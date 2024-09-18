@@ -11,6 +11,7 @@
 #include "ActsExamples/EventData/Index.hpp"
 #include "ActsExamples/Vertexing/AdaptiveMultiVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/IterativeVertexFinderAlgorithm.hpp"
+#include "ActsExamples/Vertexing/SecondaryVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/SingleSeedVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/VertexFitterAlgorithm.hpp"
 #include "ActsExamples/Vertexing/TrackletVertexingAlgorithm.hpp"
@@ -47,7 +48,23 @@ void addVertexing(Context& ctx) {
   ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::IterativeVertexFinderAlgorithm,
                                 mex, "IterativeVertexFinderAlgorithm",
                                 inputTrackParameters, outputProtoVertices,
-                                outputVertices, bField, maxIterations);
+                                outputVertices, bField,
+                                significanceCutSeeding,
+                                maximumChi2cutForSeeding,
+                                maxVertices,
+                                createSplitVertices,
+                                splitVerticesTrkInvFraction,
+                                reassignTracksAfterFirstFit,
+                                doMaxTracksCut,
+                                maxTracks,
+                                cutOffTrackWeight,
+                                cutOffTrackWeightReassign,
+                                rejectedFraction);
+
+  ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::SecondaryVertexFinderAlgorithm,
+                                mex, "SecondaryVertexFinderAlgorithm",
+                                inputTrackParameters, outputProtoVertices,
+                                outputVertices, bField, outputMasses);
 
   ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::VertexFitterAlgorithm, mex,
                                 "VertexFitterAlgorithm", inputTrackParameters,

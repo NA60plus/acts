@@ -45,11 +45,13 @@ void SeedFinder<external_spacepoint_t, grid_t, platform_t>::createSeedsForGroup(
     const sp_range_t& topSPsIdx,
     const Acts::Range1D<float>& rMiddleSPRange,
     float zTarget) const {
+
+  std::cout<<"start seed creation"<<std::endl;
   if (!options.isInInternalUnits) {
     throw std::runtime_error(
         "SeedFinderOptions not in ACTS internal units in SeedFinder");
   }
-
+  zTarget=0;
   // This is used for seed filtering later
   const std::size_t max_num_seeds_per_spm =
       m_config.seedFilter->getSeedFilterConfig().maxSeedsPerSpMConf;
@@ -61,6 +63,10 @@ void SeedFinder<external_spacepoint_t, grid_t, platform_t>::createSeedsForGroup(
 
   // If there are no bottom or top bins, just return and waste no time
   if (bottomSPsIdx.size() == 0 || topSPsIdx.size() == 0) {
+    if (bottomSPsIdx.size() == 0)
+      std::cout<<"no bottomSP"<<std::endl;
+    if (topSPsIdx.size() == 0)
+      std::cout<<"no topSP"<<std::endl;
     return;
   }
 
@@ -68,6 +74,7 @@ void SeedFinder<external_spacepoint_t, grid_t, platform_t>::createSeedsForGroup(
   const auto& middleSPs = grid.at(middleSPsIdx);
   // Return if somehow there are no middle sp candidates
   if (middleSPs.size() == 0) {
+    std::cout<<"no middleSP"<<std::endl;
     return;
   }
 
@@ -81,13 +88,16 @@ void SeedFinder<external_spacepoint_t, grid_t, platform_t>::createSeedsForGroup(
   for (const std::size_t idx : bottomSPsIdx) {
     // Only add an entry if the bin has entries
     if (grid.at(idx).size() == 0) {
+      std::cout<<"bottomSPsIdx grid.at(idx).size() == 0"<<std::endl;
       continue;
     }
+    std::cout<<"bottomSPsIdx emplace"<<std::endl;
     state.bottomNeighbours.emplace_back(
         grid, idx, middleSPs.front()->radius() - m_config.deltaRMaxBottomSP);
   }
   // if no bottom candidates, then no need to proceed
   if (state.bottomNeighbours.size() == 0) {
+    std::cout<<"state.bottomNeighbours.size() == 0"<<std::endl;
     return;
   }
 
@@ -95,13 +105,16 @@ void SeedFinder<external_spacepoint_t, grid_t, platform_t>::createSeedsForGroup(
   for (const std::size_t idx : topSPsIdx) {
     // Only add an entry if the bin has entries
     if (grid.at(idx).size() == 0) {
+      std::cout<<"topSPsIdx grid.at(idx).size() == 0"<<std::endl;
       continue;
     }
+    std::cout<<"topSPsIdx emplace"<<std::endl;
     state.topNeighbours.emplace_back(
         grid, idx, middleSPs.front()->radius() + m_config.deltaRMinTopSP);
   }
   // if no top candidates, then no need to proceed
   if (state.topNeighbours.size() == 0) {
+    std::cout<<"state.topNeighbours.size() == 0"<<std::endl;
     return;
   }
 
@@ -896,10 +909,11 @@ SeedFinder<external_spacepoint_t, grid_t, platform_t>::filterCandidates(
                   << " options.minHelixDiameter2=" << options.minHelixDiameter2
                   << " m_config.helixCutTolerance= " << m_config.helixCutTolerance << std::endl;
       }
+      /*
       if (S2 < B2 * options.minHelixDiameter2) {
         continue;
       }
-
+      */
       // refinement of the cut on the compatibility between the r-z slope of
       // the two seed segments using a scattering term scaled by the actual
       // measured pT (p2scatterSigma)

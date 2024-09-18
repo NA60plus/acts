@@ -193,6 +193,7 @@ def addParticleReader(
     outputDirRoot: Optional[Union[Path, str]] = None,
     printParticles: bool = False,
     logLevel: Optional[acts.logging.Level] = None,
+    det_suffix = ""
 ) -> None:
     """This function read
     Parameters
@@ -215,13 +216,13 @@ def addParticleReader(
             acts.logging.WARNING,
             inputDir=str(inputDir),
             inputStem="particles",
-            outputParticles="particles_input",
-            outputVertices="vertices_input",
+            outputParticles="particles_input"+det_suffix,
+            outputVertices="vertices_input"+det_suffix,
         )
     
     s.addReader(evReader)
 
-    s.addWhiteboardAlias("particles", evReader.config.outputParticles)
+    s.addWhiteboardAlias("particles"+det_suffix, evReader.config.outputParticles)
 
     if printParticles:
         s.addAlgorithm(
@@ -241,7 +242,7 @@ def addParticleReader(
                 level=customLogLevel(),
                 inputParticles=evReader.config.outputParticles,
                 outputDir=str(outputDirCsv),
-                outputStem="particles",
+                outputStem="particles"+det_suffix,
             )
         )
 
@@ -499,6 +500,7 @@ def addFatras(
     outputDirCsv: Optional[Union[Path, str]] = None,
     outputDirRoot: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    det_suffix: str=""
 ) -> None:
     """This function steers the detector simulation using Fatras
 
@@ -528,7 +530,7 @@ def addFatras(
 
     # Selector
     if preSelectParticles is not None:
-        particlesSelected = "fatras_particles_preselected"
+        particles_selected = "particles_selected"+det_suffix
         addParticleSelection(
             s,
             preSelectParticles,
@@ -585,7 +587,7 @@ def addFatras(
         particlesFinal = alg.config.outputParticlesFinal
 
     # Only add alias for 'particles_initial' as this is the one we use most
-    s.addWhiteboardAlias("particles", particlesInitial)
+    s.addWhiteboardAlias("particles"+det_suffix, particlesInitial)
 
     # Output
     addSimWriters(
@@ -596,6 +598,7 @@ def addFatras(
         outputDirCsv,
         outputDirRoot,
         logLevel,
+        det_suffix
     )
 
     return s
@@ -609,6 +612,7 @@ def addSimWriters(
     outputDirCsv: Optional[Union[Path, str]] = None,
     outputDirRoot: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    det_suffix = ""
 ) -> None:
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -621,7 +625,7 @@ def addSimWriters(
                 level=customLogLevel(),
                 outputDir=str(outputDirCsv),
                 inputParticles=particlesInitial,
-                outputStem="particles_initial",
+                outputStem="particles_initial"+det_suffix,
             )
         )
         s.addWriter(
@@ -629,7 +633,7 @@ def addSimWriters(
                 level=customLogLevel(),
                 outputDir=str(outputDirCsv),
                 inputParticles=particlesFinal,
-                outputStem="particles_final",
+                outputStem="particles_final"+det_suffix,
             )
         )
         s.addWriter(
@@ -637,7 +641,7 @@ def addSimWriters(
                 level=customLogLevel(),
                 inputSimHits=simHits,
                 outputDir=str(outputDirCsv),
-                outputStem="hits",
+                outputStem="hits"+det_suffix,
             )
         )
 
@@ -650,14 +654,14 @@ def addSimWriters(
                 level=customLogLevel(),
                 inputParticles=particlesInitial,
                 inputFinalParticles=particlesFinal,
-                filePath=str(outputDirRoot / "particles_simulation.root"),
+                filePath=str(outputDirRoot / str("particles_simulation" + det_suffix + ".root")),
             )
         )
         s.addWriter(
             acts.examples.RootSimHitWriter(
                 level=customLogLevel(),
                 inputSimHits=simHits,
-                filePath=str(outputDirRoot / "hits.root"),
+                filePath=str(outputDirRoot / str("hits" + det_suffix + ".root")),
             )
         )
 
@@ -863,6 +867,7 @@ def addDigitization(
     applyEndcapShort: Optional[bool] = None,
     applyEndcapLong: Optional[bool] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    suffix = "",
 ) -> acts.examples.Sequencer:
     """This function steers the digitization step
 
@@ -894,11 +899,12 @@ def addDigitization(
         ),
         surfaceByIdentifier=trackingGeometry.geoIdSurfaceMap(),
         randomNumbers=rnd,
-        inputSimHits="simhits",
-        outputSourceLinks="sourcelinks",
-        outputMeasurements="measurements",
-        outputMeasurementParticlesMap="measurement_particles_map",
-        outputMeasurementSimHitsMap="measurement_simhits_map",
+        inputSimHits="simhits"+suffix,
+        outputSourceLinks="sourcelinks"+suffix,
+        outputMeasurements="measurements"+suffix,
+        outputClusters="clusters"+suffix,
+        outputMeasurementParticlesMap="measurement_particles_map"+suffix,
+        outputMeasurementSimHitsMap="measurement_simhits_map"+suffix,
         doMerge=doMerge,
     )
 
