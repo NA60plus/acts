@@ -308,7 +308,6 @@ def addSeeding(
     noGuessing = False,
     suffix = "",
     trkVtxOnly = False,
-    projective = False,
     zPerigee = 0,
     det_suffix = "",
     suffixSpacepoint = ""
@@ -413,7 +412,6 @@ def addSeeding(
                 verbose=verbose,
                 useFit=True,
                 nbins=60,
-                projective=projective,
                 zPerigee=zPerigee
             )
 
@@ -581,7 +579,6 @@ def addNewSeeding(
     doTrkVtx=True,
     noGuessing = False,
     trkVtxOnly=False,
-    projective=False,
     zPerigee = 0,
     suffix = "",
     det_suffix = ""
@@ -618,7 +615,6 @@ def addNewSeeding(
         addTrackletVertexing(
             s,
             noGuessing=noGuessing,
-            projective=projective,
             zPerigee = zPerigee,
             inputSpacePoints=spacePoints,#+det_suffix,
             inputParticles=inputParticles,
@@ -1793,6 +1789,7 @@ def addMatching(
     outputTracks = "outputTracks",
     outputMatchedTracks = "outputMatchedTracks",
     inputParticles = "particles",
+    inputVertices = "vertices",
     inputMeasurementParticlesMapVT = "measurement_particles_map_vt",
     inputMeasurementParticlesMapMS = "measurement_particles_map_ms",
     useRecVtx = False,
@@ -1854,6 +1851,7 @@ def addMatching(
         chi2max = chi2max,
         trackingGeometry = trackingGeometry,
         magneticField = magneticField,
+        inputVertices=inputVertices,
         
         #fit=acts.examples.makeKalmanFitterFunction(
         #    trackingGeometry, magneticField, **kalmanOptions
@@ -2744,8 +2742,10 @@ def addTrackletVertexing(
     inputMeasurementParticlesMap: str="measurement_particles_map",
     outputRecPrimaryVertex: str="OutputRecPrimaryVertex",
     outputGenPrimaryVertex: str="OutputGenPrimaryVertex",
-    zmax: float=170,
-    zmin: float=0,
+    zMaxTop: float=170,
+    zMinTop: float=0,
+    zMaxBot: float=170,
+    zMinBot: float=0,
     deltaPhi: float=0.08,
     deltaThetaMax: float=0.04,
     deltaThetaMin: float=-0.15,
@@ -2754,7 +2754,6 @@ def addTrackletVertexing(
     noGuessing: bool=False,
     useFit: bool=True,
     nbins: int=60,
-    projective: bool=False,
     zPerigee: float=0,
     logLevel: Optional[acts.logging.Level] = None,
 
@@ -2771,8 +2770,10 @@ def addTrackletVertexing(
         outputGenPrimaryVertex=outputGenPrimaryVertex,
         outputFitPrimaryVertex="OutputFitPrimaryVertex",
         inputMeasurementParticlesMap=inputMeasurementParticlesMap,
-        zmax=zmax,
-        zmin=zmin,
+        zMaxTop=zMaxTop,
+        zMinTop=zMinTop,
+        zMaxBot=zMaxBot,
+        zMinBot=zMinBot,
         deltaPhi=deltaPhi,
         deltaThetaMin=deltaThetaMin,
         deltaThetaMax=deltaThetaMax,
@@ -2781,7 +2782,6 @@ def addTrackletVertexing(
         noGuessing=noGuessing,
         useFit=useFit,
         nbins=nbins,
-        projective=projective,
         zPerigee=zPerigee,
         outputFitFunction="OutputFitFuncVtx",
         outputZTracklets="OutputZTracklets",
