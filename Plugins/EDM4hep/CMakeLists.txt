@@ -7,9 +7,16 @@ target_include_directories(
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(
+<<<<<<< HEAD
     ActsPluginEDM4hep
     PUBLIC ActsCore ActsPluginPodio EDM4HEP::edm4hep
 )
+=======
+	ActsPluginEDM4hep
+  PUBLIC
+    ActsCore
+    EDM4HEP::edm4hep)
+>>>>>>> main
 
 install(
     TARGETS ActsPluginEDM4hep

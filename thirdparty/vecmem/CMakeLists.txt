@@ -7,7 +7,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # CMake include(s).
+<<<<<<< HEAD
 include(FetchContent)
+=======
+cmake_minimum_required( VERSION 3.11 )
+include( FetchContent )
+>>>>>>> main
 
 # Tell the user what's happening.
 message(STATUS "Building VecMem as part of the Acts project")
@@ -18,6 +23,7 @@ set(VECMEM_VERSION "v${_acts_vecmem_version}")
 FetchContent_Declare(VecMem ${ACTS_VECMEM_SOURCE})
 
 # Options used in the build of VecMem.
+<<<<<<< HEAD
 set(VECMEM_BUILD_TESTING
     FALSE
     CACHE BOOL
@@ -28,6 +34,12 @@ set(VECMEM_BUILD_BENCHMARKING
     CACHE BOOL
     "Turn off the build of VecMem benchmarking"
 )
+=======
+set( VECMEM_BUILD_TESTING FALSE CACHE BOOL
+   "Turn off the build of the VecMem unit tests" )
+set( VECMEM_BUILD_BENCHMARKING FALSE CACHE BOOL
+   "Turn off the build of VecMem benchmarking" )   
+>>>>>>> main
 
 # Now set up its build.
 FetchContent_MakeAvailable(VecMem)

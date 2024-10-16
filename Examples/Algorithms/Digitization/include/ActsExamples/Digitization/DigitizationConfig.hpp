@@ -60,7 +60,7 @@ struct GeometricConfig {
 
   /// The charge smearer
   ActsFatras::SingleParameterSmearFunction<ActsExamples::RandomEngine>
-      chargeSmearer = Digitization::Exact(0);
+      chargeSmearer = Digitization::Exact{};
 
   // The threshold below a cell activation is ignored
   double threshold = 0.;
@@ -168,6 +168,15 @@ class DigitizationConfig {
   /// Table 35.10)
   /// @NOTE The default is set to 0 because this works only well with Geant4
   double minEnergyDeposit = 0.0;  // 1000 * 3.65 * Acts::UnitConstants::eV;
+  //new configurable for NA60+
+  double  efficiency=1;
+  bool applyDeadAreas=false;
+  bool applyFastSimSelections=false;
+  bool applyReadout=false;
+  bool applyBackbone=false;
+  bool applyHole=false;
+  bool applyEndcapShort=false;
+  bool applyEndcapLong=false;
   /// The digitizers per GeometryIdentifiers
   Acts::GeometryHierarchyMap<DigiComponentsConfig> digitizationConfigs;
 

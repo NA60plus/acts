@@ -73,13 +73,17 @@ class Vertex {
   /// @return Returns pair of (chi2, numberDoF)
   std::pair<double, double> fitQuality() const;
 
-  /// @brief Set position
+  /// @brief Set position and time
   ///
+<<<<<<< HEAD
+=======
   /// @param position Vertex position
-  void setPosition(const Vector3& position);
+  /// @param time The time
+  void setPosition(const Vector3& position, ActsScalar time = 0);
 
   /// @brief Set position and time
   ///
+>>>>>>> main
   /// @param fullPosition Vertex position and time
   void setFullPosition(const Vector4& fullPosition);
 

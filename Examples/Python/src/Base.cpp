@@ -1,6 +1,10 @@
 // This file is part of the ACTS project.
 //
+<<<<<<< HEAD
 // Copyright (C) 2016 CERN for the benefit of the ACTS project
+=======
+// Copyright (C) 2021 CERN for the benefit of the Acts project
+>>>>>>> main
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -9,13 +13,10 @@
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/PdgParticle.hpp"
 #include "Acts/Definitions/Units.hpp"
-#include "Acts/Geometry/GeometryContext.hpp"
-#include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Plugins/Python/Utilities.hpp"
 #include "Acts/Utilities/Any.hpp"
 #include "Acts/Utilities/AxisFwd.hpp"
 #include "Acts/Utilities/BinningData.hpp"
-#include "Acts/Utilities/CalibrationContext.hpp"
 #include "Acts/Utilities/Logger.hpp"
 
 #include <array>
@@ -34,6 +35,7 @@ using namespace pybind11::literals;
 
 namespace Acts::Python {
 
+<<<<<<< HEAD
 void addContext(Context& ctx) {
   auto& m = ctx.get("main");
 
@@ -50,6 +52,8 @@ void addAny(Context& ctx) {
   py::class_<Acts::AnyBase<512>>(m, "AnyBase512").def(py::init<>());
 }
 
+=======
+>>>>>>> main
 void addUnits(Context& ctx) {
   auto& m = ctx.get("main");
   auto u = m.def_submodule("UnitConstants");
@@ -219,7 +223,7 @@ void addLogging(Acts::Python::Context& ctx) {
     } catch (const std::exception& e) {
       std::string what = e.what();
       if (what.find("ACTS_LOG_FAILURE_THRESHOLD") != std::string::npos) {
-        py::set_error(exc, e.what());
+        exc(e.what());
       } else {
         std::rethrow_exception(p);
       }
@@ -370,10 +374,24 @@ void addBinning(Context& ctx) {
                           .value("binEta", Acts::BinningValue::binEta)
                           .value("binMag", Acts::BinningValue::binMag);
 
+<<<<<<< HEAD
   auto boundaryType = py::enum_<Acts::AxisBoundaryType>(m, "AxisBoundaryType")
                           .value("Bound", Acts::AxisBoundaryType::Bound)
                           .value("Closed", Acts::AxisBoundaryType::Closed)
                           .value("Open", Acts::AxisBoundaryType::Open);
+=======
+  auto BinningOption = py::enum_<Acts::BinningOption>(binning, "BinningOption")
+                          .value("open", Acts::BinningOption::open)
+                          .value("closed", Acts::BinningOption::closed)
+                          .export_values();
+
+  auto boundaryType =
+      py::enum_<Acts::AxisBoundaryType>(binning, "AxisBoundaryType")
+          .value("bound", Acts::AxisBoundaryType::Bound)
+          .value("closed", Acts::AxisBoundaryType::Closed)
+          .value("open", Acts::AxisBoundaryType::Open)
+          .export_values();
+>>>>>>> main
 
   auto axisType = py::enum_<Acts::AxisType>(m, "AxisType")
                       .value("equidistant", Acts::AxisType::Equidistant)

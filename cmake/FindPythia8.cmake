@@ -22,6 +22,7 @@ find_path(
     DOC "The Pythia8 include directory"
 )
 
+<<<<<<< HEAD
 file(READ "${Pythia8_INCLUDE_DIR}/Pythia8/Pythia.h" Pythia8_VERSION_FILE)
 string(
     REGEX MATCH
@@ -36,6 +37,10 @@ find_package_handle_standard_args(
     REQUIRED_VARS Pythia8_LIBRARY Pythia8_INCLUDE_DIR
     VERSION_VAR Pythia8_VERSION
 )
+=======
+find_package_handle_standard_args(Pythia8
+  REQUIRED_VARS Pythia8_LIBRARY Pythia8_INCLUDE_DIR)
+>>>>>>> main
 
 add_library(Pythia8 SHARED IMPORTED)
 set_property(TARGET Pythia8 PROPERTY IMPORTED_LOCATION ${Pythia8_LIBRARY})
