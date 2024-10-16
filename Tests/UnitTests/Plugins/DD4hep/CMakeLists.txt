@@ -34,38 +34,23 @@ else()
     set(factory_path "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
-if(NOT "${dd4hep_core_library}" STREQUAL "dd4hep_core_library-NOTFOUND")
-    cmake_path(GET dd4hep_core_library PARENT_PATH DD4HEP_LIBRARY_PATH)
-    # set test library dependencies
-    set(unittest_extra_libraries ActsTestsDD4hepFactories ActsPluginDD4hep)
-    set(dd4hep_tests
-        DD4hepDetectorElement
-        DD4hepCylinderLayerStructure
-        DD4hepDiscLayerStructure
-        DD4hepCylindricalDetector
-    )
-    foreach(_test ${dd4hep_tests})
-        add_unittest(${_test} ${_test}Tests.cpp)
-        add_dependencies(
-            ActsUnitTest${_test}
-            Components_ActsTestsDD4hepFactories
-        )
-        if(APPLE)
-            set_property(
-                TEST ${_test}
-                PROPERTY
-                    ENVIRONMENT
-                        "DYLD_LIBRARY_PATH=${DD4HEP_LIBRARY_PATH}:${factory_path}:$ENV{DYLD_LIBRARY_PATH}"
-            )
-        else()
-            set_property(
-                TEST ${_test}
-                PROPERTY
-                    ENVIRONMENT
-                        "LD_LIBRARY_PATH=${DD4HEP_LIBRARY_PATH}:${factory_path}:$ENV{LD_LIBRARY_PATH}"
-            )
-        endif()
-    endforeach()
+
+if (NOT "${dd4hep_core_library}" STREQUAL "dd4hep_core_library-NOTFOUND")
+  cmake_path(GET dd4hep_core_library PARENT_PATH DD4HEP_LIBRARY_PATH)
+  # set test library dependencies
+  set(unittest_extra_libraries ActsTestsDD4hepFactories ActsPluginDD4hep)
+  set(dd4hep_tests DD4hepDetectorElement DD4hepCylinderLayerStructure DD4hepDiscLayerStructure DD4hepCylindricalDetector)
+  foreach(_test ${dd4hep_tests})
+    add_unittest(${_test} ${_test}Tests.cpp)
+    add_dependencies(ActsUnitTest${_test} Components_ActsTestsDD4hepFactories)
+    if(APPLE)
+      set_property(TEST ${_test} PROPERTY ENVIRONMENT 
+        "DYLD_LIBRARY_PATH=${DD4HEP_LIBRARY_PATH}:${factory_path}") 
+    else()
+      set_property(TEST ${_test} PROPERTY ENVIRONMENT 
+        "LD_LIBRARY_PATH=${DD4HEP_LIBRARY_PATH}:${factory_path}")
+    endif()
+  endforeach()
 else()
     message(
         WARNING

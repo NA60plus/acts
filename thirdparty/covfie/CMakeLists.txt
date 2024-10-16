@@ -7,6 +7,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # CMake include(s).
+cmake_minimum_required(VERSION 3.14)
 include(FetchContent)
 
 # Tell the user what's happening.
@@ -33,4 +34,4 @@ set(COVFIE_REQUIRE_CXX20 OFF CACHE BOOL "Enable covfie C++20 requirement")
 set(COVFIE_QUIET ON CACHE BOOL "Quiet covfie feature warnings")
 
 # Now set up its build.
-FetchContent_MakeAvailable(covfie)
+FetchContent_MakeAvailable( covfie )

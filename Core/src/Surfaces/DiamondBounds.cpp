@@ -8,33 +8,16 @@
 
 #include "Acts/Surfaces/DiamondBounds.hpp"
 
-#include "Acts/Definitions/Algebra.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
-#include "Acts/Surfaces/detail/BoundaryCheckHelper.hpp"
-
 #include <iomanip>
 #include <iostream>
-#include <optional>
 
 Acts::SurfaceBounds::BoundsType Acts::DiamondBounds::type() const {
   return SurfaceBounds::eDiamond;
 }
 
-bool Acts::DiamondBounds::inside(
-    const Acts::Vector2& lposition,
-    const Acts::BoundaryTolerance& boundaryTolerance) const {
-  // Vertices starting at lower left (min rel. phi)
-  // counter-clockwise
-  double x1 = get(DiamondBounds::eHalfLengthXnegY);
-  double y1 = get(DiamondBounds::eHalfLengthYneg);
-  double x2 = get(DiamondBounds::eHalfLengthXzeroY);
-  double y2 = 0.;
-  double x3 = get(DiamondBounds::eHalfLengthXposY);
-  double y3 = get(DiamondBounds::eHalfLengthYpos);
-  Vector2 vertices[] = {{-x1, -y1}, {x1, -y1}, {x2, y2},
-                        {x3, y3},   {-x3, y3}, {-x2, y2}};
-  return detail::insidePolygon(vertices, boundaryTolerance, lposition,
-                               std::nullopt);
+bool Acts::DiamondBounds::inside(const Acts::Vector2& lposition,
+                                 const Acts::BoundaryCheck& bcheck) const {
+  return bcheck.isInside(lposition, vertices());
 }
 
 std::vector<Acts::Vector2> Acts::DiamondBounds::vertices(

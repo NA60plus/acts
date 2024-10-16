@@ -24,7 +24,6 @@
 #include "Acts/Propagator/EigenStepperError.hpp"
 #include "Acts/Propagator/MultiStepperError.hpp"
 #include "Acts/Propagator/Propagator.hpp"
-#include "Acts/Propagator/StepperOptions.hpp"
 #include "Acts/Propagator/detail/LoopStepperUtils.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Intersection.hpp"
@@ -181,15 +180,12 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
   /// @brief How many components can this stepper manage?
   static constexpr int maxComponents = std::numeric_limits<int>::max();
 
-  struct Config {
-    std::shared_ptr<const MagneticFieldProvider> bField;
-  };
-
-  struct Options : public StepperPlainOptions {
-    void setPlainOptions(const StepperPlainOptions& options) {
-      static_cast<StepperPlainOptions&>(*this) = options;
-    }
-  };
+  /// Constructor from a magnetic field and a optionally provided Logger
+  MultiEigenStepperLoop(std::shared_ptr<const MagneticFieldProvider> bField,
+                        std::unique_ptr<const Logger> logger =
+                            getDefaultLogger("GSF", Logging::INFO))
+      : EigenStepper<extensionlist_t, auctioneer_t>(std::move(bField)),
+        m_logger(std::move(logger)) {}
 
   struct State {
     /// The struct that stores the individual components
@@ -259,19 +255,6 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
       }
     }
   };
-
-  /// Constructor from a magnetic field and a optionally provided Logger
-  MultiEigenStepperLoop(std::shared_ptr<const MagneticFieldProvider> bField,
-                        std::unique_ptr<const Logger> logger =
-                            getDefaultLogger("GSF", Logging::INFO))
-      : EigenStepper<extension_t>(std::move(bField)),
-        m_logger(std::move(logger)) {}
-
-  /// Constructor from a configuration and optionally provided Logger
-  MultiEigenStepperLoop(const Config& config,
-                        std::unique_ptr<const Logger> logger =
-                            getDefaultLogger("GSF", Logging::INFO))
-      : EigenStepper<extension_t>(config), m_logger(std::move(logger)) {}
 
   /// Construct and initialize a state
   State makeState(std::reference_wrapper<const GeometryContext> gctx,
@@ -513,12 +496,12 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
   /// @param [in] surface The surface provided
   /// @param [in] index The surface intersection index
   /// @param [in] navDir The navigation direction
-  /// @param [in] boundaryTolerance The boundary check for this status update
+  /// @param [in] bcheck The boundary check for this status update
   /// @param [in] surfaceTolerance Surface tolerance used for intersection
   /// @param [in] logger A @c Logger instance
   Intersection3D::Status updateSurfaceStatus(
       State& state, const Surface& surface, std::uint8_t index,
-      Direction navDir, const BoundaryTolerance& boundaryTolerance,
+      Direction navDir, const BoundaryCheck& bcheck,
       ActsScalar surfaceTolerance = s_onSurfaceTolerance,
       const Logger& logger = getDummyLogger()) const {
     using Status = Intersection3D::Status;
@@ -527,7 +510,7 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
 
     for (auto& component : state.components) {
       component.status = detail::updateSingleSurfaceStatus<SingleStepper>(
-          *this, component.state, surface, index, navDir, boundaryTolerance,
+          *this, component.state, surface, index, navDir, bcheck,
           surfaceTolerance, logger);
       ++counts[static_cast<std::size_t>(component.status)];
     }
@@ -604,7 +587,7 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
       auto intersection = surface.intersect(
           component.state.geoContext, SingleStepper::position(component.state),
           direction * SingleStepper::direction(component.state),
-          BoundaryTolerance::None())[oIntersection.index()];
+          BoundaryCheck(true))[oIntersection.index()];
 
       SingleStepper::updateStepSize(component.state, intersection, direction,
                                     release);

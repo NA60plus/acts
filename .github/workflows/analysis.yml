@@ -29,7 +29,7 @@ env:
 jobs:
   build_debug:
     runs-on: ubuntu-latest
-    container: ghcr.io/acts-project/ubuntu2404:58
+    container: ghcr.io/acts-project/ubuntu2204:v41
     steps:
 
       - uses: actions/checkout@v4
@@ -49,6 +49,9 @@ jobs:
           --preset=github-ci
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_FLAGS="-Werror --coverage -g -gz -g1"
+          -DACTS_BUILD_UNITTESTS=on
+          -DACTS_BUILD_EXAMPLES_UNITTESTS=off
+          -DACTS_BUILD_EVERYTHING=ON
           -DACTS_BUILD_ODD=OFF
       - name: Build
         run: cmake --build build
@@ -86,7 +89,7 @@ jobs:
 
   build_performance:
     runs-on: ubuntu-latest
-    container: ghcr.io/acts-project/ubuntu2404:58
+    container: ghcr.io/acts-project/ubuntu2204:v41
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4

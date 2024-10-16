@@ -5,6 +5,7 @@ from collections.abc import Iterable
 
 import acts
 from acts.examples import (
+    CsvParticleReader,
     RandomNumbers,
     EventGenerator,
     FixedMultiplicityGenerator,
@@ -184,6 +185,118 @@ def addParticleGun(
         )
 
     return s
+
+def addParticleReader(
+    s: acts.examples.Sequencer,
+    inputDir: Optional[Union[Path, str]] = None,
+    outputDirCsv: Optional[Union[Path, str]] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    printParticles: bool = False,
+    logLevel: Optional[acts.logging.Level] = None,
+    det_suffix = ""
+) -> None:
+    """This function read
+    Parameters
+    ----------
+    s: Sequencer
+        the sequencer module to which we add the particle gun steps (returned from addParticleGun)
+    inputDirCsv : Path|str, path, None
+        the input folder for the Csv input, None triggers no output
+    outputDirCsv : Path|str, path, None
+        the output folder for the Csv output, None triggers no output
+    outputDirRoot : Path|str, path, None
+        the output folder for the Root output, None triggers no output
+    printParticles : bool, False
+        print generated particles
+    """
+
+    customLogLevel = acts.examples.defaultLogging(s, logLevel)
+
+    evReader = acts.examples.CsvParticleReader(
+            acts.logging.WARNING,
+            inputDir=str(inputDir),
+            inputStem="particles",
+            outputParticles="particles_input"+det_suffix,
+            outputVertices="vertices_input"+det_suffix,
+        )
+    
+    s.addReader(evReader)
+
+    s.addWhiteboardAlias("particles"+det_suffix, evReader.config.outputParticles)
+
+    if printParticles:
+        s.addAlgorithm(
+            ParticlesPrinter(
+                level=customLogLevel(),
+                inputParticles=evReader.config.outputParticles,
+            )
+        )
+
+    if outputDirCsv is not None:
+        outputDirCsv = Path(outputDirCsv)
+        if not outputDirCsv.exists():
+            outputDirCsv.mkdir()
+
+        s.addWriter(
+            CsvParticleWriter(
+                level=customLogLevel(),
+                inputParticles=evReader.config.outputParticles,
+                outputDir=str(outputDirCsv),
+                outputStem="particles"+det_suffix,
+            )
+        )
+
+    if outputDirRoot is not None:
+        outputDirRoot = Path(outputDirRoot)
+        if not outputDirRoot.exists():
+            outputDirRoot.mkdir()
+
+        s.addWriter(
+            RootParticleWriter(
+                level=customLogLevel(),
+                inputParticles=evReader.config.outputParticles,
+                filePath=str(outputDirRoot / "particles.root"),
+            )
+        )
+
+    return s
+
+
+def addSimHitsReader(
+    s: acts.examples.Sequencer,
+    inputDir: Optional[Union[Path, str]] = None,
+    outputSimHits: Optional[Union[Path, str]] = None,
+) -> None:
+    """This function read
+    Parameters
+    ----------
+    s: Sequencer
+        the sequencer module to which we add the particle gun steps (returned from addParticleGun)
+    inputDirCsv : Path|str, path, None
+        the input folder for the Csv input, None triggers no output
+    outputDirCsv : Path|str, path, None
+        the output folder for the Csv output, None triggers no output
+    outputDirRoot : Path|str, path, None
+        the output folder for the Root output, None triggers no output
+    printParticles : bool, False
+        print generated particles
+    """
+
+
+    hitReader = acts.examples.CsvSimHitReader(
+            acts.logging.WARNING,
+            inputDir=str(inputDir),
+            inputStem="hits",
+            outputSimHits=outputSimHits
+        )
+    
+    s.addReader(hitReader)
+
+    #s.addWhiteboardAlias("particles"+det_suffix, evReader.config.outputParticles)
+
+
+    return s
+
 
 
 def addPythia8(
@@ -420,9 +533,11 @@ def addFatras(
     outputParticlesInitial: str = "particles_initial",
     outputParticlesFinal: str = "particles_final",
     outputSimHits: str = "simhits",
+    inputSimHits: Optional[str] = None,
     outputDirCsv: Optional[Union[Path, str]] = None,
     outputDirRoot: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    det_suffix: str=""
 ) -> None:
     """This function steers the detector simulation using Fatras
 
@@ -452,22 +567,21 @@ def addFatras(
 
     # Selector
     if preSelectParticles is not None:
-        particlesSelected = "fatras_particles_preselected"
+        particles_selected = "particles_selected"+det_suffix
         addParticleSelection(
             s,
             preSelectParticles,
             inputParticles=inputParticles,
-            outputParticles=particlesSelected,
+            outputParticles=particles_selected,
         )
-        s.addWhiteboardAlias("particles_selected", particlesSelected)
     else:
-        particlesSelected = inputParticles
+        particles_selected = inputParticles
 
     # Simulation
     alg = acts.examples.FatrasSimulation(
         **acts.examples.defaultKWArgs(
             level=customLogLevel(),
-            inputParticles=particlesSelected,
+            inputParticles=particles_selected,
             outputParticlesInitial=outputParticlesInitial,
             outputParticlesFinal=outputParticlesFinal,
             outputSimHits=outputSimHits,
@@ -480,6 +594,7 @@ def addFatras(
             emEnergyLossRadiation=enableInteractions,
             emPhotonConversion=enableInteractions,
             pMin=pMin,
+            inputSimHits=inputSimHits
         )
     )
 
@@ -503,13 +618,12 @@ def addFatras(
             inputParticles=alg.config.outputParticlesFinal,
             outputParticles=particlesFinal,
         )
-        s.addWhiteboardAlias("particles_selected", particlesFinal)
     else:
         particlesInitial = alg.config.outputParticlesInitial
         particlesFinal = alg.config.outputParticlesFinal
 
     # Only add alias for 'particles_initial' as this is the one we use most
-    s.addWhiteboardAlias("particles", particlesInitial)
+    s.addWhiteboardAlias("particles"+det_suffix, particlesInitial)
 
     # Output
     addSimWriters(
@@ -520,6 +634,7 @@ def addFatras(
         outputDirCsv,
         outputDirRoot,
         logLevel,
+        det_suffix
     )
 
     return s
@@ -533,6 +648,7 @@ def addSimWriters(
     outputDirCsv: Optional[Union[Path, str]] = None,
     outputDirRoot: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    det_suffix = ""
 ) -> None:
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -545,7 +661,7 @@ def addSimWriters(
                 level=customLogLevel(),
                 outputDir=str(outputDirCsv),
                 inputParticles=particlesInitial,
-                outputStem="particles_initial",
+                outputStem="particles_initial"+det_suffix,
             )
         )
         s.addWriter(
@@ -553,7 +669,7 @@ def addSimWriters(
                 level=customLogLevel(),
                 outputDir=str(outputDirCsv),
                 inputParticles=particlesFinal,
-                outputStem="particles_final",
+                outputStem="particles_final"+det_suffix,
             )
         )
         s.addWriter(
@@ -561,7 +677,7 @@ def addSimWriters(
                 level=customLogLevel(),
                 inputSimHits=simHits,
                 outputDir=str(outputDirCsv),
-                outputStem="hits",
+                outputStem="hits"+det_suffix,
             )
         )
 
@@ -574,14 +690,14 @@ def addSimWriters(
                 level=customLogLevel(),
                 inputParticles=particlesInitial,
                 inputFinalParticles=particlesFinal,
-                filePath=str(outputDirRoot / "particles_simulation.root"),
+                filePath=str(outputDirRoot / str("particles_simulation" + det_suffix + ".root")),
             )
         )
         s.addWriter(
             acts.examples.RootSimHitWriter(
                 level=customLogLevel(),
                 inputSimHits=simHits,
-                filePath=str(outputDirRoot / "hits.root"),
+                filePath=str(outputDirRoot / str("hits" + det_suffix + ".root")),
             )
         )
 
@@ -684,16 +800,15 @@ def addGeant4(
 
     # Selector
     if preSelectParticles is not None:
-        particlesSelected = "geant4_particles_preselected"
+        particles_selected = "particles_selected"
         addParticleSelection(
             s,
             preSelectParticles,
             inputParticles=inputParticles,
-            outputParticles=particlesSelected,
+            outputParticles=particles_selected,
         )
-        s.addWhiteboardAlias("particles_selected", particlesSelected)
     else:
-        particlesSelected = inputParticles
+        particles_selected = inputParticles
 
     if g4DetectorConstructionFactory is None:
         if detector is None:
@@ -717,7 +832,7 @@ def addGeant4(
         geant4Handle=__geant4Handle,
         detectorConstructionFactory=g4DetectorConstructionFactory,
         randomNumbers=rnd,
-        inputParticles=particlesSelected,
+        inputParticles=particles_selected,
         outputParticlesInitial=outputParticlesInitial,
         outputParticlesFinal=outputParticlesFinal,
         outputSimHits=outputSimHits,
@@ -738,7 +853,7 @@ def addGeant4(
 
     # Selector
     if postSelectParticles is not None:
-        particlesInitial = "geant4_particles_initial_postselected"
+        particlesInitial = "geant4_particles_initial_selected"
         addParticleSelection(
             s,
             postSelectParticles,
@@ -746,14 +861,13 @@ def addGeant4(
             outputParticles=particlesInitial,
         )
 
-        particlesFinal = "geant4_particles_final_postselected"
+        particlesFinal = "geant4_particles_final_selected"
         addParticleSelection(
             s,
             postSelectParticles,
             inputParticles=alg.config.outputParticlesFinal,
             outputParticles=particlesFinal,
         )
-        s.addWhiteboardAlias("particles_selected", particlesFinal)
     else:
         particlesInitial = alg.config.outputParticlesInitial
         particlesFinal = alg.config.outputParticlesFinal
@@ -785,7 +899,16 @@ def addDigitization(
     rnd: Optional[acts.examples.RandomNumbers] = None,
     doMerge: Optional[bool] = None,
     minEnergyDeposit: Optional[float] = None,
+    efficiency: Optional[float] = None,
+    applyDeadAreas: Optional[bool] = None,
+    applyFastSimSelections: Optional[bool] = None,
+    applyReadout: Optional[bool] = None,
+    applyBackbone: Optional[bool] = None,
+    applyHole: Optional[bool] = None,
+    applyEndcapShort: Optional[bool] = None,
+    applyEndcapLong: Optional[bool] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    suffix = "",
 ) -> acts.examples.Sequencer:
     """This function steers the digitization step
 
@@ -817,16 +940,41 @@ def addDigitization(
         ),
         surfaceByIdentifier=trackingGeometry.geoIdSurfaceMap(),
         randomNumbers=rnd,
-        inputSimHits="simhits",
-        outputMeasurements="measurements",
-        outputMeasurementParticlesMap="measurement_particles_map",
-        outputMeasurementSimHitsMap="measurement_simhits_map",
+        inputSimHits="simhits"+suffix,
+        outputSourceLinks="sourcelinks"+suffix,
+        outputMeasurements="measurements"+suffix,
+        outputClusters="clusters"+suffix,
+        outputMeasurementParticlesMap="measurement_particles_map"+suffix,
+        outputMeasurementSimHitsMap="measurement_simhits_map"+suffix,
         doMerge=doMerge,
     )
 
     # Not sure how to do this in our style
     if minEnergyDeposit is not None:
         digiCfg.minEnergyDeposit = minEnergyDeposit
+    if efficiency is not None:
+        digiCfg.efficiency=efficiency
+        
+    if applyDeadAreas is not None:
+        digiCfg.applyDeadAreas=applyDeadAreas
+        
+    if applyFastSimSelections is not None:
+        digiCfg.applyFastSimSelections=applyFastSimSelections
+        
+    if applyReadout is not None:
+        digiCfg.applyReadout=applyReadout
+        
+    if applyBackbone is not None:
+        digiCfg.applyBackbone=applyBackbone
+        
+    if applyHole is not None:
+        digiCfg.applyHole=applyHole
+        
+    if applyEndcapShort is not None:
+        digiCfg.applyEndcapShort=applyEndcapShort
+
+    if applyEndcapLong is not None:
+        digiCfg.applyEndcapLong=applyEndcapLong
 
     digiAlg = acts.examples.DigitizationAlgorithm(digiCfg, customLogLevel())
 

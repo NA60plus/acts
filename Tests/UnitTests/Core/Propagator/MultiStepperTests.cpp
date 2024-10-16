@@ -76,15 +76,11 @@ const auto defaultNullBField = std::make_shared<NullBField>();
 const auto particleHypothesis = ParticleHypothesis::pion();
 
 struct Options {
+  double stepTolerance = 1e-4;
+  double stepSizeCutOff = 0.0;
+  std::size_t maxRungeKuttaStepTrials = 10;
   Direction direction = defaultNDir;
-
   const Acts::Logger &logger = Acts::getDummyLogger();
-
-  struct {
-    double stepTolerance = 1e-4;
-    double stepSizeCutOff = 0.0;
-    std::size_t maxRungeKuttaStepTrials = 10;
-  } stepping;
 };
 
 struct MockNavigator {};
@@ -455,9 +451,9 @@ void test_multi_stepper_surface_status_update() {
 
   // Update surface status and check
   {
-    auto status = multi_stepper.updateSurfaceStatus(
-        multi_state, *right_surface, 0, Direction::Forward,
-        BoundaryTolerance::Infinite());
+    auto status = multi_stepper.updateSurfaceStatus(multi_state, *right_surface,
+                                                    0, Direction::Forward,
+                                                    BoundaryCheck(false));
 
     BOOST_CHECK_EQUAL(status, Intersection3D::Status::reachable);
 
@@ -484,9 +480,9 @@ void test_multi_stepper_surface_status_update() {
 
   // Update surface status and check again
   {
-    auto status = multi_stepper.updateSurfaceStatus(
-        multi_state, *right_surface, 0, Direction::Forward,
-        BoundaryTolerance::Infinite());
+    auto status = multi_stepper.updateSurfaceStatus(multi_state, *right_surface,
+                                                    0, Direction::Forward,
+                                                    BoundaryCheck(false));
 
     BOOST_CHECK_EQUAL(status, Intersection3D::Status::onSurface);
 
@@ -500,9 +496,9 @@ void test_multi_stepper_surface_status_update() {
 
   // Start surface should be reachable
   {
-    auto status = multi_stepper.updateSurfaceStatus(
-        multi_state, *start_surface, 0, Direction::Forward,
-        BoundaryTolerance::Infinite());
+    auto status = multi_stepper.updateSurfaceStatus(multi_state, *start_surface,
+                                                    0, Direction::Forward,
+                                                    BoundaryCheck(false));
 
     BOOST_CHECK_EQUAL(status, Intersection3D::Status::reachable);
 
@@ -567,15 +563,14 @@ void test_component_bound_state() {
   // Step forward now
   {
     multi_stepper.updateSurfaceStatus(multi_state, *right_surface, 0,
-                                      Direction::Forward,
-                                      BoundaryTolerance::Infinite());
+                                      Direction::Forward, BoundaryCheck(false));
     auto multi_prop_state = DummyPropState(Direction::Forward, multi_state);
     multi_stepper.step(multi_prop_state, mockNavigator);
 
     // Single stepper
     single_stepper.updateSurfaceStatus(single_state, *right_surface, 0,
                                        Direction::Forward,
-                                       BoundaryTolerance::Infinite());
+                                       BoundaryCheck(false));
     auto single_prop_state = DummyPropState(Direction::Forward, single_state);
     single_stepper.step(single_prop_state, mockNavigator);
   }
@@ -796,11 +791,8 @@ void propagator_instatiation_test_function() {
   Propagator<multi_stepper_t, Navigator> propagator(
       std::move(multi_stepper), Navigator{Navigator::Config{}});
 
-  auto surface =
-      Acts::CurvilinearSurface(Vector3::Zero(), Vector3{1.0, 0.0, 0.0})
-          .planeSurface();
-  using PropagatorOptions =
-      typename Propagator<multi_stepper_t, Navigator>::template Options<>;
+  auto surface = Acts::Surface::makeShared<Acts::PlaneSurface>(
+      Vector3::Zero(), Vector3{1.0, 0.0, 0.0});
   PropagatorOptions options(geoCtx, magCtx);
 
   std::vector<std::tuple<double, BoundVector, std::optional<BoundSquareMatrix>>>

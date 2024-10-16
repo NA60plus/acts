@@ -326,59 +326,90 @@ function simulation() {
     config="CI/physmon/config/simulation.yml"
 
     run Examples/Scripts/generic_plotter.py \
-        $outdir/data/simulation/particles_${suffix}.root \
-        particles \
-        $outdir/data/simulation/particles_${suffix}_hist.root \
+        $outdir/performance_amvf_ttbar.root \
+        vertexing \
+        $outdir/performance_amvf_ttbar_hist.root \
         --silent \
-        --config $config
+        --config CI/physmon/vertexing_ttbar_config.yml
+    ec=$(($ec | $?))
+
+    run Examples/Scripts/generic_plotter.py \
+        $outdir/tracksummary_ckf_ttbar.root \
+        tracksummary \
+        $outdir/tracksummary_ckf_ttbar_hist.root \
+        --config CI/physmon/tracksummary_ckf_config.yml
     ec=$(($ec | $?))
 
     # remove ntuple file because it's large
-    rm $outdir/data/simulation/particles_${suffix}.root
+    rm $outdir/tracksummary_ckf_ttbar.root
 
     run_histcmp \
-        $outdir/data/simulation/particles_${suffix}_hist.root \
-        $refdir/simulation/particles_${suffix}_hist.root \
-        "Particles ${suffix}" \
-        simulation/particles_${suffix}.html \
-        simulation/particles_${suffix}_plots
-}
-
-function generation() {
-    run Examples/Scripts/generic_plotter.py \
-        $outdir/data/simulation/particles_ttbar.root \
-        particles \
-        $outdir/data/simulation/particles_ttbar_hist.root \
-        --silent \
-        --config CI/physmon/config/pythia8_ttbar.yml
+        $outdir/tracksummary_ckf_ttbar_hist.root \
+        $refdir/tracksummary_ckf_ttbar_hist.root \
+        "Track Summary CKF ttbar" \
+        tracksummary_ckf_ttbar
 
     # remove ntuple file because it's large
-    rm $outdir/data/simulation/particles_ttbar.root
+    rm $outdir/performance_amvf_ttbar.root
 
     run_histcmp \
-        $outdir/data/simulation/particles_ttbar_hist.root \
-        $refdir/simulation/particles_ttbar_hist.root \
-        "Particles ttbar" \
-        simulation/particles_ttbar.html \
-        simulation/particles_ttbar_plots
+        $outdir/performance_amvf_ttbar_hist.root \
+        $refdir/performance_amvf_ttbar_hist.root \
+        "AMVF ttbar" \
+        amvf_ttbar
 
     run Examples/Scripts/generic_plotter.py \
-        $outdir/data/simulation/vertices_ttbar.root \
-        vertices \
-        $outdir/data/simulation/vertices_ttbar_hist.root \
+        $outdir/performance_amvf_gridseeder_ttbar.root \
+        vertexing \
+        $outdir/performance_amvf_gridseeder_ttbar_hist.root \
         --silent \
-        --config CI/physmon/config/pythia8_ttbar.yml
+        --config CI/physmon/vertexing_ttbar_config.yml
+    ec=$(($ec | $?))
 
     # remove ntuple file because it's large
-    rm $outdir/data/simulation/vertices_ttbar.root
+    rm $outdir/performance_amvf_gridseeder_ttbar.root
 
     run_histcmp \
-        $outdir/data/simulation/vertices_ttbar_hist.root \
-        $refdir/simulation/vertices_ttbar_hist.root \
-        "Vertices ttbar" \
-        simulation/vertices_ttbar.html \
-        simulation/vertices_ttbar_plots
-}
+        $outdir/performance_amvf_gridseeder_ttbar_hist.root \
+        $refdir/performance_amvf_gridseeder_ttbar_hist.root \
+        "AMVF (+grid seeder) ttbar" \
+        amvf_gridseeder_ttbar
+fi
+
+if [[ "$mode" == "all" || "$mode" == "gsf" ]]; then
+    run_histcmp \
+        $outdir/performance_gsf.root \
+        $refdir/performance_gsf.root \
+        "Truth tracking (GSF)" \
+        gsf \
+        -c CI/physmon/gsf.yml
+fi
+
+if [[ "$mode" == "all" || "$mode" == "kalman" ]]; then
+    run_histcmp \
+        $outdir/performance_truth_tracking.root \
+        $refdir/performance_truth_tracking.root \
+        "Truth tracking" \
+        truth_tracking \
+        -c CI/physmon/truth_tracking.yml
+fi
+
+if [[ "$mode" == "all" || "$mode" == "gx2f" ]]; then
+    run_histcmp \
+        $outdir/performance_gx2f.root \
+        $refdir/performance_gx2f.root \
+        "Truth tracking (GX2F)" \
+        gx2f \
+        -c CI/physmon/gx2f.yml
+fi
+
+if [[ "$mode" == "all" || "$mode" == "vertexing" ]]; then
+    run Examples/Scripts/vertex_mu_scan.py \
+        $outdir/performance_vertexing_*mu*.root \
+        $outdir/vertexing_mu_scan.pdf
+
+    rm $outdir/performance_vertexing_*mu*
+fi
 
 if [[ "$mode" == "all" || "$mode" == "simulation" ]]; then
     simulation fatras

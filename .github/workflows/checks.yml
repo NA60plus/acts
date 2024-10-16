@@ -15,9 +15,7 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    env:
-      PRE_COMMIT_HOME: '/tmp/pre-commit'
-
+    container: ghcr.io/acts-project/format14:v41
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -15,6 +15,7 @@
 
 #include <limits>
 #include <memory>
+#include <iostream>
 #include <vector>
 
 namespace Acts {
@@ -44,7 +45,8 @@ struct SeedFinderConfig {
 
   /// Vector containing the z-bin edges for non equidistant binning in z
   std::vector<float> zBinEdges;
-
+  
+  bool verbose=false;
   /// Order of z bins to loop over when searching for SPs
   std::vector<std::size_t> zBinsCustomLooping = {};
 
@@ -58,8 +60,8 @@ struct SeedFinderConfig {
   /// The range can be defined manually with (rMinMiddle, rMaxMiddle). If
   /// useVariableMiddleSPRange is set to false and the vector rRangeMiddleSP is
   /// empty, we use (rMinMiddle, rMaxMiddle) to cut the middle space-points
-  float rMinMiddle = 60.f * Acts::UnitConstants::mm;
-  float rMaxMiddle = 120.f * Acts::UnitConstants::mm;
+  float rMinMiddle = 3500.f * Acts::UnitConstants::mm;
+  float rMaxMiddle = 4000.f * Acts::UnitConstants::mm;
   /// If useVariableMiddleSPRange is set to false, the vector rRangeMiddleSP can
   /// be used to define a fixed r range for each z bin: {{rMin, rMax}, ...}
   bool useVariableMiddleSPRange = false;
@@ -96,7 +98,8 @@ struct SeedFinderConfig {
 
   /// Maximum allowed cotTheta between two space-points in doublet, used to
   /// check if forward angle is within bounds
-  float cotThetaMax = 10.01788;  // equivalent to eta = 3 (pseudorapidity)
+  // equivalent to 2.7 eta (pseudorapidity)
+  float cotThetaMax = 7.40627;
 
   /// Limiting location of collision region in z-axis used to check if doublet
   /// origin is within reasonable bounds
@@ -129,7 +132,7 @@ struct SeedFinderConfig {
   float impactMax = 20. * Acts::UnitConstants::mm;
   /// Parameter which can loosen the tolerance of the track seed to form a
   /// helix. This is useful for e.g. misaligned seeding.
-  float helixCutTolerance = 1.;
+  float helixCutTolerance = 1000.;
 
   /// Seeding parameters used for quality seed confirmation
 
@@ -176,18 +179,24 @@ struct SeedFinderConfig {
   /// measurement from strips on back-to-back modules.
   /// Enables setting of the following delegates.
   bool useDetailedDoubleMeasurementInfo = false;
-
-  Delegate<bool(const SpacePoint&)> spacePointSelector{
-      DelegateFuncTag<voidSpacePointSelector>{}};
-
-  static bool voidSpacePointSelector(const SpacePoint& /*sp*/) { return true; }
-
+  /// Returns half of the length of the top strip.
+  Delegate<float(const SpacePoint&)> getTopHalfStripLength;
+  /// Returns half of the length of the bottom strip.
+  Delegate<float(const SpacePoint&)> getBottomHalfStripLength;
+  /// Returns direction of the top strip.
+  Delegate<Acts::Vector3(const SpacePoint&)> getTopStripDirection;
+  /// Returns direction of the bottom strip.
+  Delegate<Acts::Vector3(const SpacePoint&)> getBottomStripDirection;
+  /// Returns distance between the centers of the two strips.
+  Delegate<Acts::Vector3(const SpacePoint&)> getStripCenterDistance;
+  /// Returns position of the center of the top strip.
+  Delegate<Acts::Vector3(const SpacePoint&)> getTopStripCenterPosition;
   /// Tolerance parameter used to check the compatibility of space-point
   /// coordinates in xyz. This is only used in a detector specific check for
   /// strip modules
   float toleranceParam = 1.1 * Acts::UnitConstants::mm;
 
-  // Delegate to apply experiment specific cuts during doublet finding
+  // Delegate to apply experiment specific cuts
   Delegate<bool(float /*bottomRadius*/, float /*cotTheta*/)> experimentCuts{
       DelegateFuncTag<&noopExperimentCuts>{}};
 
@@ -308,6 +317,22 @@ struct SeedFinderOptions {
         options.pT2perRadius * std::pow(2 * config.sigmaScattering, 2);
     options.multipleScattering2 =
         config.maxScatteringAngle2 * std::pow(config.sigmaScattering, 2);
+
+	  std::cout << "NA60+_options.bFieldInZ= " << options.bFieldInZ << std::endl;
+     options.pTPerHelixRadius = 1_T * 1e6 * options.bFieldInZ;
+	  std::cout << "NA60+_1_T= " << 1_T << std::endl;
+	  std::cout << "NA60+_options.pTPerHelixRadius= " << options.pTPerHelixRadius << std::endl;
+	  std::cout << "NA60+_config.minPt= " << config.minPt << std::endl;
+     options.minHelixDiameter2 =
+         std::pow(config.minPt * 2 / options.pTPerHelixRadius, 2);
+	  std::cout << "NA60+_options.minHelixDiameter2= " << options.minHelixDiameter2 << std::endl;
+     options.pT2perRadius =
+         std::pow(config.highland / options.pTPerHelixRadius, 2);
+     options.sigmapT2perRadius =
+         options.pT2perRadius * std::pow(2 * config.sigmaScattering, 2);
+     options.multipleScattering2 =
+         config.maxScatteringAngle2 * std::pow(config.sigmaScattering, 2);
+	  std::cout << "NA60+_options.multipleScattering2= " << options.multipleScattering2 << std::endl;
     return options;
   }
 };

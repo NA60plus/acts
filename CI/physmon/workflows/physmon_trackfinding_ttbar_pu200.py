@@ -56,7 +56,6 @@ with tempfile.TemporaryDirectory() as temp:
             stddev=acts.Vector4(0.0125 * u.mm, 0.0125 * u.mm, 55.5 * u.mm, 5.0 * u.ns),
         ),
         rnd=rnd,
-        outputDirRoot=tp,
     )
 
     addFatras(
@@ -186,14 +185,12 @@ with tempfile.TemporaryDirectory() as temp:
             tp / f"performance_vertexing_{vertexing}.root",
         )
 
-    for file in [
-        "performance_seeding.root",
-        "tracksummary_ckf.root",
-        "performance_ckf.root",
-        "performance_ckf_ambi.root",
-        "performance_vertexing_amvf_gauss_notime.root",
-        "performance_vertexing_amvf_grid_time.root",
-    ]:
-        perf_file = tp / file
-        assert perf_file.exists(), f"Performance file not found {perf_file}"
-        shutil.copy(perf_file, setup.outdir / file)
+    for stem in [
+        "performance_ckf",
+        "tracksummary_ckf",
+        "performance_amvf",
+        "performance_amvf_gridseeder",
+    ] + (["performance_seeding", "performance_ambi"]):
+        perf_file = tp / f"{stem}.root"
+        assert perf_file.exists(), "Performance file not found"
+        shutil.copy(perf_file, setup.outdir / f"{stem}_ttbar.root")

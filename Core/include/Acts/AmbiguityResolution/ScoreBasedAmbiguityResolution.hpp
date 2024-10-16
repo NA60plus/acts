@@ -118,7 +118,8 @@ class ScoreBasedAmbiguityResolution {
   /// The optional cuts,weights and score are used to remove tracks that are not
   /// good enough, based on some criteria. Users are free to add their own cuts
   /// with the help of this struct.
-  template <TrackProxyConcept track_proxy_t>
+  template <typename track_container_t, typename traj_t,
+            template <typename> class holder_t, bool ReadOnly>
   struct OptionalCuts {
     using OptionalFilter = std::function<bool(const track_proxy_t&)>;
 
@@ -157,7 +158,8 @@ class ScoreBasedAmbiguityResolution {
   /// @param trackFeaturesVectors is the trackFeatures map from detector ID to trackFeatures
   /// @param optionalCuts is the user defined optional cuts to be applied.
   /// @return a vector of scores for each track
-  template <TrackContainerFrontend track_container_t>
+  template <typename track_container_t, typename traj_t,
+            template <typename> class holder_t, bool ReadOnly>
   std::vector<double> simpleScore(
       const track_container_t& tracks,
       const std::vector<std::vector<TrackFeatures>>& trackFeaturesVectors,
@@ -170,7 +172,8 @@ class ScoreBasedAmbiguityResolution {
   /// @param trackFeaturesVectors is the trackFeatures map from detector ID to trackFeatures
   /// @param optionalCuts is the user defined optional cuts to be applied.
   /// @return a vector of scores for each track
-  template <TrackContainerFrontend track_container_t>
+  template <typename track_container_t, typename traj_t,
+            template <typename> class holder_t, bool ReadOnly>
   std::vector<double> ambiguityScore(
       const track_container_t& tracks,
       const std::vector<std::vector<TrackFeatures>>& trackFeaturesVectors,
@@ -199,7 +202,8 @@ class ScoreBasedAmbiguityResolution {
   /// @param trackFeaturesVectors is the map of detector id to trackFeatures for each track
   /// @param optionalCuts is the optional cuts to be applied
   /// @return a vector of IDs of the tracks we want to keep
-  template <TrackContainerFrontend track_container_t>
+  template <typename track_container_t, typename traj_t,
+            template <typename> class holder_t, bool ReadOnly>
   std::vector<int> solveAmbiguity(
       const track_container_t& tracks,
       const std::vector<std::vector<MeasurementInfo>>& measurementsPerTrack,

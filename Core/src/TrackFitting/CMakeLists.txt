@@ -1,16 +1,15 @@
 target_sources(
-    ActsCore
-    PRIVATE
-        KalmanFitterError.cpp
-        GainMatrixUpdater.cpp
-        GainMatrixSmoother.cpp
-        GlobalChiSquareFitterError.cpp
-        GsfError.cpp
-        GsfUtils.cpp
-        BetheHeitlerApprox.cpp
-        GsfMixtureReduction.cpp
-        GlobalChiSquareFitter.cpp
-        MbfSmoother.cpp
+  ActsCore
+  PRIVATE
+    KalmanFitterError.cpp
+    GainMatrixUpdater.cpp
+    GainMatrixSmoother.cpp
+    GlobalChiSquareFitterError.cpp
+    GsfError.cpp
+    GsfUtils.cpp
+    BetheHeitlerApprox.cpp
+    GsfMixtureReduction.cpp
+    GlobalChiSquareFitter.cpp
 )
 
 foreach(DIM RANGE 1 6)

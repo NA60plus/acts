@@ -1,6 +1,6 @@
 // This file is part of the ACTS project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -67,12 +67,28 @@ class IterativeVertexFinderAlgorithm final : public IAlgorithm {
     std::string outputProtoVertices;
     /// Output vertex collection
     std::string outputVertices = "vertices";
-
     /// The magnetic field
     std::shared_ptr<Acts::MagneticFieldProvider> bField;
 
-    /// Maximum number of iterations for the vertex finding
-    int maxIterations = 1000;
+    double significanceCutSeeding = 10;
+    double maximumChi2cutForSeeding = 36.;
+    int maxVertices = 1;
+
+    /// Assign a certain fraction of compatible tracks to a different (so-called
+    /// split) vertex if boolean is set to true.
+    bool createSplitVertices = false;
+    /// Inverse of the fraction of tracks that will be assigned to the split
+    /// vertex. E.g., if splitVerticesTrkInvFraction = 2, about 50% of
+    /// compatible tracks will be assigned to the split vertex.
+    int splitVerticesTrkInvFraction = 2;
+    bool reassignTracksAfterFirstFit = false;
+    bool doMaxTracksCut = false;
+    int maxTracks = 5000;
+    double cutOffTrackWeight = 0.01;
+    /// If `reassignTracksAfterFirstFit` is set this threshold will be used to
+    /// decide if a track should be checked for reassignment to other vertices
+    double cutOffTrackWeightReassign = 1;
+    double rejectedFraction = 0.;
   };
 
   IterativeVertexFinderAlgorithm(const Config& config,
@@ -97,6 +113,7 @@ class IterativeVertexFinderAlgorithm final : public IAlgorithm {
       this, "OutputProtoVertices"};
 
   WriteDataHandle<VertexCollection> m_outputVertices{this, "OutputVertices"};
+
 };
 
 }  // namespace ActsExamples

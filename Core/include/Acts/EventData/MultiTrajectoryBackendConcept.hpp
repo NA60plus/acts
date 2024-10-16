@@ -17,11 +17,15 @@
 #include "Acts/Utilities/HashedString.hpp"
 
 #include <any>
+#include <iterator>
+#include <type_traits>
+
+#if defined(__cpp_concepts)
+#include <concepts>
 
 namespace Acts {
 
 namespace detail {
-
 using Parameters = Eigen::Map<BoundVector>;
 using Covariance = Eigen::Map<BoundMatrix>;
 
@@ -54,13 +58,13 @@ concept CommonMultiTrajectoryBackend =
 
       { cv.jacobian_impl(istate) } -> std::same_as<detail::ConstCovariance>;
 
-      {
-        cv.template calibrated_impl<2>(istate)
-      } -> std::same_as<Eigen::Map<const ActsVector<2>>>;
+  {
+    cv.template measurement_impl<2>(istate)
+    } -> std::same_as<Eigen::Map<const ActsVector<2>>>;
 
-      {
-        cv.template calibratedCovariance_impl<2>(istate)
-      } -> std::same_as<Eigen::Map<const ActsSquareMatrix<2>>>;
+  {
+    cv.template measurementCovariance_impl<2>(istate)
+    } -> std::same_as<Eigen::Map<const ActsSquareMatrix<2>>>;
 
       { cv.has_impl(key, istate) } -> std::same_as<bool>;
 
@@ -84,14 +88,14 @@ concept ConstMultiTrajectoryBackend =
 
       { v.jacobian_impl(istate) } -> std::same_as<detail::ConstCovariance>;
 
-      {
-        v.template calibrated_impl<2>(istate)
-      } -> std::same_as<Eigen::Map<const ActsVector<2>>>;
+  {
+    v.template measurement_impl<2>(istate)
+    } -> std::same_as<Eigen::Map<const ActsVector<2>>>;
 
-      {
-        v.template calibratedCovariance_impl<2>(istate)
-      } -> std::same_as<Eigen::Map<const ActsSquareMatrix<2>>>;
-    };
+  {
+    v.template measurementCovariance_impl<2>(istate)
+    } -> std::same_as<Eigen::Map<const ActsSquareMatrix<2>>>;
+};
 
 template <typename T>
 concept MutableMultiTrajectoryBackend =
@@ -105,13 +109,13 @@ concept MutableMultiTrajectoryBackend =
 
       { v.jacobian_impl(istate) } -> std::same_as<detail::Covariance>;
 
-      {
-        v.template calibrated_impl<2>(istate)
-      } -> std::same_as<Eigen::Map<ActsVector<2>>>;
+  {
+    v.template measurement_impl<2>(istate)
+    } -> std::same_as<Eigen::Map<ActsVector<2>>>;
 
-      {
-        v.template calibratedCovariance_impl<2>(istate)
-      } -> std::same_as<Eigen::Map<ActsSquareMatrix<2>>>;
+  {
+    v.template measurementCovariance_impl<2>(istate)
+    } -> std::same_as<Eigen::Map<ActsSquareMatrix<2>>>;
 
       { v.addTrackState_impl() } -> std::same_as<TrackIndexType>;
 
@@ -140,3 +144,4 @@ concept MutableMultiTrajectoryBackend =
     };
 
 }  // namespace Acts
+#endif

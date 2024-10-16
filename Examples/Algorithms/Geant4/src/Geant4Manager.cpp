@@ -1,6 +1,6 @@
 // This file is part of the ACTS project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -19,6 +19,7 @@
 #include <G4EmParameters.hh>
 #include <G4HadronicParameters.hh>
 #include <G4HadronicProcessStore.hh>
+#include <G4Profiler.hh>
 #include <G4RunManager.hh>
 #include <G4RunManagerFactory.hh>
 #include <G4UserEventAction.hh>

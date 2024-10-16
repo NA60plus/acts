@@ -3,27 +3,26 @@ include(ActsTargetLinkLibrariesSystem)
 set(ActsExamplesFramework_SOURCES)
 
 add_library(
-    ActsExamplesFramework
-    SHARED
-    src/EventData/Measurement.cpp
-    src/EventData/MeasurementCalibration.cpp
-    src/EventData/ScalingCalibrator.cpp
-    src/Framework/IAlgorithm.cpp
-    src/Framework/SequenceElement.cpp
-    src/Framework/WhiteBoard.cpp
-    src/Framework/RandomNumbers.cpp
-    src/Framework/Sequencer.cpp
-    src/Utilities/EventDataTransforms.cpp
-    src/Utilities/Paths.cpp
-    src/Utilities/Options.cpp
-    src/Utilities/Helpers.cpp
-    src/Validation/DuplicationPlotTool.cpp
-    src/Validation/EffPlotTool.cpp
-    src/Validation/FakeRatePlotTool.cpp
-    src/Validation/ResPlotTool.cpp
-    src/Validation/TrackClassification.cpp
-    src/Validation/TrackSummaryPlotTool.cpp
-)
+  ActsExamplesFramework SHARED
+  src/EventData/MeasurementCalibration.cpp
+  src/EventData/ScalingCalibrator.cpp
+  src/Framework/IAlgorithm.cpp
+  src/Framework/SequenceElement.cpp
+  src/Framework/WhiteBoard.cpp
+  src/Framework/RandomNumbers.cpp
+  src/Framework/Sequencer.cpp
+  src/Utilities/EventDataTransforms.cpp
+  src/Utilities/Paths.cpp
+  src/Utilities/Options.cpp
+  src/Utilities/Helpers.cpp
+  src/Validation/DuplicationPlotTool.cpp
+  src/Validation/EffPlotTool.cpp
+  src/Validation/FakeRatePlotTool.cpp
+  src/Validation/ResPlotTool.cpp
+  src/Validation/TrackClassification.cpp
+  src/Validation/TrackSummaryPlotTool.cpp
+  src/Validation/TrkVtxPlotTool.cpp
+  )
 
 target_include_directories(
     ActsExamplesFramework

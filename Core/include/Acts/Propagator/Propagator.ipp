@@ -167,19 +167,17 @@ auto Acts::Propagator<S, N>::makeState(
   auto actorList = options.actorList.append(pathAborter);
 
   // The expanded options (including path limit)
-  auto eOptions = options.extend(actorList);
-  eOptions.navigation.startSurface = &start.referenceSurface();
-  eOptions.navigation.targetSurface = nullptr;
+  auto eOptions = options.extend(abortList);
   using OptionsType = decltype(eOptions);
-  using StateType =
-      actor_list_t_state_t<OptionsType,
-                           typename propagator_options_t::actor_list_type>;
   // Initialize the internal propagator state
+  using StateType =
+      action_list_t_state_t<OptionsType,
+                            typename propagator_options_t::action_list_type>;
   StateType state{
       eOptions,
       m_stepper.makeState(eOptions.geoContext, eOptions.magFieldContext, start,
-                          eOptions.stepping.maxStepSize),
-      m_navigator.makeState(eOptions.navigation)};
+                          eOptions.maxStepSize),
+      m_navigator.makeState(&start.referenceSurface(), nullptr)};
 
   static_assert(
       detail::propagator_stepper_compatible_with<S, StateType, N>,
@@ -208,9 +206,7 @@ auto Acts::Propagator<S, N>::makeState(
   auto actorList = options.actorList.append(targetAborter, pathAborter);
 
   // Create the extended options and declare their type
-  auto eOptions = options.extend(actorList);
-  eOptions.navigation.startSurface = &start.referenceSurface();
-  eOptions.navigation.targetSurface = &target;
+  auto eOptions = options.extend(abortList);
   using OptionsType = decltype(eOptions);
 
   // Initialize the internal propagator state
@@ -220,8 +216,8 @@ auto Acts::Propagator<S, N>::makeState(
   StateType state{
       eOptions,
       m_stepper.makeState(eOptions.geoContext, eOptions.magFieldContext, start,
-                          eOptions.stepping.maxStepSize),
-      m_navigator.makeState(eOptions.navigation)};
+                          eOptions.maxStepSize),
+      m_navigator.makeState(&start.referenceSurface(), &target)};
 
   static_assert(
       detail::propagator_stepper_compatible_with<S, StateType, N>,
@@ -348,11 +344,8 @@ Acts::Result<Acts::BoundTrackParameters>
 Acts::detail::BasePropagatorHelper<derived_t>::propagateToSurface(
     const BoundTrackParameters& start, const Surface& target,
     const Options& options) const {
-  using ResultType = Result<typename derived_t::template actor_list_t_result_t<
-      BoundTrackParameters, ActorList<>>>;
-  using DerivedOptions = typename derived_t::template Options<>;
-
-  DerivedOptions derivedOptions(options);
+  using ResultType = Result<typename derived_t::template action_list_t_result_t<
+      BoundTrackParameters, ActionList<>>>;
 
   // dummy initialization
   ResultType res = ResultType::failure(PropagatorError::Failure);
@@ -361,14 +354,14 @@ Acts::detail::BasePropagatorHelper<derived_t>::propagateToSurface(
   // is sometimes not met.
   if (target.type() == Surface::SurfaceType::Perigee) {
     res = static_cast<const derived_t*>(this)
-              ->template propagate<BoundTrackParameters, DerivedOptions,
+              ->template propagate<BoundTrackParameters, PropagatorOptions<>,
                                    ForcedSurfaceReached, PathLimitReached>(
-                  start, target, derivedOptions);
+                  start, target, options);
   } else {
     res = static_cast<const derived_t*>(this)
-              ->template propagate<BoundTrackParameters, DerivedOptions,
+              ->template propagate<BoundTrackParameters, PropagatorOptions<>,
                                    SurfaceReached, PathLimitReached>(
-                  start, target, derivedOptions);
+                  start, target, options);
   }
 
   if (res.ok()) {

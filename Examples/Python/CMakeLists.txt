@@ -29,7 +29,9 @@ pybind11_add_module(ActsPythonBindings
   src/Vertexing.cpp
   src/AmbiguityResolution.cpp
   src/EventData.cpp
-  src/Utilities.cpp
+  src/FilterMeasurements.cpp
+  src/MergeContainers.cpp
+  #src/Matching.cpp
 )
 install(TARGETS ActsPythonBindings DESTINATION ${_python_install_dir})
 
@@ -42,32 +44,34 @@ set_target_properties(
     PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${_python_dir}/acts
 )
 
-target_link_libraries(
-    ActsPythonBindings
-    PUBLIC
-        ActsCore
-        ActsPythonUtilities
-        ActsExamplesFramework
-        ActsExamplesGeometry
-        ActsExamplesDetectorGeneric
-        ActsExamplesDetectorContextual
-        ActsExamplesDetectorTGeo
-        ActsExamplesMagneticField
-        ActsExamplesIoRoot
-        ActsExamplesIoNuclearInteractions
-        ActsExamplesIoCsv
-        ActsExamplesIoObj
-        ActsExamplesIoJson
-        ActsExamplesIoPerformance
-        ActsExamplesGenerators
-        ActsExamplesPrinters
-        ActsExamplesTrackFinding
-        ActsExamplesTrackFitting
-        ActsExamplesVertexing
-        ActsExamplesFatras
-        ActsExamplesDetectorTelescope
-        ActsExamplesUtilities
-        ActsExamplesAmbiguityResolution
+target_link_libraries(ActsPythonBindings PUBLIC
+  ActsCore
+  ActsPythonUtilities
+  ActsExamplesFramework
+  ActsExamplesGeometry
+  ActsExamplesDetectorGeneric
+  ActsExamplesDetectorContextual
+  ActsExamplesDetectorTGeo
+  ActsExamplesMagneticField
+  ActsExamplesIoRoot
+  ActsExamplesIoNuclearInteractions
+  ActsExamplesIoCsv
+  ActsExamplesIoObj
+  ActsExamplesIoJson
+  ActsExamplesIoPerformance
+  ActsExamplesGenerators
+  ActsExamplesPrinters
+  ActsExamplesTrackFinding
+  ActsExamplesTrackFitting
+  ActsExamplesVertexing
+  ActsExamplesFatras
+  ActsExamplesDetectorTelescope
+  ActsExamplesUtilities
+  ActsExamplesAmbiguityResolution
+  ActsExamplesFilterMeasurements
+  ActsExamplesMergeContainers
+  ActsExamplesMatching
+  ActsExamplesTransportParticles
 )
 
 set(py_files
@@ -92,19 +96,6 @@ if(ACTS_BUILD_PLUGIN_GEOMODEL)
     target_sources(ActsPythonBindings PRIVATE src/GeoModel.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/GeoModelStub.cpp)
-endif()
-
-if(ACTS_BUILD_PLUGIN_TRACCC)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginDetray)
-    target_sources(ActsPythonBindings PRIVATE src/Detray.cpp)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginCovfie)
-    target_sources(ActsPythonBindings PRIVATE src/Covfie.cpp)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesTraccc)
-    target_sources(ActsPythonBindings PRIVATE src/Traccc.cpp)
-else()
-    target_sources(ActsPythonBindings PRIVATE src/DetrayStub.cpp)
-    target_sources(ActsPythonBindings PRIVATE src/CovfieStub.cpp)
-    target_sources(ActsPythonBindings PRIVATE src/TracccStub.cpp)
 endif()
 
 if(ACTS_BUILD_PLUGIN_ACTSVG)

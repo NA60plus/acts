@@ -139,7 +139,7 @@ void addPropagation(Context& ctx) {
 
   {
     addPropagator<Acts::EigenStepper<>, Acts::Experimental::DetectorNavigator>(
-        prop, "EigenDetector");
+        prop, "EigenNext");
   }
 
   // ATLAS based stepper
@@ -151,37 +151,12 @@ void addPropagation(Context& ctx) {
   }
 
   {
-    addPropagator<Acts::AtlasStepper, Acts::Experimental::DetectorNavigator>(
-        prop, "AtlasDetector");
-  }
-
-  // Sympy based stepper
-  {
-    auto stepper = py::class_<Acts::SympyStepper>(m, "SympyStepper");
-    stepper.def(py::init<std::shared_ptr<const Acts::MagneticFieldProvider>>());
-
-    addPropagator<Acts::SympyStepper, Acts::Navigator>(prop, "Sympy");
-  }
-
-  {
-    addPropagator<Acts::SympyStepper, Acts::Experimental::DetectorNavigator>(
-        prop, "SympyDetector");
-  }
-
-  // Straight line stepper
-  {
     auto stepper =
         py::class_<Acts::StraightLineStepper>(m, "StraightLineStepper");
     stepper.def(py::init<>());
 
     addPropagator<Acts::StraightLineStepper, Acts::Navigator>(prop,
                                                               "StraightLine");
-  }
-
-  {
-    addPropagator<Acts::StraightLineStepper,
-                  Acts::Experimental::DetectorNavigator>(
-        prop, "StraightLineDetector");
   }
 }
 

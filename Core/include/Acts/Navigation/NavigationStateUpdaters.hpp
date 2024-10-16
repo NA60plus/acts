@@ -47,21 +47,18 @@ inline void intitializeCandidates(const GeometryContext& gctx,
 
   for (auto& sc : nState.surfaceCandidates) {
     // Get the surface representation: either native surface of portal
-    const Surface& surface =
-        sc.surface != nullptr ? *sc.surface : sc.portal->surface();
-    // Only allow overstepping if it's not a portal
-    ActsScalar overstepTolerance =
-        sc.portal != nullptr ? s_onSurfaceTolerance : nState.overstepTolerance;
-    // Boundary tolerance is forced to 0 for portals
-    BoundaryTolerance boundaryTolerance =
-        sc.portal != nullptr ? BoundaryTolerance::None() : sc.boundaryTolerance;
-    // Check the surface intersection
-    auto sIntersection = surface.intersect(
-        gctx, position, direction, boundaryTolerance, s_onSurfaceTolerance);
+    const Surface& sRep =
+        c.surface != nullptr ? *c.surface : c.portal->surface();
+
+    // Get the intersection @todo make a templated intersector
+    // TODO surface tolerance
+    auto sIntersection = sRep.intersect(gctx, position, direction,
+                                        c.boundaryCheck, s_onSurfaceTolerance);
     for (auto& si : sIntersection.split()) {
-      if (si.isValid() && si.pathLength() > overstepTolerance) {
-        confirmedCandidates.emplace_back(NavigationState::SurfaceCandidate{
-            si, sc.surface, sc.portal, boundaryTolerance});
+      c.objectIntersection = si;
+      if (c.objectIntersection &&
+          c.objectIntersection.pathLength() > nState.overstepTolerance) {
+        nextSurfaceCandidates.emplace_back(c);
       }
     }
   }

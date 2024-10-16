@@ -233,52 +233,39 @@ ProcessCode RootTrackParameterWriter::writeT(
     identifyContributingParticles(hitParticlesMap, ptrack, particleHitCounts);
 
     if (particleHitCounts.size() == 1) {
-      m_t_matched = true;
-      m_t_particleId = particleHitCounts.front().particleId.value();
-      m_nMajorityHits = particleHitCounts.front().hitCount;
-
-      // Get the index of the first space point
-      const auto& hitIdx = ptrack.front();
-      // Get the sim hits via the measurement to sim hits map
-      auto indices = makeRange(hitSimHitsMap.equal_range(hitIdx));
-      auto [truthLocal, truthPos4, truthUnitDir] =
-          averageSimHits(ctx.geoContext, surface, simHits, indices, logger());
-
-      // Get the truth track parameter at the first space point
-      m_t_loc0 = truthLocal[Acts::ePos0];
-      m_t_loc1 = truthLocal[Acts::ePos1];
-      m_t_phi = phi(truthUnitDir);
-      m_t_theta = theta(truthUnitDir);
-      m_t_qop = NaNfloat;
-      m_t_time = truthPos4[Acts::eTime];
-
-      m_t_charge = 0;
-      m_t_p = NaNfloat;
-      m_t_pt = NaNfloat;
-      m_t_eta = eta(truthUnitDir);
-
-      // momentum averaging makes even less sense than averaging position and
-      // direction. use the first momentum or set q/p to zero
-      if (!indices.empty()) {
-        // we assume that the indices are within valid ranges so we do not
-        // need to check their validity again.
-        const auto simHitIdx0 = indices.begin()->second;
-        const auto& simHit0 = *simHits.nth(simHitIdx0);
-        const auto p =
-            simHit0.momentum4Before().template segment<3>(Acts::eMom0);
-        const auto& particleId = simHit0.particleId();
-        // The truth charge has to be retrieved from the sim particle
-        if (auto ip = particles.find(particleId); ip != particles.end()) {
-          const auto& particle = *ip;
-          m_t_charge = static_cast<int>(particle.charge());
-          m_t_qop = particle.hypothesis().qOverP(p.norm(), particle.charge());
-          m_t_p = p.norm();
-          m_t_pt = perp(p);
-        } else {
-          ACTS_WARNING("Truth particle with barcode " << particleId << "="
-                                                      << particleId.value()
-                                                      << " not found!");
-        }
+      m_truthMatched = true;
+    }
+    // Get the index of the first space point
+    const auto& hitIdx = ptrack.front();
+    // Get the sim hits via the measurement to sim hits map
+    auto indices = makeRange(hitSimHitsMap.equal_range(hitIdx));
+    auto [truthLocal, truthPos4, truthUnitDir] =
+        averageSimHits(ctx.geoContext, surface, simHits, indices, logger());
+    // Get the truth track parameter at the first space point
+    m_t_loc0 = truthLocal[Acts::ePos0];
+    m_t_loc1 = truthLocal[Acts::ePos1];
+    m_t_phi = phi(truthUnitDir);
+    m_t_theta = theta(truthUnitDir);
+    m_t_time = truthPos4[Acts::eTime];
+    // momentum averaging makes even less sense than averaging position and
+    // direction. use the first momentum or set q/p to zero
+    if (!indices.empty()) {
+      // we assume that the indices are within valid ranges so we do not
+      // need to check their validity again.
+      const auto simHitIdx0 = indices.begin()->second;
+      const auto& simHit0 = *simHits.nth(simHitIdx0);
+      const auto p =
+          simHit0.momentum4Before().template segment<3>(Acts::eMom0).norm();
+      const auto& particleId = simHit0.particleId();
+      // The truth charge has to be retrieved from the sim particle
+      auto ip = particles.find(particleId);
+      if (ip != particles.end()) {
+        const auto& particle = *ip;
+        m_t_charge = static_cast<int>(particle.charge());
+        m_t_qop = m_t_charge / p;
+      } else {
+        ACTS_DEBUG("Truth particle with barcode "
+                   << particleId << "=" << particleId.value() << " not found!");
       }
 
       m_res_loc0 = m_loc0 - m_t_loc0;

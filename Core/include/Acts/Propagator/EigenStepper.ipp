@@ -176,7 +176,10 @@ Acts::Result<double> Acts::EigenStepper<E>::step(
     // This is given by the order of the Runge-Kutta method
     constexpr double exponent = 0.25;
 
-    double x = state.options.stepping.stepTolerance / errorEstimate_;
+    // Whether to use fast power function if available
+    constexpr bool tryUseFastPow{false};
+
+    double x = state.options.stepTolerance / errorEstimate_;
 
     if constexpr (exponent == 0.25) {
       // This is 3x faster than std::pow
@@ -192,8 +195,7 @@ Acts::Result<double> Acts::EigenStepper<E>::step(
     // For details about these values see ATL-SOFT-PUB-2009-001
     constexpr double marginFactor = 4.0;
 
-    return errorEstimate_ <=
-           marginFactor * state.options.stepping.stepTolerance;
+    return errorEstimate_ <= marginFactor * state.options.stepTolerance;
   };
 
   // The following functor starts to perform a Runge-Kutta step of a certain
@@ -273,14 +275,14 @@ Acts::Result<double> Acts::EigenStepper<E>::step(
 
     // If step size becomes too small the particle remains at the initial
     // place
-    if (std::abs(h) < std::abs(state.options.stepping.stepSizeCutOff)) {
+    if (std::abs(h) < std::abs(state.options.stepSizeCutOff)) {
       // Not moving due to too low momentum needs an aborter
       return EigenStepperError::StepSizeStalled;
     }
 
     // If the parameter is off track too much or given stepSize is not
     // appropriate
-    if (nStepTrials > state.options.stepping.maxRungeKuttaStepTrials) {
+    if (nStepTrials > state.options.maxRungeKuttaStepTrials) {
       // Too many trials, have to abort
       return EigenStepperError::StepSizeAdjustmentFailed;
     }
