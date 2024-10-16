@@ -27,6 +27,7 @@
 #include "Acts/Surfaces/PerigeeSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
+#include "Acts/TrackFitting/GainMatrixSmoother.hpp"
 #include "Acts/TrackFitting/GainMatrixUpdater.hpp"
 #include "Acts/Utilities/Enumerate.hpp"
 #include "Acts/Utilities/Logger.hpp"
@@ -172,6 +173,9 @@ void visitSeedIdentifiers(const TrackProxy& track, Visitor visitor) {
 
 class BranchStopper {
  public:
+  using Config =
+      std::optional<std::variant<Acts::TrackSelector::Config,
+                                 Acts::TrackSelector::EtaBinnedConfig>>;
   using BranchStopperResult =
       Acts::CombinatorialKalmanFilterBranchStopperResult;
 
@@ -185,13 +189,12 @@ class BranchStopper {
 
   mutable std::atomic<std::size_t> m_nStoppedBranches{0};
 
-  explicit BranchStopper(const TrackFindingAlgorithm::Config& config)
-      : m_cfg(config) {}
+  explicit BranchStopper(const Config& config) : m_config(config) {}
 
   BranchStopperResult operator()(
-      const TrackContainer::TrackProxy& track,
-      const TrackContainer::TrackStateProxy& trackState) const {
-    if (!m_cfg.trackSelectorCfg.has_value()) {
+      const Acts::CombinatorialKalmanFilterTipState& tipState,
+      Acts::VectorMultiTrajectory::TrackStateProxy& trackState) const {
+    if (!m_config.has_value()) {
       return BranchStopperResult::Continue;
     }
 
@@ -207,7 +210,7 @@ class BranchStopper {
             return config.hasCuts(eta) ? &config.getCuts(eta) : nullptr;
           }
         },
-        *m_cfg.trackSelectorCfg);
+        *m_config);
 
     if (singleConfig == nullptr) {
       ++m_nStoppedBranches;
@@ -252,7 +255,7 @@ class BranchStopper {
   }
 
  private:
-  const TrackFindingAlgorithm::Config& m_cfg;
+  Config m_config;
 };
 
 }  // namespace
@@ -294,6 +297,7 @@ TrackFindingAlgorithm::TrackFindingAlgorithm(Config config,
   m_inputInitialTrackParameters.initialize(m_cfg.inputInitialTrackParameters);
   m_inputSeeds.maybeInitialize(m_cfg.inputSeeds);
   m_outputTracks.initialize(m_cfg.outputTracks);
+  m_inputPrimaryVertex.initialize(m_cfg.inputPrimaryVertex);
 }
 
 ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
@@ -313,7 +317,7 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
 
   // Construct a perigee surface as the target surface
   auto pSurface = Acts::Surface::makeShared<Acts::PerigeeSurface>(
-      Acts::Vector3{0., 0., 0.});
+      Acts::Vector3{0., 0., 0*m_inputPrimaryVertex(ctx)});
 
   PassThroughCalibrator pcalibrator;
   MeasurementCalibratorAdapter calibrator(pcalibrator, measurements);
@@ -321,15 +325,17 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
   MeasurementSelector measSel{
       Acts::MeasurementSelector(m_cfg.measurementSelectorCfg)};
 
-  using Extensions = Acts::CombinatorialKalmanFilterExtensions<TrackContainer>;
+  using Extensions =
+      Acts::CombinatorialKalmanFilterExtensions<Acts::VectorMultiTrajectory>;
 
-  BranchStopper branchStopper(m_cfg);
+  BranchStopper branchStopper(m_cfg.trackSelectorCfg);
 
   Extensions extensions;
   extensions.calibrator.connect<&MeasurementCalibratorAdapter::calibrate>(
       &calibrator);
-  extensions.updater.connect<&Acts::GainMatrixUpdater::operator()<
-      typename TrackContainer::TrackStateContainerBackend>>(&kfUpdater);
+  extensions.updater.connect<
+      &Acts::GainMatrixUpdater::operator()<Acts::VectorMultiTrajectory>>(
+      &kfUpdater);
   extensions.measurementSelector.connect<&MeasurementSelector::select>(
       &measSel);
   extensions.branchStopper.connect<&BranchStopper::operator()>(&branchStopper);
@@ -340,16 +346,14 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
       slAccessorDelegate;
   slAccessorDelegate.connect<&IndexSourceLinkAccessor::range>(&slAccessor);
 
-  Acts::PropagatorPlainOptions firstPropOptions(ctx.geoContext,
-                                                ctx.magFieldContext);
+  Acts::PropagatorPlainOptions firstPropOptions;
   firstPropOptions.maxSteps = m_cfg.maxSteps;
   firstPropOptions.direction = m_cfg.reverseSearch ? Acts::Direction::Backward
                                                    : Acts::Direction::Forward;
   firstPropOptions.constrainToVolumeIds = m_cfg.constrainToVolumeIds;
   firstPropOptions.endOfWorldVolumeIds = m_cfg.endOfWorldVolumeIds;
 
-  Acts::PropagatorPlainOptions secondPropOptions(ctx.geoContext,
-                                                 ctx.magFieldContext);
+  Acts::PropagatorPlainOptions secondPropOptions;
   secondPropOptions.maxSteps = m_cfg.maxSteps;
   secondPropOptions.direction = firstPropOptions.direction.invert();
   secondPropOptions.constrainToVolumeIds = m_cfg.constrainToVolumeIds;

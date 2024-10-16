@@ -15,9 +15,6 @@
 #include "ActsExamples/EventData/Cluster.hpp"
 #include "ActsExamples/EventData/GeometryContainers.hpp"
 #include "ActsExamples/EventData/IndexSourceLink.hpp"
-#include <ActsExamples/Digitization/MeasurementCreation.hpp>
-
-#include <cmath>
 
 #include <TChain.h>
 #include <boost/container/static_vector.hpp>
@@ -308,7 +305,8 @@ RootAthenaDumpReader::readMeasurements(
     }
     ACTS_VERBOSE("Cluster " << im << ": " << CLhardware->at(im));
 
-    auto type = (CLhardware->at(im) == "PIXEL") ? ePixel : eStrip;
+    ACTS_VERBOSE(bec << " " << lydisk << " " << etamod << " " << phimod << " "
+                     << side << " ");
 
     // Make cluster
     // TODO refactor Cluster class so it is not so tedious
@@ -496,7 +494,6 @@ RootAthenaDumpReader::readSpacepoints(
   spacePoints.reserve(nSP);
 
   // Loop on space points
-  std::size_t skippedSpacePoints = 0;
   for (int isp = 0; isp < nSP; isp++) {
     auto isPhiOverlap = (SPisOverlap[isp] == 2) || (SPisOverlap[isp] == 3);
     auto isEtaOverlap = (SPisOverlap[isp] == 1) || (SPisOverlap[isp] == 3);

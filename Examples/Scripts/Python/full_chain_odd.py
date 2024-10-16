@@ -438,7 +438,7 @@ if args.reco:
     addVertexFitting(
         s,
         field,
-        vertexFinder=VertexFinder.AMVF,
+        vertexFinder=VertexFinder.Iterative,
         outputDirRoot=outputDir if args.output_root else None,
     )
 

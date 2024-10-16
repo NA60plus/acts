@@ -30,18 +30,24 @@ struct SeedFilterState {
   // compatible top required
   float rMaxSeedConf =
       std::numeric_limits<float>::max();  // Acts::UnitConstants::mm
+  // number of high quality seeds in seed confirmation
+  std::size_t numQualitySeeds = 0;
+  // number of seeds that did not pass the quality confirmation but were still
+  // accepted, if quality confirmation is not used this is the total number of
+  // seeds
+  std::size_t numSeeds = 0;
 };
 
 /// Filter seeds at various stages with the currently
 /// available information.
 template <typename external_spacepoint_t>
-class SeedFilter final {
+class SeedFilter {
  public:
   SeedFilter(SeedFilterConfig config,
              IExperimentCuts<external_spacepoint_t>* expCuts = nullptr);
 
   SeedFilter() = delete;
-  ~SeedFilter() = default;
+  virtual ~SeedFilter() = default;
 
   /// Create Seeds for the all seeds with the same bottom and middle
   /// space point and discard all others.
@@ -68,7 +74,8 @@ class SeedFilter final {
   /// Filter seeds once all seeds for one middle space point have been created
   /// @param mutableData Container for mutable variables used in the seeding
   /// @param candidates_collector collection of seed candidates
-  /// @param outputCollection Output container for the seeds
+  /// @param numQualitySeeds number of high quality seeds in seed confirmation
+  /// @param outIt Output iterator for the seeds
   /// for all seeds with the same middle space point
   template <typename collection_t>
   void filterSeeds_1SpFixed(
@@ -80,7 +87,7 @@ class SeedFilter final {
   /// @param mutableData Container for mutable variables used in the seeding
   /// @param candidates collection of seed candidates
   /// @param numQualitySeeds number of high quality seeds in seed confirmation
-  /// @param outputCollection Output container for the seeds
+  /// @param outIt Output iterator for the seeds
   /// for all seeds with the same middle space point
   template <typename collection_t>
   void filterSeeds_1SpFixed(

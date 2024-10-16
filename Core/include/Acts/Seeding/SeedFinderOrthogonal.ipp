@@ -363,8 +363,7 @@ void SeedFinderOrthogonal<external_spacepoint_t>::filterCandidates(
         bottom[b]->radius() > seedFilterState.rMaxSeedConf) {
       minCompatibleTopSPs = 1;
     }
-    if (m_config.seedConfirmation &&
-        candidates_collector.nHighQualityCandidates()) {
+    if (m_config.seedConfirmation && seedFilterState.numQualitySeeds) {
       minCompatibleTopSPs++;
     }
 

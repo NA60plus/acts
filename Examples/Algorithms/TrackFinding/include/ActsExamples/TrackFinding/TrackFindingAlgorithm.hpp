@@ -32,7 +32,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <variant>
 #include <vector>
@@ -53,7 +52,7 @@ class TrackFindingAlgorithm final : public IAlgorithm {
   /// and track finder options and returns some track-finder-specific result.
   using TrackFinderOptions =
       Acts::CombinatorialKalmanFilterOptions<IndexSourceLinkAccessor::Iterator,
-                                             TrackContainer>;
+                                             Acts::VectorMultiTrajectory>;
   using TrackFinderResult =
       Acts::Result<std::vector<TrackContainer::TrackProxy>>;
 
@@ -85,9 +84,10 @@ class TrackFindingAlgorithm final : public IAlgorithm {
     /// Input seeds. These are optional and allow for seed deduplication.
     /// The seeds must match the initial track parameters.
     std::string inputSeeds;
+    /// Input z of the primary vertex from the tracklet vertexing
+    std::string inputPrimaryVertex;
     /// Output find trajectories collection.
     std::string outputTracks;
-
     /// The tracking geometry that should be used.
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
     /// The magnetic field that should be used.
@@ -168,6 +168,8 @@ class TrackFindingAlgorithm final : public IAlgorithm {
   ReadDataHandle<TrackParametersContainer> m_inputInitialTrackParameters{
       this, "InputInitialTrackParameters"};
   ReadDataHandle<SimSeedContainer> m_inputSeeds{this, "InputSeeds"};
+
+  ReadDataHandle<double> m_inputPrimaryVertex{this, "OutputRecPrimaryVertex"};
 
   WriteDataHandle<ConstTrackContainer> m_outputTracks{this, "OutputTracks"};
 

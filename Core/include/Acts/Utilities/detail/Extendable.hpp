@@ -39,7 +39,7 @@ struct Extendable {
   Extendable(const Extendable<extensions_t...>& extendable) = default;
 
   // Default move constructor
-  Extendable(Extendable<extensions_t...>&& extendable) noexcept = default;
+  Extendable(Extendable<extensions_t...>&& extendable) = default;
 
   /// Constructor from tuple
   ///
@@ -63,7 +63,7 @@ struct Extendable {
   ///
   /// @param extendable The source Extendable list
   Extendable<extensions_t...>& operator=(
-      Extendable<extensions_t...>&& extendable) noexcept = default;
+      Extendable<extensions_t...>&& extendable) = default;
 
   /// Append new entries and return a new condition
   ///

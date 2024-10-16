@@ -14,7 +14,6 @@
 
 #include <iomanip>
 #include <iostream>
-#include <optional>
 
 Acts::SurfaceBounds::BoundsType Acts::DiamondBounds::type() const {
   return SurfaceBounds::eDiamond;

@@ -13,7 +13,6 @@
 #include "Acts/Surfaces/detail/BoundaryCheckHelper.hpp"
 
 #include <algorithm>
-#include <optional>
 #include <ostream>
 
 std::ostream& Acts::ConvexPolygonBoundsBase::toStream(std::ostream& sl) const {

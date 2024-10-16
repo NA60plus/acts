@@ -139,7 +139,7 @@ void addPropagation(Context& ctx) {
 
   {
     addPropagator<Acts::EigenStepper<>, Acts::Experimental::DetectorNavigator>(
-        prop, "EigenDetector");
+        prop, "EigenNext");
   }
 
   // ATLAS based stepper
@@ -176,12 +176,6 @@ void addPropagation(Context& ctx) {
 
     addPropagator<Acts::StraightLineStepper, Acts::Navigator>(prop,
                                                               "StraightLine");
-  }
-
-  {
-    addPropagator<Acts::StraightLineStepper,
-                  Acts::Experimental::DetectorNavigator>(
-        prop, "StraightLineDetector");
   }
 }
 

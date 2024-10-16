@@ -103,7 +103,7 @@ class SeedFinder {
   /// @param options frequently changing configuration (like beam position)
   /// @param state State object that holds memory used
   /// @param grid The grid with space points
-  /// @param outputCollection Output container for the seeds in the group
+  /// @param outIt Output iterator for the seeds in the group
   /// @param bottomSPs group of space points to be used as innermost SP in a seed.
   /// @param middleSPs group of space points to be used as middle SP in a seed.
   /// @param topSPs group of space points to be used as outermost SP in a seed.

@@ -171,6 +171,7 @@ auto Acts::Propagator<S, N>::makeState(
   eOptions.navigation.startSurface = &start.referenceSurface();
   eOptions.navigation.targetSurface = nullptr;
   using OptionsType = decltype(eOptions);
+  // Initialize the internal propagator state
   using StateType =
       actor_list_t_state_t<OptionsType,
                            typename propagator_options_t::actor_list_type>;
@@ -178,8 +179,8 @@ auto Acts::Propagator<S, N>::makeState(
   StateType state{
       eOptions,
       m_stepper.makeState(eOptions.geoContext, eOptions.magFieldContext, start,
-                          eOptions.stepping.maxStepSize),
-      m_navigator.makeState(eOptions.navigation)};
+                          eOptions.maxStepSize),
+      m_navigator.makeState(&start.referenceSurface(), nullptr)};
 
   static_assert(
       detail::propagator_stepper_compatible_with<S, StateType, N>,
@@ -220,8 +221,8 @@ auto Acts::Propagator<S, N>::makeState(
   StateType state{
       eOptions,
       m_stepper.makeState(eOptions.geoContext, eOptions.magFieldContext, start,
-                          eOptions.stepping.maxStepSize),
-      m_navigator.makeState(eOptions.navigation)};
+                          eOptions.maxStepSize),
+      m_navigator.makeState(&start.referenceSurface(), &target)};
 
   static_assert(
       detail::propagator_stepper_compatible_with<S, StateType, N>,
@@ -361,14 +362,14 @@ Acts::detail::BasePropagatorHelper<derived_t>::propagateToSurface(
   // is sometimes not met.
   if (target.type() == Surface::SurfaceType::Perigee) {
     res = static_cast<const derived_t*>(this)
-              ->template propagate<BoundTrackParameters, DerivedOptions,
+              ->template propagate<BoundTrackParameters, PropagatorOptions<>,
                                    ForcedSurfaceReached, PathLimitReached>(
-                  start, target, derivedOptions);
+                  start, target, options);
   } else {
     res = static_cast<const derived_t*>(this)
-              ->template propagate<BoundTrackParameters, DerivedOptions,
+              ->template propagate<BoundTrackParameters, PropagatorOptions<>,
                                    SurfaceReached, PathLimitReached>(
-                  start, target, derivedOptions);
+                  start, target, options);
   }
 
   if (res.ok()) {

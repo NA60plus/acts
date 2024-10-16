@@ -19,6 +19,7 @@
 #include <G4EmParameters.hh>
 #include <G4HadronicParameters.hh>
 #include <G4HadronicProcessStore.hh>
+#include <G4Profiler.hh>
 #include <G4RunManager.hh>
 #include <G4RunManagerFactory.hh>
 #include <G4UserEventAction.hh>

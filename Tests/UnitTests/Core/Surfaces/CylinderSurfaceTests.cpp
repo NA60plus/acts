@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(CylinderSurfaceProperties) {
   /// intersection test
   Vector3 direction{-1., 0, 0};
   auto sfIntersection = cylinderSurfaceObject->intersect(
-      testContext, offSurface, direction, BoundaryTolerance::Infinite());
+      testContext, offSurface, direction, BoundaryCheck(false));
   Intersection3D expectedIntersect{Vector3{1, 1, 2}, 99.,
                                    Intersection3D::Status::reachable};
   BOOST_CHECK(sfIntersection[0].isValid());

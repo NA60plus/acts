@@ -85,7 +85,7 @@ struct SingleParticleSimulation {
 
     // Construct per-call options.
     PropagatorOptions options(geoCtx, magCtx);
-    options.stepping.maxStepSize = maxStepSize;
+    options.maxStepSize = maxStepSize;
     options.pathLimit = pathLimit;
     // setup the interactor as part of the propagator options
     auto &actor = options.actorList.template get<Actor>();

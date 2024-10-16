@@ -47,13 +47,10 @@ jobs:
             ${{ runner.os  }}-ccache-linux_ubuntu_${{ env.CCACHE_KEY_SUFFIX }}_
 
       - name: Configure
-        # setting CMAKE_CXX_STANDARD=20 is a workaround for a bug in the
+        # setting CMAKE_CXX_STANDARD=17 is a workaround for a bug in the
         # dd4hep CMake configuration that gets triggered on recent CMake
         # versions
-        # Need to set git user & email for patching to work (GeoModel plugin)
         run: >
-          git config --global user.name 'CI' &&
-          git config --global user.email '<>' &&
           ccache -z &&
           cmake -B build -S .
           --preset=github-ci
@@ -97,7 +94,7 @@ jobs:
           -GNinja
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_FLAGS=-Werror
-          -DCMAKE_CXX_STANDARD=20
+          -DCMAKE_CXX_STANDARD=17
           -DCMAKE_PREFIX_PATH="${INSTALL_DIR}"
 
       - name: Downstream build
@@ -184,10 +181,7 @@ jobs:
           && source build/this_acts_withdeps.sh
           && echo "::endgroup::"
           && CI/physmon/phys_perf_mon.sh all physmon
-
-      - name: Post step summary
-        if: always()
-        run: cat physmon/summary.md >> $GITHUB_STEP_SUMMARY
+          && cat physmon/summary.md >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -201,7 +195,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Install dependencies
-        run: pip3 install spyral-cli==1.1.2
+        run: pip3 install spyral-cli==1.1.0
 
       - uses: actions/download-artifact@v4
         with:
@@ -228,7 +222,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: ubuntu2204
+          - image: ubuntu2004
+            std: 17
+          - image: ubuntu2204_cpp20
             std: 20
           - image: ubuntu2204_clang
             std: 20
@@ -256,7 +252,7 @@ jobs:
 
 
       - name: Configure
-        # setting CMAKE_CXX_STANDARD=20 is a workaround for a bug in the
+        # setting CMAKE_CXX_STANDARD=17 is a workaround for a bug in the
         # dd4hep CMake configuration that gets triggered on recent CMake
         # versions
         run: >
@@ -294,7 +290,7 @@ jobs:
           -GNinja
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_FLAGS=-Werror
-          -DCMAKE_CXX_STANDARD=${{ matrix.std }}
+          -DCMAKE_CXX_STANDARD=17
           -DCMAKE_PREFIX_PATH="${INSTALL_DIR}"
 
       - name: Downstream build
@@ -303,11 +299,119 @@ jobs:
       - name: Downstream run
         run: ./build-downstream/bin/ShowActsVersion
 
-  macos:
-    runs-on: macos-14
+  linux-nodeps:
+    runs-on: ubuntu-latest
+    container: ghcr.io/acts-project/${{ matrix.image }}:v41
+    strategy:
+      matrix:
+        image:
+          # Note: We only want the centos8 base here, and so we do not
+          # setup the lcg environment below
+          - centos8-lcg100-gcc10
     env:
-      INSTALL_DIR: ${{ github.workspace }}/install_acts
-      DEPENDENCY_DIR: ${{ github.workspace }}/install
+      # NOTE: we setup the ROOT from LCG even though this is a
+      # "nodeps" build. This is because we want to test that the boost
+      # dependency is handled correctly when building the examples
+      # (same for tbb below). ROOT is available from the "epel"
+      # official centos8 repo, but to save hundreds of MB's of package
+      # download we simply use lcg for this one package.
+      SETUP: source /opt/lcg/ROOT/v6.24.00-e7098/x86_64-centos8-gcc10-opt/bin/thisroot.sh
+      PRELOAD: export LD_PRELOAD=/opt/lcg/gcc/10/x86_64-centos8/lib64/libstdc++.so.6
+      INSTALL_DIR: ${{ github.workspace }}/install
+      ACTS_LOG_FAILURE_THRESHOLD: WARNING
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+          # Install tbb-devel also to build the examples
+        run: >
+          dnf -y install ninja-build tbb-devel ccache
+          && ln -s $(find / -type f -name 'ccache') /usr/local/bin/ccache
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        id: ccache-restore
+        with:
+          path: ${{ github.workspace }}/ccache
+          key: ${{ runner.os  }}-ccache-linux-nodeps_${{ env.CCACHE_KEY_SUFFIX }}_${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os  }}-ccache-linux-nodeps_${{ env.CCACHE_KEY_SUFFIX }}_
+
+      - name: Configure
+        run: >
+          ccache -z &&
+          cmake -B build -S .
+          -GNinja
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_FLAGS=-Werror
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+          -DACTS_BUILD_UNITTESTS=ON
+          -DACTS_BUILD_INTEGRATIONTESTS=ON
+          -DACTS_ENABLE_LOG_FAILURE_THRESHOLD=ON
+          -DACTS_FORCE_ASSERTIONS=ON
+          -DACTS_USE_SYSTEM_BOOST=OFF
+          -DACTS_USE_SYSTEM_EIGEN3=OFF
+          -DACTS_BUILD_PLUGIN_JSON=ON
+      - name: Build
+        run: ${SETUP} && ( cmake --build build || cmake --build build )
+      # The above line is required as a sort of retry mechanism. Without it,
+      # the build fails for technical reasons.
+      - name: ccache stats
+        run: ccache -s
+      - name: Save ccache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ github.workspace }}/ccache
+          key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
+      - name: Unit tests
+        run: ${SETUP} && cmake --build build --target test
+      - name: Integration tests
+        run: ${SETUP} && cmake --build build --target integrationtests
+      - name: Install
+        run: ${SETUP} && cmake --build build --target install
+      # For some reasons, this version of ROOT complains that it
+      # cannot find the nlohmann::json config before we even installed
+      # it. So we have to do the examples in separate step.
+      - name: Configure Examples
+        run: >
+          ${SETUP} &&
+          cmake -B build -S .
+          -GNinja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_FLAGS=-Werror
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+          -DACTS_ENABLE_LOG_FAILURE_THRESHOLD=ON
+          -DACTS_FORCE_ASSERTIONS=ON
+          -DACTS_USE_SYSTEM_BOOST=OFF
+          -DACTS_USE_SYSTEM_EIGEN3=OFF
+          -DACTS_BUILD_EXAMPLES=ON
+      - name: Build Examples
+        run: ${SETUP} && ${PRELOAD} && cmake --build build
+      - name: Install Examples
+        run: ${SETUP} && cmake --build build --target install
+      - name: Run Examples
+        # Run a single example to be sure that the boost dependencies
+        # got linked correctly
+        run: ${SETUP} && ${PRELOAD} && "${INSTALL_DIR}/bin/ActsExampleHelloWorld" -n 1
+      - name: Downstream configure
+        run: >
+          ${SETUP} &&
+          cmake -B build-downstream-nodeps -S Tests/DownstreamProjectNodeps
+          -GNinja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_FLAGS=-Werror
+          -DCMAKE_PREFIX_PATH="${INSTALL_DIR}"
+      - name: Downstream build
+        run: cmake --build build-downstream-nodeps
+      - name: Downstream run
+        run: ./build-downstream-nodeps/bin/ShowActsVersion
+             && CI/check_boost_eigen_versions.sh ./build-downstream-nodeps/bin/ShowActsVersion
+
+  macos:
+    runs-on: macos-13
+    env:
+      INSTALL_DIR: ${{ github.workspace }}/install
       ACTS_LOG_FAILURE_THRESHOLD: WARNING
       DEPENDENCY_URL: https://acts.web.cern.ch/ACTS/ci/macos-14/deps.v2.tar.zst
       # Works around an issue where root's RPATH is wrong for tbb, thus won't find it
@@ -375,8 +479,8 @@ jobs:
           -GNinja
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_FLAGS=-Werror
-          -DCMAKE_CXX_STANDARD=20
-          -DCMAKE_PREFIX_PATH="${INSTALL_DIR}"
+          -DCMAKE_CXX_STANDARD=17
+          -DCMAKE_PREFIX_PATH="${INSTALL_DIR};/usr/local/acts"
       - name: Downstream build
         run: cmake --build build-downstream
       - name: Downstream run

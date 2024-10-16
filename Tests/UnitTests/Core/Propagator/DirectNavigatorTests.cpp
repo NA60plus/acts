@@ -113,7 +113,7 @@ void runTest(const rpropagator_t& rprop, const dpropagator_t& dprop, double pT,
   using Options = typename rpropagator_t::template Options<ReferenceActorList>;
   Options pOptions(tgContext, mfContext);
   if (oversteppingTest) {
-    pOptions.stepping.maxStepSize = oversteppingMaxStepSize;
+    pOptions.maxStepSize = oversteppingMaxStepSize;
   }
 
   // Surface collector configuration
@@ -146,7 +146,9 @@ void runTest(const rpropagator_t& rprop, const dpropagator_t& dprop, double pT,
         typename dpropagator_t::template Options<DirectActorList>;
     DirectOptions dOptions(tgContext, mfContext);
     // Set the surface sequence
-    dOptions.navigation.surfaces = surfaceSequence;
+    auto& dInitializer =
+        dOptions.actionList.get<DirectNavigator::Initializer>();
+    dInitializer.navSurfaces = surfaceSequence;
     // Surface collector configuration
     auto& dCollector = dOptions.actorList.template get<SurfaceCollector<>>();
     dCollector.selector.selectSensitive = true;

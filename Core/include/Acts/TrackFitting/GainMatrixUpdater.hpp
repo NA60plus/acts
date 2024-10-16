@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "Acts/Definitions/Direction.hpp"
 #include "Acts/EventData/MeasurementHelpers.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/Types.hpp"
@@ -39,6 +40,12 @@ class GainMatrixUpdater {
                      false>::Parameters filtered;
     TrackStateTraits<MultiTrajectoryTraits::MeasurementSizeMax,
                      false>::Covariance filteredCovariance;
+    // This is used to build a covariance matrix view in the .cpp file
+    double* calibrated;
+    double* calibratedCovariance;
+    TrackStateTraits<MultiTrajectoryTraits::MeasurementSizeMax,
+                     false>::Projector projector;
+    unsigned int calibratedSize;
   };
 
  public:
@@ -46,10 +53,12 @@ class GainMatrixUpdater {
   ///
   /// @tparam kMeasurementSizeMax
   /// @param[in,out] trackState The track state
+  /// @param[in] direction The navigation direction
   /// @param[in] logger Where to write logging information to
   template <typename traj_t>
   Result<void> operator()(const GeometryContext& /*gctx*/,
                           typename traj_t::TrackStateProxy trackState,
+                          Direction direction = Direction::Forward,
                           const Logger& logger = getDummyLogger()) const {
     ACTS_VERBOSE("Invoked GainMatrixUpdater");
 
@@ -85,8 +94,21 @@ class GainMatrixUpdater {
             trackState.predictedCovariance(),
             trackState.filtered(),
             trackState.filteredCovariance(),
+            // This abuses an incorrectly sized vector / matrix to access the
+            // data pointer! This works (don't use the matrix as is!), but be
+            // careful!
+            trackState
+                .template calibrated<
+                    MultiTrajectoryTraits::MeasurementSizeMax>()
+                .data(),
+            trackState
+                .template calibratedCovariance<
+                    MultiTrajectoryTraits::MeasurementSizeMax>()
+                .data(),
+            trackState.projector(),
+            trackState.calibratedSize(),
         },
-        logger);
+        direction, logger);
 
     trackState.chi2() = chi2;
 

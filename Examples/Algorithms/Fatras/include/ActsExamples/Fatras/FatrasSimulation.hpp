@@ -48,6 +48,8 @@ class FatrasSimulation final : public IAlgorithm {
     /// The simulated particles final state collection.
     std::string outputParticlesFinal;
     /// The simulated hits output collection.
+    std::string inputSimHits;
+    /// The simulated hits output collection.
     std::string outputSimHits;
     /// Parametrisation of nuclear interaction
     std::string imputParametrisationNuclearInteraction =
@@ -61,7 +63,7 @@ class FatrasSimulation final : public IAlgorithm {
 
     // tuning parameters
     /// Minimal absolute momentum for particles to be simulated.
-    double pMin = 0.5 * Acts::UnitConstants::GeV;
+    double pMin = 0.1 * Acts::UnitConstants::GeV;
     /// Simulate (multiple) scattering for charged particles.
     bool emScattering = true;
     /// Simulate ionisiation/excitation energy loss of charged particles.
@@ -107,6 +109,8 @@ class FatrasSimulation final : public IAlgorithm {
   const Config& config() const { return m_cfg; }
 
   ReadDataHandle<SimParticleContainer> m_inputParticles{this, "InputParticles"};
+
+  ReadDataHandle<SimHitContainer> m_inputSimHits{this, "InputSimHits"};
 
   WriteDataHandle<SimHitContainer> m_outputSimHits{this, "OutputSimHits"};
 

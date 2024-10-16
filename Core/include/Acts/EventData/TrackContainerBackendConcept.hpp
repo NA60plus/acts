@@ -16,6 +16,10 @@
 #include "Acts/Utilities/HashedString.hpp"
 
 #include <any>
+#include <type_traits>
+
+#if defined(__cpp_concepts)
+#include <concepts>
 
 namespace Acts {
 
@@ -96,3 +100,5 @@ concept TrackContainerBackend =
     ConstTrackContainerBackend<T> &&
     (IsReadOnlyTrackContainer<T>::value || MutableTrackContainerBackend<T>);
 }  // namespace Acts
+
+#endif

@@ -114,7 +114,7 @@ struct SurfaceObserver {
           surface
               ->intersect(state.geoContext, stepper.position(state.stepping),
                           stepper.direction(state.stepping),
-                          BoundaryTolerance::None())
+                          BoundaryCheck(true))
               .closest()
               .pathLength();
       // Adjust the step size so that we cannot cross the target surface
@@ -192,7 +192,7 @@ BOOST_DATA_TEST_CASE(
   EigenPropagatorType::Options<ActorList> options(tgContext, mfContext);
 
   options.pathLimit = 20_m;
-  options.stepping.maxStepSize = 1_cm;
+  options.maxStepSize = 1_cm;
 
   // set the surface to be passed by
   options.actorList.get<CylinderObserver>().surface = mSurface.get();
@@ -246,9 +246,9 @@ BOOST_DATA_TEST_CASE(
   (void)index;
 
   // setup propagation options - the tow step options
-  EigenPropagatorType::Options<> options_2s(tgContext, mfContext);
+  PropagatorOptions<> options_2s(tgContext, mfContext);
   options_2s.pathLimit = 50_cm;
-  options_2s.stepping.maxStepSize = 1_cm;
+  options_2s.maxStepSize = 1_cm;
 
   // define start parameters
   double x = 0;
@@ -276,9 +276,9 @@ BOOST_DATA_TEST_CASE(
       epropagator.propagate(*mid_parameters, options_2s).value().endParameters;
 
   // setup propagation options - the one step options
-  EigenPropagatorType::Options<> options_1s(tgContext, mfContext);
+  PropagatorOptions<> options_1s(tgContext, mfContext);
   options_1s.pathLimit = 100_cm;
-  options_1s.stepping.maxStepSize = 1_cm;
+  options_1s.maxStepSize = 1_cm;
   // propagate to a path length of 100 in one step
   const auto& end_parameters_1s =
       epropagator.propagate(start, options_1s).value().endParameters;
@@ -326,9 +326,9 @@ BOOST_DATA_TEST_CASE(
   (void)index;
 
   // setup propagation options - 2 setp options
-  EigenPropagatorType::Options<> options_2s(tgContext, mfContext);
+  PropagatorOptions<> options_2s(tgContext, mfContext);
   options_2s.pathLimit = 10_m;
-  options_2s.stepping.maxStepSize = 1_cm;
+  options_2s.maxStepSize = 1_cm;
 
   // define start parameters
   double x = 0;
@@ -359,9 +359,9 @@ BOOST_DATA_TEST_CASE(
           .endParameters;
 
   // setup propagation options - one step options
-  EigenPropagatorType::Options<> options_1s(tgContext, mfContext);
+  PropagatorOptions<> options_1s(tgContext, mfContext);
   options_1s.pathLimit = 10_m;
-  options_1s.stepping.maxStepSize = 1_cm;
+  options_1s.maxStepSize = 1_cm;
   // propagate to a final surface in one stop
   const auto& end_parameters_1s =
       epropagator.propagate(start, *cSurface, options_1s).value().endParameters;
@@ -406,7 +406,7 @@ BOOST_AUTO_TEST_CASE(BasicPropagatorInterface) {
 
   GeometryContext gctx;
   MagneticFieldContext mctx;
-  EigenPropagatorType::Options<> options{gctx, mctx};
+  PropagatorOptions<> options{gctx, mctx};
 
   {
     Propagator propagator{eigenStepper, navigator};

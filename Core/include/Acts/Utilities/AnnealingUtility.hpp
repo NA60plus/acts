@@ -32,9 +32,6 @@ class AnnealingUtility {
   struct Config {
     Config();
 
-    Config(double cutOff_, std::vector<double> setOfTemperatures_)
-        : cutOff(cutOff_), setOfTemperatures(std::move(setOfTemperatures_)) {}
-
     // Insensitivity of calculated weight at cutoff
     double cutOff{9.};
 

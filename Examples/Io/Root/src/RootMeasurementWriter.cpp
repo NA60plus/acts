@@ -8,8 +8,6 @@
 
 #include "ActsExamples/Io/Root/RootMeasurementWriter.hpp"
 
-#include "Acts/Definitions/TrackParametrization.hpp"
-#include "Acts/Utilities/Enumerate.hpp"
 #include "ActsExamples/EventData/AverageSimHits.hpp"
 #include "ActsExamples/EventData/Index.hpp"
 #include "ActsExamples/EventData/Measurement.hpp"
@@ -18,16 +16,15 @@
 
 #include <cstddef>
 #include <ios>
-#include <limits>
-#include <memory>
 #include <stdexcept>
 #include <utility>
 #include <variant>
 
 #include <TFile.h>
-#include <TTree.h>
 
-namespace ActsExamples {
+namespace Acts {
+class Surface;
+}  // namespace Acts
 
 struct RootMeasurementWriter::DigitizationTree {
   const std::array<std::string, Acts::eBoundSize> bNames = {
@@ -217,9 +214,9 @@ RootMeasurementWriter::RootMeasurementWriter(
         "Missing hit-to-simulated-hits map input collection");
   }
 
-  m_inputClusters.maybeInitialize(m_cfg.inputClusters);
   m_inputSimHits.initialize(m_cfg.inputSimHits);
   m_inputMeasurementSimHitsMap.initialize(m_cfg.inputMeasurementSimHitsMap);
+  m_inputClusters.maybeInitialize(m_cfg.inputClusters);
 
   if (m_cfg.surfaceByIdentifier.empty()) {
     throw std::invalid_argument("Missing Surface-GeoID association map");
@@ -232,34 +229,59 @@ RootMeasurementWriter::RootMeasurementWriter(
 
   m_outputFile->cd();
 
-  std::vector bIndices = {Acts::eBoundLoc0, Acts::eBoundLoc1, Acts::eBoundTime};
-  m_outputTree =
-      std::make_unique<DigitizationTree>("measurements", bIndices, bIndices);
+  // Analyze the smearers
+  std::vector<
+      std::pair<Acts::GeometryIdentifier, std::unique_ptr<DigitizationTree>>>
+      dTrees;
+  if (!m_cfg.boundIndices.empty()) {
+    ACTS_DEBUG("Bound indices are declared, preparing trees.");
+    for (std::size_t ikv = 0; ikv < m_cfg.boundIndices.size(); ++ikv) {
+      auto geoID = m_cfg.boundIndices.idAt(ikv);
+      auto bIndices = m_cfg.boundIndices.valueAt(ikv);
+      auto dTree = std::make_unique<DigitizationTree>(geoID);
+      for (const auto& bIndex : bIndices) {
+        ACTS_VERBOSE("- setup branch for index: " << bIndex);
+        dTree->setupBoundRecBranch(bIndex);
+      }
+      if (!m_cfg.inputClusters.empty()) {
+        dTree->setupClusterBranch(bIndices);
+      }
+      dTrees.push_back({geoID, std::move(dTree)});
+    }
+  } else {
+    ACTS_DEBUG("Bound indices are not declared, no reco setup.");
+  }
+
+  m_outputTrees = Acts::GeometryHierarchyMap<std::unique_ptr<DigitizationTree>>(
+      std::move(dTrees));
 }
 
-RootMeasurementWriter::~RootMeasurementWriter() {
+ActsExamples::RootMeasurementWriter::~RootMeasurementWriter() {
   if (m_outputFile != nullptr) {
     m_outputFile->Close();
   }
 }
 
-ProcessCode RootMeasurementWriter::finalize() {
+ActsExamples::ProcessCode ActsExamples::RootMeasurementWriter::finalize() {
   /// Close the file if it's yours
   m_outputFile->cd();
-  m_outputTree->tree->Write();
+  for (auto dTree = m_outputTrees.begin(); dTree != m_outputTrees.end();
+       ++dTree) {
+    (*dTree)->tree->Write();
+  }
   m_outputFile->Close();
 
   return ProcessCode::SUCCESS;
 }
 
-ProcessCode RootMeasurementWriter::writeT(
+ActsExamples::ProcessCode ActsExamples::RootMeasurementWriter::writeT(
     const AlgorithmContext& ctx, const MeasurementContainer& measurements) {
   const auto& simHits = m_inputSimHits(ctx);
   const auto& hitSimHitsMap = m_inputMeasurementSimHitsMap(ctx);
 
-  const ClusterContainer* clusters = nullptr;
+  ClusterContainer clusters;
   if (!m_cfg.inputClusters.empty()) {
-    clusters = &m_inputClusters(ctx);
+    clusters = m_inputClusters(ctx);
   }
 
   // Exclusive access to the tree while writing
@@ -303,7 +325,5 @@ ProcessCode RootMeasurementWriter::writeT(
     m_outputTree->clear();
   }
 
-  return ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
-
-}  // namespace ActsExamples

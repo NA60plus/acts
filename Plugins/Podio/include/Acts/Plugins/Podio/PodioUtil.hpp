@@ -13,6 +13,7 @@
 #include "Acts/Geometry/TrackingGeometry.hpp"
 #include "Acts/Plugins/Podio/PodioDynamicColumns.hpp"
 #include "Acts/Utilities/HashedString.hpp"
+#include "Acts/Utilities/Helpers.hpp"
 
 #include <limits>
 #include <memory>
@@ -30,10 +31,6 @@
 
 namespace ActsPodioEdm {
 class Surface;
-}
-
-namespace podio {
-class Frame;
 }
 
 namespace Acts {

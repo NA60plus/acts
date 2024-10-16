@@ -10,10 +10,13 @@
 
 #include "Acts/EventData/TrackProxy.hpp"
 #include "Acts/EventData/TrackStateProxy.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/HashedString.hpp"
 
 #include <type_traits>
 
+#if defined(__cpp_concepts)
+#include <concepts>
 namespace Acts::detail {
 
 template <typename T>
@@ -39,6 +42,7 @@ concept ProxyType = (MutableProxyType<T> || ConstProxyType<T>) && requires {
 };
 
 }  // namespace Acts::detail
+#endif
 
 namespace Acts {
 

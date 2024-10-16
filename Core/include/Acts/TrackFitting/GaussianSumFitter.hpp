@@ -13,7 +13,6 @@
 #include "Acts/Propagator/MultiStepperAborters.hpp"
 #include "Acts/Propagator/Navigator.hpp"
 #include "Acts/Propagator/StandardAborters.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
 #include "Acts/TrackFitting/GsfOptions.hpp"
 #include "Acts/TrackFitting/detail/GsfActor.hpp"
 #include "Acts/Utilities/Helpers.hpp"
@@ -107,7 +106,8 @@ struct GaussianSumFitter {
       using Actors = ActorList<GsfActor, NavigationBreakAborter>;
       using PropagatorOptions = typename propagator_t::template Options<Actors>;
 
-      PropagatorOptions propOptions(opts.geoContext, opts.magFieldContext);
+      PropagatorOptions<Actors, Aborters> propOptions(opts.geoContext,
+                                                      opts.magFieldContext);
 
       propOptions.setPlainOptions(opts.propagatorPlainOptions);
 
@@ -127,7 +127,8 @@ struct GaussianSumFitter {
           std::next(sSequence.rbegin()), sSequence.rend());
       backwardSequence.push_back(opts.referenceSurface);
 
-      PropagatorOptions propOptions(opts.geoContext, opts.magFieldContext);
+      PropagatorOptions<Actors, Aborters> propOptions(opts.geoContext,
+                                                      opts.magFieldContext);
 
       propOptions.setPlainOptions(opts.propagatorPlainOptions);
 
@@ -160,6 +161,8 @@ struct GaussianSumFitter {
 
       PropagatorOptions propOptions(opts.geoContext, opts.magFieldContext);
 
+      PropagatorOptions<Actors, Aborters> propOptions(opts.geoContext,
+                                                      opts.magFieldContext);
       propOptions.setPlainOptions(opts.propagatorPlainOptions);
 
       propOptions.actorList.template get<GsfActor>()
@@ -173,7 +176,8 @@ struct GaussianSumFitter {
       using Actors = ActorList<GsfActor, EndOfWorldReached>;
       using PropagatorOptions = typename propagator_t::template Options<Actors>;
 
-      PropagatorOptions propOptions(opts.geoContext, opts.magFieldContext);
+      PropagatorOptions<Actors, Aborters> propOptions(opts.geoContext,
+                                                      opts.magFieldContext);
 
       propOptions.setPlainOptions(opts.propagatorPlainOptions);
 
@@ -217,7 +221,7 @@ struct GaussianSumFitter {
         sParameters.referenceSurface()
             .intersect(GeometryContext{},
                        sParameters.position(GeometryContext{}),
-                       sParameters.direction(), BoundaryTolerance::None())
+                       sParameters.direction(), BoundaryCheck(true))
             .closest()
             .status();
 

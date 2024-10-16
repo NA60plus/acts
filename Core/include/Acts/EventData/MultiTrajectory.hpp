@@ -18,6 +18,7 @@
 #include "Acts/EventData/Types.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Utilities/AlgebraHelpers.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/HashedString.hpp"
 #include "Acts/Utilities/Helpers.hpp"
 #include "Acts/Utilities/ThrowAssert.hpp"
@@ -150,7 +151,6 @@ struct IsReadOnlyMultiTrajectory;
 /// iterating over specific sub-components.
 template <typename derived_t>
 class MultiTrajectory {
- public:
   using Derived = derived_t;
 
   static constexpr bool ReadOnly = IsReadOnlyMultiTrajectory<Derived>::value;
@@ -164,6 +164,7 @@ class MultiTrajectory {
   template <typename T>
   friend class MultiTrajectory;
 
+ public:
   /// Alias for the const version of a track state proxy, with the same
   /// backends as this container
   using ConstTrackStateProxy =
@@ -242,6 +243,7 @@ class MultiTrajectory {
   ///       which to leave invalid
   /// @param iprevious index of the previous state, kInvalid if first
   /// @return Index of the newly added track state
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
   IndexType addTrackState(TrackStatePropMask mask = TrackStatePropMask::All,
                           IndexType iprevious = kInvalid)
     requires(!ReadOnly)
@@ -253,6 +255,7 @@ class MultiTrajectory {
   /// This effectively calls @c addTrackState and @c getTrackState
   /// @note Only available if the track state container is not read-only
   /// @return a track state proxy to the newly added track state
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
   TrackStateProxy makeTrackState(
       TrackStatePropMask mask = TrackStatePropMask::All,
       IndexType iprevious = kInvalid)
@@ -473,7 +476,7 @@ class MultiTrajectory {
   }
 
   /// Retrieve a jacobian proxy instance for a jacobian at a given index
-  /// @param istate The track state
+  /// @param jacIdx Index into the jacobian column
   /// @return Mutable proxy
   typename TrackStateProxy::Covariance jacobian(IndexType istate)
     requires(!ReadOnly)
@@ -482,16 +485,37 @@ class MultiTrajectory {
   }
 
   /// Retrieve a jacobian proxy instance for a jacobian at a given index
-  /// @param istate The track state
+  /// @param jacIdx Index into the jacobian column
   /// @return Const proxy
-  typename ConstTrackStateProxy::Covariance jacobian(IndexType istate) const {
-    return self().jacobian_impl(istate);
+  typename ConstTrackStateProxy::Covariance jacobian(IndexType jacIdx) const {
+    return self().jacobian_impl(jacIdx);
   }
 
-  /// Retrieve a calibrated measurement proxy instance for a measurement at a
+  /// Retrieve a measurement proxy instance for a measurement at a given index
+  /// @tparam measdim the measurement dimension
+  /// @param measIdx Index into the measurement column
+  /// @return Mutable proxy
+  template <std::size_t measdim, bool RO = ReadOnly,
+            typename = std::enable_if_t<!RO>>
+  typename TrackStateProxy::template Measurement<measdim> measurement(
+      IndexType measIdx) {
+    return self().template measurement_impl<measdim>(measIdx);
+  }
+
+  /// Retrieve a measurement proxy instance for a measurement at a given index
+  /// @tparam measdim the measurement dimension
+  /// @param measIdx Index into the measurement column
+  /// @return Const proxy
+  template <std::size_t measdim>
+  typename ConstTrackStateProxy::template Measurement<measdim> measurement(
+      IndexType measIdx) const {
+    return self().template measurement_impl<measdim>(measIdx);
+  }
+
+  /// Retrieve a measurement covariance proxy instance for a measurement at a
   /// given index
   /// @tparam measdim the measurement dimension
-  /// @param istate The track state
+  /// @param covIdx Index into the measurement covariance column
   /// @return Mutable proxy
   template <std::size_t measdim>
   typename TrackStateProxy::template Calibrated<measdim> calibrated(
@@ -501,10 +525,9 @@ class MultiTrajectory {
     return self().template calibrated_impl<measdim>(istate);
   }
 
-  /// Retrieve a calibrated measurement proxy instance for a measurement at a
+  /// Retrieve a measurement covariance proxy instance for a measurement at a
   /// given index
-  /// @tparam measdim the measurement dimension
-  /// @param istate The track state
+  /// @param covIdx Index into the measurement covariance column
   /// @return Const proxy
   template <std::size_t measdim>
   typename ConstTrackStateProxy::template Calibrated<measdim> calibrated(
@@ -610,6 +633,7 @@ class MultiTrajectory {
   ///       or projector. See @c TrackStatePropMask.
   /// @note The track states both need to be stored in the
   ///       same @c MultiTrajectory instance
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
   void shareFrom(IndexType iself, IndexType iother,
                  TrackStatePropMask shareSource, TrackStatePropMask shareTarget)
     requires(!ReadOnly)

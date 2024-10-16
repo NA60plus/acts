@@ -9,13 +9,10 @@
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/PdgParticle.hpp"
 #include "Acts/Definitions/Units.hpp"
-#include "Acts/Geometry/GeometryContext.hpp"
-#include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Plugins/Python/Utilities.hpp"
 #include "Acts/Utilities/Any.hpp"
 #include "Acts/Utilities/AxisFwd.hpp"
 #include "Acts/Utilities/BinningData.hpp"
-#include "Acts/Utilities/CalibrationContext.hpp"
 #include "Acts/Utilities/Logger.hpp"
 
 #include <array>
@@ -219,7 +216,7 @@ void addLogging(Acts::Python::Context& ctx) {
     } catch (const std::exception& e) {
       std::string what = e.what();
       if (what.find("ACTS_LOG_FAILURE_THRESHOLD") != std::string::npos) {
-        py::set_error(exc, e.what());
+        exc(e.what());
       } else {
         std::rethrow_exception(p);
       }

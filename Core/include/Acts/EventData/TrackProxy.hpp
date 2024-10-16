@@ -10,12 +10,12 @@
 
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
-#include "Acts/EventData/MultiTrajectoryBackendConcept.hpp"
 #include "Acts/EventData/ParticleHypothesis.hpp"
 #include "Acts/EventData/TrackContainerBackendConcept.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/EventData/TrackProxyConcept.hpp"
 #include "Acts/EventData/TrackStatePropMask.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/HashedString.hpp"
 #include "Acts/Utilities/TypeTraits.hpp"
 #include "Acts/Utilities/UnitVectors.hpp"
@@ -25,9 +25,8 @@
 
 namespace Acts {
 
-template <TrackContainerBackend track_container_t,
-          CommonMultiTrajectoryBackend traj_t,
-          template <typename> class holder_t>
+template <ACTS_CONCEPT(Acts::TrackContainerBackend) track_container_t,
+          typename traj_t, template <typename> class holder_t>
 class TrackContainer;
 
 /// Proxy class representing a single track.
@@ -79,20 +78,20 @@ class TrackProxy {
   /// Map-type for a bound parameter vector. This has reference semantics, i.e.
   /// points at a matrix by an internal pointer.
   using Parameters =
-      typename detail_lt::FixedSizeTypes<eBoundSize, false>::CoefficientsMap;
+      typename detail_lt::Types<eBoundSize, false>::CoefficientsMap;
 
   /// Same as @ref Parameters, but with const semantics
   using ConstParameters =
-      typename detail_lt::FixedSizeTypes<eBoundSize, true>::CoefficientsMap;
+      typename detail_lt::Types<eBoundSize, true>::CoefficientsMap;
 
   /// Map-type for a bound covariance. This has reference semantics, i.e.
   /// points at a matrix by an internal pointer.
   using Covariance =
-      typename detail_lt::FixedSizeTypes<eBoundSize, false>::CovarianceMap;
+      typename detail_lt::Types<eBoundSize, false>::CovarianceMap;
 
   /// Same as @ref Covariance, but with const semantics
   using ConstCovariance =
-      typename detail_lt::FixedSizeTypes<eBoundSize, true>::CovarianceMap;
+      typename detail_lt::Types<eBoundSize, true>::CovarianceMap;
 
 #ifndef DOXYGEN
   friend TrackContainer<Container, Trajectory, holder_t>;
@@ -588,8 +587,9 @@ class TrackProxy {
       reverseTrackStates();
     }
 
+    parameters() = other.parameters();
+    covariance() = other.covariance();
     setParticleHypothesis(other.particleHypothesis());
-
     if (other.hasReferenceSurface()) {
       setReferenceSurface(other.referenceSurface().getSharedPtr());
       parameters() = other.parameters();
@@ -597,7 +597,6 @@ class TrackProxy {
     } else {
       setReferenceSurface(nullptr);
     }
-
     nMeasurements() = other.nMeasurements();
     nHoles() = other.nHoles();
     nOutliers() = other.nOutliers();
@@ -786,5 +785,4 @@ class TrackProxy {
       m_container;
   IndexType m_index;
 };
-
 }  // namespace Acts

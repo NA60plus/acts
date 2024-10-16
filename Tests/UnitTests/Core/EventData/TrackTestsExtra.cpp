@@ -8,8 +8,6 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "Acts/Definitions/Units.hpp"
-#include "Acts/EventData/ProxyAccessor.hpp"
 #include "Acts/EventData/VectorMultiTrajectory.hpp"
 #include "Acts/EventData/VectorTrackContainer.hpp"
 #include "Acts/Surfaces/CurvilinearSurface.hpp"
@@ -22,65 +20,6 @@
 using namespace Acts;
 using namespace Acts::HashedStringLiteral;
 using MultiTrajectoryTraits::IndexType;
-using namespace Acts::UnitLiterals;
-
-template <typename track_container_t, typename traj_t,
-          template <typename> class holder_t>
-struct Factory {};
-
-template <typename track_container_t, typename traj_t>
-struct Factory<track_container_t, traj_t, detail::RefHolder> {
-  using track_container_type =
-      TrackContainer<track_container_t, traj_t, detail::RefHolder>;
-
-  track_container_t vtc;
-  traj_t mtj;
-  track_container_type tc{vtc, mtj};
-
-  auto& trackContainer() { return tc; }
-  auto& trackStateContainer() { return mtj; }
-  auto& backend() { return vtc; }
-};
-
-template <typename track_container_t, typename traj_t>
-struct Factory<track_container_t, traj_t, detail::ValueHolder> {
-  using track_container_type =
-      TrackContainer<track_container_t, traj_t, detail::ValueHolder>;
-
-  track_container_type tc{track_container_t{}, traj_t{}};
-
-  auto& trackContainer() { return tc; }
-  auto& trackStateContainer() { return tc.trackStateContainer(); }
-  auto& backend() { return tc.container(); }
-};
-
-template <typename track_container_t, typename traj_t>
-struct Factory<track_container_t, traj_t, std::shared_ptr> {
-  using track_container_type =
-      TrackContainer<track_container_t, traj_t, std::shared_ptr>;
-
-  std::shared_ptr<track_container_t> vtc{std::make_shared<track_container_t>()};
-  std::shared_ptr<traj_t> mtj{std::make_shared<traj_t>()};
-  track_container_type tc{vtc, mtj};
-
-  auto& trackContainer() { return tc; }
-  auto& trackStateContainer() { return *mtj; }
-  auto& backend() { return *vtc; }
-};
-
-template <typename track_container_t, typename traj_t,
-          template <typename> class... holders>
-using holder_types_t =
-    std::tuple<Factory<track_container_t, traj_t, holders>...>;
-
-using holder_types = holder_types_t<VectorTrackContainer, VectorMultiTrajectory,
-                                    // detail_tc::ValueHolder,
-                                    // detail_tc::RefHolder,
-                                    std::shared_ptr>;
-
-using const_holder_types =
-    holder_types_t<ConstVectorTrackContainer, ConstVectorMultiTrajectory,
-                   detail::ValueHolder, detail::RefHolder, std::shared_ptr>;
 
 BOOST_AUTO_TEST_SUITE(EventDataTrack)
 

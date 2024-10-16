@@ -56,7 +56,6 @@ with tempfile.TemporaryDirectory() as temp:
             stddev=acts.Vector4(0.0125 * u.mm, 0.0125 * u.mm, 55.5 * u.mm, 5.0 * u.ns),
         ),
         rnd=rnd,
-        outputDirRoot=tp,
     )
 
     addFatras(

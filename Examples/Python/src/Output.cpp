@@ -31,6 +31,7 @@
 #include "ActsExamples/Io/Performance/SeedingPerformanceWriter.hpp"
 #include "ActsExamples/Io/Performance/TrackFinderPerformanceWriter.hpp"
 #include "ActsExamples/Io/Performance/TrackFitterPerformanceWriter.hpp"
+#include "ActsExamples/Io/Performance/TrackletVertexingPerformanceWriter.hpp"
 #include "ActsExamples/Io/Performance/VertexPerformanceWriter.hpp"
 #include "ActsExamples/Io/Root/RootBFieldWriter.hpp"
 #include "ActsExamples/Io/Root/RootMaterialTrackWriter.hpp"
@@ -181,6 +182,10 @@ void addOutput(Context& ctx) {
     py::class_<DuplicationPlotTool::Config>(mex, "DuplicationPlotToolConfig")
         .def(py::init<std::map<std::string, PlotHelpers::Binning>>(),
              "varBinning"_a);
+             
+    py::class_<TrkVtxPlotTool::Config>(mex, "TrkVtxPlotToolConfig")
+        .def(py::init<std::map<std::string, PlotHelpers::Binning>>(),
+             "varBinning"_a);
   }
 
   // ROOT WRITERS
@@ -215,13 +220,19 @@ void addOutput(Context& ctx) {
   ACTS_PYTHON_DECLARE_WRITER(
       ActsExamples::SeedingPerformanceWriter, mex, "SeedingPerformanceWriter",
       inputSeeds, inputMeasurementParticlesMap, inputParticles, filePath,
-      fileMode, effPlotToolConfig, duplicationPlotToolConfig);
+      fileMode, effPlotToolConfig, duplicationPlotToolConfig, verbose);
 
   ACTS_PYTHON_DECLARE_WRITER(
       ActsExamples::RootTrackParameterWriter, mex, "RootTrackParameterWriter",
       inputTrackParameters, inputProtoTracks, inputParticles, inputSimHits,
       inputMeasurementParticlesMap, inputMeasurementSimHitsMap, filePath,
       treeName, fileMode);
+
+  ACTS_PYTHON_DECLARE_WRITER(
+      ActsExamples::TrackletVertexingPerformanceWriter, mex, "TrackletVertexingPerformanceWriter",
+      inputRecPrimaryVertex, inputGenPrimaryVertex, filePath, inputSeeds,  
+      inputFitFunction, inputZTracklets, inputZTrackletsPeak, fileMode, trkVtxPlotToolConfig, verbose);
+
 
   ACTS_PYTHON_DECLARE_WRITER(
       ActsExamples::RootMaterialTrackWriter, mex, "RootMaterialTrackWriter",

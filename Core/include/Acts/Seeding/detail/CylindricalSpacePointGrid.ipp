@@ -26,10 +26,11 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
   using AxisScalar = Acts::Vector3::Scalar;
   using namespace Acts::UnitLiterals;
 
-  int phiBins = 0;
+  int phiBins = 1;
+  /*
   // for no magnetic field, create 100 phi-bins
   if (options.bFieldInZ == 0) {
-    phiBins = 100;
+    phiBins = 1;
   } else {
     // calculate circle intersections of helix and max detector radius
     float minHelixRadius =
@@ -98,7 +99,7 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
       phiBins = config.maxPhiBins;
     }
   }
-
+  */
   Acts::Axis<AxisType::Equidistant, AxisBoundaryType::Closed> phiAxis(
       config.phiMin, config.phiMax, phiBins);
 
@@ -176,9 +177,7 @@ void Acts::CylindricalSpacePointGridCreator::fillGrid(
   // in the config object.
 
   // keep track of changed bins while sorting
-  std::vector<bool> usedBinIndex(grid.size(), false);
-  std::vector<std::size_t> rBinsIndex;
-  rBinsIndex.reserve(grid.size());
+  boost::container::flat_set<std::size_t> rBinsIndex;
 
   std::size_t counter = 0ul;
   for (external_spacepoint_iterator_t it = spBegin; it != spEnd;
@@ -202,14 +201,13 @@ void Acts::CylindricalSpacePointGridCreator::fillGrid(
 
     // keep track of the bins we modify so that we can later sort the SPs in
     // those bins only
-    if (rbin.size() > 1 && !usedBinIndex[globIndex]) {
-      usedBinIndex[globIndex] = true;
-      rBinsIndex.push_back(globIndex);
+    if (rbin.size() > 1) {
+      rBinsIndex.insert(grid.globalBinFromPosition(spLocation));
     }
   }
 
   /// sort SPs in R for each filled bin
-  for (std::size_t binIndex : rBinsIndex) {
+  for (auto& binIndex : rBinsIndex) {
     auto& rbin = grid.atPosition(binIndex);
     std::ranges::sort(rbin, {}, [](const auto& rb) { return rb->radius(); });
   }

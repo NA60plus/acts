@@ -29,7 +29,11 @@ using Stepper = Acts::SympyStepper;
 using Navigator = Acts::Navigator;
 using Propagator = Acts::Propagator<Stepper, Navigator>;
 using CKF =
-    Acts::CombinatorialKalmanFilter<Propagator, ActsExamples::TrackContainer>;
+    Acts::CombinatorialKalmanFilter<Propagator, Acts::VectorMultiTrajectory>;
+
+using TrackContainer =
+    Acts::TrackContainer<Acts::VectorTrackContainer,
+                         Acts::VectorMultiTrajectory, std::shared_ptr>;
 
 struct TrackFinderFunctionImpl
     : public ActsExamples::TrackFindingAlgorithm::TrackFinderFunction {

@@ -17,11 +17,15 @@
 #include "Acts/Utilities/HashedString.hpp"
 
 #include <any>
+#include <iterator>
+#include <type_traits>
+
+#if defined(__cpp_concepts)
+#include <concepts>
 
 namespace Acts {
 
 namespace detail {
-
 using Parameters = Eigen::Map<BoundVector>;
 using Covariance = Eigen::Map<BoundMatrix>;
 
@@ -140,3 +144,4 @@ concept MutableMultiTrajectoryBackend =
     };
 
 }  // namespace Acts
+#endif

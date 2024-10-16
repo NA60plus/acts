@@ -14,17 +14,19 @@
 #include "Acts/Geometry/DetectorElementBase.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Material/ISurfaceMaterial.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Surfaces/SurfaceBounds.hpp"
 #include "Acts/Utilities/Result.hpp"
+
+#if defined(__cpp_concepts)
+#include <concepts>
 
 namespace Acts {
 
 template <typename S>
 concept SurfaceConcept = requires(S s, const S cs, S s2, const S cs2,
-                                  GeometryContext gctx,
-                                  BoundaryTolerance tolerance) {
+                                  GeometryContext gctx) {
   { cs == s2 } -> std::same_as<bool>;
 
   { cs.type() } -> std::same_as<Surface::SurfaceType>;
@@ -120,3 +122,5 @@ concept RegularSurfaceConcept =
       { cs.isOnSurface(gctx, Vector3{}, tolerance) } -> std::same_as<bool>;
     };
 }  // namespace Acts
+
+#endif
