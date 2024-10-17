@@ -19,6 +19,9 @@
 
 #include <utility>
 
+#if defined(__cpp_concepts)
+#include <concepts>
+
 namespace Acts {
 
 namespace detail {
@@ -51,8 +54,9 @@ using ConstDynamicMeasurementCovariance = Eigen::Map<
 constexpr static auto ProjectorFlags = Eigen::RowMajor | Eigen::AutoAlign;
 using Projector = Eigen::Matrix<typename Covariance::Scalar, eBoundSize,
                                 eBoundSize, ProjectorFlags>;
+
 using EffectiveProjector =
-    Eigen::Matrix<typename Projector::Scalar, Eigen::Dynamic, eBoundSize,
+    Eigen::Matrix<typename Projector::Scalar, Eigen::Dynamic, Eigen::Dynamic,
                   ProjectorFlags, eBoundSize, eBoundSize>;
 
 }  // namespace detail
@@ -255,3 +259,4 @@ concept MutableTrackStateProxyConcept =
       { v.typeFlags() } -> std::same_as<TrackStateType>;
     };
 }  // namespace Acts
+#endif

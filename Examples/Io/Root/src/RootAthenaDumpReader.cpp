@@ -15,13 +15,11 @@
 #include "ActsExamples/EventData/Cluster.hpp"
 #include "ActsExamples/EventData/GeometryContainers.hpp"
 #include "ActsExamples/EventData/IndexSourceLink.hpp"
-#include <ActsExamples/Digitization/MeasurementCreation.hpp>
-
-#include <cmath>
 
 #include <TChain.h>
 #include <boost/container/static_vector.hpp>
 
+<<<<<<< HEAD
 using namespace Acts::UnitLiterals;
 
 namespace {
@@ -56,6 +54,8 @@ inline auto particleVectorToSet(std::vector<ActsFatras::Particle>& particles) {
 
 }  // namespace
 
+=======
+>>>>>>> origin/clone_of_main
 enum SpacePointType { ePixel = 1, eStrip = 2 };
 
 namespace ActsExamples {
@@ -77,12 +77,16 @@ RootAthenaDumpReader::RootAthenaDumpReader(
   m_outputPixelSpacePoints.initialize(m_cfg.outputPixelSpacePoints);
   m_outputStripSpacePoints.initialize(m_cfg.outputStripSpacePoints);
   m_outputSpacePoints.initialize(m_cfg.outputSpacePoints);
+<<<<<<< HEAD
   if (!m_cfg.onlySpacepoints) {
     m_outputClusters.initialize(m_cfg.outputClusters);
     m_outputParticles.initialize(m_cfg.outputParticles);
     m_outputMeasParticleMap.initialize(m_cfg.outputMeasurementParticlesMap);
     m_outputMeasurements.initialize(m_cfg.outputMeasurements);
   }
+=======
+  m_outputClusters.initialize(m_cfg.outputClusters);
+>>>>>>> origin/clone_of_main
 
   // Set the branches
 
@@ -244,6 +248,7 @@ RootAthenaDumpReader::RootAthenaDumpReader(
   ACTS_DEBUG("End of constructor. In total available events=" << m_events);
 }  // constructor
 
+<<<<<<< HEAD
 SimParticleContainer RootAthenaDumpReader::readParticles() const {
   std::vector<ActsFatras::Particle> particles;
   particles.reserve(nPartEVT);
@@ -297,18 +302,49 @@ RootAthenaDumpReader::readMeasurements(
 
   const auto prevParticlesSize = particles.size();
   IndexMultimap<ActsFatras::Barcode> measPartMap;
+=======
+ActsExamples::ProcessCode ActsExamples::RootAthenaDumpReader::read(
+    const ActsExamples::AlgorithmContext& ctx) {
+  ACTS_DEBUG("Reading event " << ctx.eventNumber);
+  auto entry = ctx.eventNumber;
+  if (entry >= m_events) {
+    ACTS_ERROR("event out of bounds");
+    return ProcessCode::ABORT;
+  }
+
+  std::lock_guard<std::mutex> lock(m_read_mutex);
+
+  m_inputchain->GetEntry(entry);
+
+  // Loop on clusters (measurements)
+  ACTS_DEBUG("Found " << nSP << " space points");
+  ACTS_DEBUG("Found " << nCL << " clusters / measurements");
+
+  ClusterContainer clusters;
+  clusters.resize(nCL);
+>>>>>>> origin/clone_of_main
 
   // We cannot use im for the index since we might skip measurements
   std::unordered_map<int, std::size_t> imIdxMap;
 
   for (int im = 0; im < nCL; im++) {
+<<<<<<< HEAD
     if (!(CLhardware->at(im) == "PIXEL" || CLhardware->at(im) == "STRIP")) {
       ACTS_ERROR("hardware is neither 'PIXEL' or 'STRIP', skip particle");
       continue;
     }
     ACTS_VERBOSE("Cluster " << im << ": " << CLhardware->at(im));
+=======
+    int bec = CLbarrel_endcap[im];
+    int lydisk = CLlayer_disk[im];
+    int etamod = CLeta_module[im];
+    int phimod = CLphi_module[im];
+    int side = CLside[im];
+    // ULong64_t moduleID = CLmoduleID     [im];
+>>>>>>> origin/clone_of_main
 
-    auto type = (CLhardware->at(im) == "PIXEL") ? ePixel : eStrip;
+    ACTS_VERBOSE(bec << " " << lydisk << " " << etamod << " " << phimod << " "
+                     << side << " ");
 
     // Make cluster
     // TODO refactor Cluster class so it is not so tedious
@@ -349,6 +385,7 @@ RootAthenaDumpReader::readMeasurements(
                                     activation);
     }
 
+<<<<<<< HEAD
     cluster.globalPosition = {CLx[im], CLy[im], CLz[im]};
     cluster.localDirection = {CLloc_direction1[im], CLloc_direction2[im],
                               CLloc_direction3[im]};
@@ -462,6 +499,13 @@ RootAthenaDumpReader::readMeasurements(
     }
 
     imIdxMap.emplace(im, measIndex);
+=======
+    ACTS_VERBOSE("Cluster " << im << ": " << cluster.channels.size()
+                            << "cells, dimensions: " << cluster.sizeLoc0 << ", "
+                            << cluster.sizeLoc1);
+
+    clusters[im] = cluster;
+>>>>>>> origin/clone_of_main
   }
 
   if (measurements.size() < static_cast<std::size_t>(nCL)) {
@@ -496,8 +540,8 @@ RootAthenaDumpReader::readSpacepoints(
   spacePoints.reserve(nSP);
 
   // Loop on space points
-  std::size_t skippedSpacePoints = 0;
   for (int isp = 0; isp < nSP; isp++) {
+<<<<<<< HEAD
     auto isPhiOverlap = (SPisOverlap[isp] == 2) || (SPisOverlap[isp] == 3);
     auto isEtaOverlap = (SPisOverlap[isp] == 1) || (SPisOverlap[isp] == 3);
     if (m_cfg.skipOverlapSPsPhi && isPhiOverlap) {
@@ -512,6 +556,11 @@ RootAthenaDumpReader::readSpacepoints(
     const Acts::Vector3 globalPos{SPx[isp], SPy[isp], SPz[isp]};
     const double spCovr = SPcovr[isp];
     const double spCovz = SPcovz[isp];
+=======
+    Acts::Vector3 globalPos{SPx[isp], SPy[isp], SPz[isp]};
+    double sp_covr = SPcovr[isp];
+    double sp_covz = SPcovz[isp];
+>>>>>>> origin/clone_of_main
 
     // PIX=1  STRIP = 2
     auto type = SPCL2_index[isp] == -1 ? ePixel : eStrip;
@@ -606,6 +655,7 @@ RootAthenaDumpReader::readSpacepoints(
     spacePoints.push_back(sp);
   }
 
+<<<<<<< HEAD
   if (m_cfg.skipOverlapSPsEta || m_cfg.skipOverlapSPsPhi) {
     ACTS_DEBUG("Skipped " << skippedSpacePoints
                           << " because of eta/phi overlaps");
@@ -709,10 +759,20 @@ ProcessCode RootAthenaDumpReader::read(const AlgorithmContext& ctx) {
 
   auto [spacePoints, pixelSpacePoints, stripSpacePoints] =
       readSpacepoints(optImIdxMap);
+=======
+  ACTS_DEBUG("Created " << pixelSpacePoints.size() << " "
+                        << " pixel space points");
+
+  ACTS_DEBUG("Created " << spacePoints.size() << " overall space points");
+>>>>>>> origin/clone_of_main
 
   m_outputPixelSpacePoints(ctx, std::move(pixelSpacePoints));
   m_outputStripSpacePoints(ctx, std::move(stripSpacePoints));
   m_outputSpacePoints(ctx, std::move(spacePoints));
+<<<<<<< HEAD
+=======
+  m_outputClusters(ctx, std::move(clusters));
+>>>>>>> origin/clone_of_main
 
   return ProcessCode::SUCCESS;
 }

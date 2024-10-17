@@ -1,6 +1,10 @@
 // This file is part of the ACTS project.
 //
+<<<<<<< HEAD
 // Copyright (C) 2016 CERN for the benefit of the ACTS project
+=======
+// Copyright (C) 2023 CERN for the benefit of the Acts project
+>>>>>>> origin/clone_of_main
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -12,7 +16,6 @@
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/Definitions/Units.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
-#include "Acts/EventData/MultiTrajectoryBackendConcept.hpp"
 #include "Acts/EventData/TrackContainerBackendConcept.hpp"
 #include "Acts/EventData/TrackProxy.hpp"
 #include "Acts/EventData/Types.hpp"
@@ -26,7 +29,6 @@
 #include <any>
 #include <cstddef>
 #include <iterator>
-#include <string_view>
 
 namespace Acts {
 
@@ -39,8 +41,8 @@ struct IsReadOnlyTrackContainer;
 /// @tparam track_container_t the track container backend
 /// @tparam traj_t the track state container backend
 /// @tparam holder_t ownership management class for the backend
-template <TrackContainerBackend track_container_t,
-          CommonMultiTrajectoryBackend traj_t,
+template <ACTS_CONCEPT(TrackContainerBackend) track_container_t,
+          typename traj_t,
           template <typename> class holder_t = detail::RefHolder>
 class TrackContainer {
  public:
@@ -73,6 +75,7 @@ class TrackContainer {
   using ConstTrackProxy =
       Acts::TrackProxy<track_container_t, traj_t, holder_t, true>;
 
+<<<<<<< HEAD
   using TrackContainerBackend = track_container_t;
   using TrackStateContainerBackend = traj_t;
 
@@ -86,6 +89,8 @@ class TrackContainer {
   using const_iterator =
       Acts::ContainerIndexIterator<TrackContainer, ConstTrackProxy, true>;
 
+=======
+>>>>>>> origin/clone_of_main
 #ifndef DOXYGEN
   friend TrackProxy;
   friend ConstTrackProxy;
@@ -115,8 +120,15 @@ class TrackContainer {
   ///       You need to ensure suitable lifetime
   /// @param container the track container backend
   /// @param traj the track state container backend
+<<<<<<< HEAD
   TrackContainer(auto& container, auto& traj)
     requires(detail::is_same_template<holder_t, detail::RefHolder>::value)
+=======
+  template <template <typename> class H = holder_t,
+            typename = std::enable_if_t<
+                detail::is_same_template<H, detail::RefHolder>::value>>
+  TrackContainer(track_container_t& container, traj_t& traj)
+>>>>>>> origin/clone_of_main
       : m_container{&container}, m_traj{&traj} {}
 
   /// Constructor from const references to a track container backend and to a
@@ -125,10 +137,20 @@ class TrackContainer {
   ///       You need to ensure suitable lifetime
   /// @param container the track container backend
   /// @param traj the track state container backend
+<<<<<<< HEAD
   TrackContainer(const auto& container, const auto& traj)
     requires(detail::is_same_template<holder_t,
                                       detail::ConstRefHolder>::value &&
              ReadOnly && TrackStateReadOnly)
+=======
+  template <
+      template <typename> class H = holder_t,
+      bool RO = (IsReadOnlyTrackContainer<track_container_t>::value &&
+                 IsReadOnlyMultiTrajectory<traj_t>::value),
+      typename = std::enable_if_t<
+          detail::is_same_template<H, detail::ConstRefHolder>::value && RO>>
+  TrackContainer(const track_container_t& container, const traj_t& traj)
+>>>>>>> origin/clone_of_main
       : m_container{&container}, m_traj{&traj} {}
 
   /// @}
@@ -150,6 +172,7 @@ class TrackContainer {
   /// @note Only available if the track container is not read-only
   /// @param itrack the track index in the container
   /// @return A mutable track proxy for the index
+<<<<<<< HEAD
   TrackProxy getTrack(IndexType itrack)
     requires(!ReadOnly)
   {
@@ -168,6 +191,10 @@ class TrackContainer {
   TrackProxy at(IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  TrackProxy getTrack(IndexType itrack) {
+>>>>>>> origin/clone_of_main
     return {*this, itrack};
   }
 
@@ -175,9 +202,14 @@ class TrackContainer {
   /// allocates memory. You can combine this with @c getTrack to obtain a track proxy
   /// @note Only available if the track container is not read-only
   /// @return the index to the newly added track
+<<<<<<< HEAD
   IndexType addTrack()
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  IndexType addTrack() {
+>>>>>>> origin/clone_of_main
     auto track = getTrack(m_container->addTrack_impl());
     track.tipIndex() = kInvalid;
     return track.index();
@@ -187,9 +219,14 @@ class TrackContainer {
   /// This effectively calls @c addTrack and @c getTrack
   /// @note Only available if the track container is not read-only
   /// @return a track proxy to the newly added track
+<<<<<<< HEAD
   TrackProxy makeTrack()
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  TrackProxy makeTrack() {
+>>>>>>> origin/clone_of_main
     return getTrack(addTrack());
   }
 
@@ -198,28 +235,47 @@ class TrackContainer {
   /// @note This invalidates track proxies that point to tracks with larger
   ///       indices than @p itrack!
   /// @param itrack The index of the track to remove
+<<<<<<< HEAD
   void removeTrack(IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  void removeTrack(IndexType itrack) {
+>>>>>>> origin/clone_of_main
     m_container->removeTrack_impl(itrack);
   }
 
   /// Get a mutable iterator to the first track in the container
   /// @note Only available if the track container is not read-only
   /// @return a mutable iterator to the first track
+<<<<<<< HEAD
   iterator begin()
     requires(!ReadOnly)
   {
     return iterator{*this, 0};
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto begin() {
+    return detail_tc::TrackProxyIterator<std::decay_t<decltype(*this)>,
+                                         TrackProxy, false>{*this, 0};
+>>>>>>> origin/clone_of_main
   }
 
   /// Get a past-the-end iterator for this container
   /// @note Only available if the track container is not read-only
   /// @return a past-the-end iterator
+<<<<<<< HEAD
   iterator end()
     requires(!ReadOnly)
   {
     return iterator{*this, size()};
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto end() {
+    return detail_tc::TrackProxyIterator<std::decay_t<decltype(*this)>,
+                                         TrackProxy, false>{*this, size()};
+>>>>>>> origin/clone_of_main
   }
 
   /// Get an const iterator to the first track in the container
@@ -242,10 +298,15 @@ class TrackContainer {
   /// Add a dymanic column to the track container
   /// @note Only available if the track container is not read-only
   /// @param key the name of the column to be added
+<<<<<<< HEAD
   template <typename T>
   constexpr void addColumn(std::string_view key)
     requires(!ReadOnly)
   {
+=======
+  template <typename T, bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  constexpr void addColumn(std::string_view key) {
+>>>>>>> origin/clone_of_main
     m_container->template addColumn_impl<T>(key);
   }
 
@@ -268,10 +329,16 @@ class TrackContainer {
   /// @note Only available if the track container is not read-only
   /// @tparam other_track_container_t Type of the other track container
   /// @param other The other track container
+<<<<<<< HEAD
   template <typename other_track_container_t>
   void ensureDynamicColumns(const other_track_container_t& other)
     requires(!ReadOnly)
   {
+=======
+  template <typename other_track_container_t, bool RO = ReadOnly,
+            typename = std::enable_if_t<!RO>>
+  void ensureDynamicColumns(const other_track_container_t& other) {
+>>>>>>> origin/clone_of_main
     container().ensureDynamicColumns_impl(other.container());
   }
 
@@ -286,9 +353,14 @@ class TrackContainer {
   /// Get a mutable reference to the track container backend
   /// @note Only available if the track container is not read-only
   /// @return a mutable reference to the backend
+<<<<<<< HEAD
   auto& container()
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto& container() {
+>>>>>>> origin/clone_of_main
     return *m_container;
   }
 
@@ -299,18 +371,28 @@ class TrackContainer {
   /// Get a mutable reference to the track state container backend
   /// @note Only available if the track container is not read-only
   /// @return a mutable reference to the backend
+<<<<<<< HEAD
   auto& trackStateContainer()
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto& trackStateContainer() {
+>>>>>>> origin/clone_of_main
     return *m_traj;
   }
 
   /// Retrieve the holder of the track state container
   /// @return The track state container including it's holder
   /// @note Only available if the track container is not read-only
+<<<<<<< HEAD
   auto& trackStateContainerHolder()
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto& trackStateContainerHolder() {
+>>>>>>> origin/clone_of_main
     return m_traj;
   }
 
@@ -330,14 +412,20 @@ class TrackContainer {
 
   /// Clear the content of the track container
   /// @note Only available if the track container is not read-only
+<<<<<<< HEAD
   void clear()
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  void clear() {
+>>>>>>> origin/clone_of_main
     m_container->clear();
     m_traj->clear();
   }
 
  protected:
+<<<<<<< HEAD
   template <typename T, HashedString key>
   constexpr T& component(IndexType itrack)
     requires(!ReadOnly)
@@ -349,6 +437,16 @@ class TrackContainer {
   constexpr T& component(HashedString key, IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <typename T, HashedString key, bool RO = ReadOnly,
+            typename = std::enable_if_t<!RO>>
+  constexpr T& component(IndexType itrack) {
+    return *std::any_cast<T*>(container().component_impl(key, itrack));
+  }
+
+  template <typename T, bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  constexpr T& component(HashedString key, IndexType itrack) {
+>>>>>>> origin/clone_of_main
     return *std::any_cast<T*>(container().component_impl(key, itrack));
   }
 
@@ -362,9 +460,14 @@ class TrackContainer {
     return *std::any_cast<const T*>(container().component_impl(key, itrack));
   }
 
+<<<<<<< HEAD
   constexpr typename TrackProxy::Parameters parameters(IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  constexpr typename TrackProxy::Parameters parameters(IndexType itrack) {
+>>>>>>> origin/clone_of_main
     return container().parameters(itrack);
   }
 
@@ -373,9 +476,14 @@ class TrackContainer {
     return container().parameters(itrack);
   }
 
+<<<<<<< HEAD
   constexpr typename TrackProxy::Covariance covariance(IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  constexpr typename TrackProxy::Covariance covariance(IndexType itrack) {
+>>>>>>> origin/clone_of_main
     return container().covariance(itrack);
   }
 
@@ -384,9 +492,14 @@ class TrackContainer {
     return container().covariance(itrack);
   }
 
+<<<<<<< HEAD
   auto reverseTrackStateRange(IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto reverseTrackStateRange(IndexType itrack) {
+>>>>>>> origin/clone_of_main
     auto tip = component<IndexType, hashString("tipIndex")>(itrack);
     return m_traj->reverseTrackStateRange(tip);
   }
@@ -396,9 +509,14 @@ class TrackContainer {
     return m_traj->reverseTrackStateRange(tip);
   }
 
+<<<<<<< HEAD
   auto forwardTrackStateRange(IndexType itrack)
     requires(!ReadOnly)
   {
+=======
+  template <bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  auto forwardTrackStateRange(IndexType itrack) {
+>>>>>>> origin/clone_of_main
     auto stem = component<IndexType, hashString("stemIndex")>(itrack);
     if (stem == kInvalid) {
       throw std::invalid_argument{"Track has no stem index"};
@@ -415,10 +533,15 @@ class TrackContainer {
   }
 
  private:
+<<<<<<< HEAD
   template <typename T>
   void copyDynamicFrom(IndexType dstIdx, const T& src, IndexType srcIdx)
     requires(!ReadOnly)
   {
+=======
+  template <typename T, bool RO = ReadOnly, typename = std::enable_if_t<!RO>>
+  void copyDynamicFrom(IndexType dstIdx, const T& src, IndexType srcIdx) {
+>>>>>>> origin/clone_of_main
     const auto& dynamicKeys = src.dynamicKeys_impl();
     for (const auto key : dynamicKeys) {
       std::any srcPtr = src.component_impl(key, srcIdx);
@@ -430,15 +553,18 @@ class TrackContainer {
   const_if_t<ReadOnly, holder_t<traj_t>> m_traj;
 };
 
-template <TrackContainerBackend track_container_t, typename traj_t>
+template <ACTS_CONCEPT(TrackContainerBackend) track_container_t,
+          typename traj_t>
 TrackContainer(track_container_t& container, traj_t& traj)
     -> TrackContainer<track_container_t, traj_t, detail::RefHolder>;
 
-template <TrackContainerBackend track_container_t, typename traj_t>
+template <ACTS_CONCEPT(TrackContainerBackend) track_container_t,
+          typename traj_t>
 TrackContainer(const track_container_t& container, const traj_t& traj)
     -> TrackContainer<track_container_t, traj_t, detail::ConstRefHolder>;
 
-template <TrackContainerBackend track_container_t, typename traj_t>
+template <ACTS_CONCEPT(TrackContainerBackend) track_container_t,
+          typename traj_t>
 TrackContainer(track_container_t&& container, traj_t&& traj)
     -> TrackContainer<track_container_t, traj_t, detail::ValueHolder>;
 

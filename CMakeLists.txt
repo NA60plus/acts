@@ -52,7 +52,6 @@ option(ACTS_BUILD_PLUGIN_GEANT4 "Build Geant4 plugin" OFF)
 option(ACTS_BUILD_PLUGIN_EXATRKX "Build the Exa.TrkX plugin" OFF)
 option(ACTS_EXATRKX_ENABLE_ONNX "Build the Onnx backend for the exatrkx plugin" OFF)
 option(ACTS_EXATRKX_ENABLE_TORCH "Build the torchscript backend for the exatrkx plugin" ON)
-option(ACTS_EXATRKX_ENABLE_CUDA "Enable CUDA for the exatrkx plugin" OFF)
 option(ACTS_BUILD_PLUGIN_JSON "Build json plugin" OFF)
 option(ACTS_BUILD_PLUGIN_LEGACY "Build legacy plugin" OFF)
 option(ACTS_BUILD_PLUGIN_ONNX "Build ONNX plugin" OFF)
@@ -228,15 +227,22 @@ set(_acts_actsvg_version 0.4.50)
 set(_acts_boost_version 1.71.0)
 set(_acts_dd4hep_version 1.21)
 set(_acts_edm4hep_version 0.7)
+<<<<<<< HEAD
 set(_acts_eigen3_version 3.4.0)
 set(_acts_podio_version 1.0.1) # will try this first
 set(_acts_podio_fallback_version 0.16) # if not found, will try this one
+=======
+set(_acts_geomodel_version 4.6.0)
+set(_acts_eigen3_version 3.3.7)
+set(_acts_podio_version 0.16)
+>>>>>>> origin/clone_of_main
 set(_acts_doxygen_version 1.9.4)
 set(_acts_hepmc3_version 3.2.1)
 set(_acts_nlohmanjson_version 3.10.5)
 set(_acts_onnxruntime_version 1.12.0)
 set(_acts_root_version 6.20)
 set(_acts_tbb_version 2020.1)
+<<<<<<< HEAD
 set(_acts_pythia8_version 8.309)
 set(_acts_pybind11_version 2.13.1)
 set(_acts_detray_version 0.75.3)
@@ -245,6 +251,8 @@ set(_acts_covfie_version 0.10.0)
 set(_acts_vecmem_version 1.4.0)
 set(_acts_algebraplugins_version 0.22.0)
 set(_acts_annoy_version 1.17.3)
+=======
+>>>>>>> origin/clone_of_main
 
 # recommended dependency version. if there is an opportunity to reach
 # this version we will try so.
@@ -253,6 +261,7 @@ set(_acts_boost_recommended_version 1.78.0)
 # Include the sources for the external dependencies.
 include(ActsExternSources)
 
+<<<<<<< HEAD
 # Controls behavior of DOWNLOAD_EXTRACT_TIMESTAMP
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
@@ -263,6 +272,12 @@ if(ACTS_SETUP_BOOST)
     if(POLICY CMP0167)
         cmake_policy(SET CMP0167 NEW)
     endif()
+=======
+# required packages
+if (ACTS_SETUP_BOOST)
+  if (ACTS_USE_SYSTEM_BOOST)
+    # NOTE FindBoost.cmake looks for BoostConfig.cmake first, before running it's own logic.
+>>>>>>> origin/clone_of_main
 
     # Enable both program_options and unit_test_framework to reduce complexity
     # Also Cuda tests seem to use program_options
@@ -372,6 +387,7 @@ if(ACTS_BUILD_PLUGIN_JSON)
     endif()
 endif()
 if(ACTS_BUILD_PLUGIN_GEOMODEL)
+<<<<<<< HEAD
     find_package(GeoModelCore CONFIG)
     if(NOT GeoModelCore_FOUND)
         message(
@@ -390,6 +406,13 @@ if(ACTS_BUILD_PLUGIN_GEOMODEL)
     endif()
     # find other GeoModel components of EXACT same version
     find_package(GeoModelIO ${GeoModelCore_VERSION} REQUIRED EXACT CONFIG)
+=======
+  if(ACTS_USE_SYSTEM_GEOMODEL)
+    find_package(GeoModel ${_acts_geomodel_version} REQUIRED CONFIG)
+  else()
+    add_subdirectory(thirdparty/GeoModel)
+  endif()
+>>>>>>> origin/clone_of_main
 endif()
 if(ACTS_BUILD_PLUGIN_TGEO)
     find_package(
@@ -412,6 +435,7 @@ if(ACTS_BUILD_ANALYSIS_APPS)
     check_root_compatibility()
 endif()
 if(ACTS_BUILD_PLUGIN_EXATRKX)
+<<<<<<< HEAD
     find_package(Torch REQUIRED)
     if(ACTS_EXATRKX_ENABLE_CUDA)
         find_package(CUDAToolkit REQUIRED)
@@ -425,6 +449,19 @@ if(ACTS_BUILD_PLUGIN_EXATRKX)
         message(
             FATAL_ERROR
             "When building the Exa.TrkX plugin, at least one of ACTS_EXATRKX_ENABLE_ONNX \
+=======
+  find_package(Torch REQUIRED)
+  find_package(CUDAToolkit)
+  if(CUDAToolkit_FOUND)
+    enable_cuda()
+    add_subdirectory(thirdparty/FRNN)
+  else()
+    message(WARNING "CUDA not found, build Exa.TrkX plugin only for CPU")
+  endif()
+  if(NOT (ACTS_EXATRKX_ENABLE_ONNX OR ACTS_EXATRKX_ENABLE_TORCH))
+    message(FATAL_ERROR
+      "When building the Exa.TrkX plugin, at least one of ACTS_EXATRKX_ENABLE_ONNX \
+>>>>>>> origin/clone_of_main
       and ACTS_EXATRKX_ENABLE_TORCHSCRIPT must be enabled."
         )
     endif()
@@ -439,6 +476,7 @@ if(ACTS_BUILD_PLUGIN_ONNX OR ACTS_EXATRKX_ENABLE_ONNX)
     find_package(OnnxRuntime ${_acts_onnxruntime_version} REQUIRED)
 endif()
 if(ACTS_BUILD_PLUGIN_EDM4HEP OR ACTS_BUILD_PLUGIN_PODIO)
+<<<<<<< HEAD
     find_package(podio ${_acts_podio_version} CONFIG)
     if(NOT podio_FOUND)
         message(
@@ -448,6 +486,10 @@ if(ACTS_BUILD_PLUGIN_EDM4HEP OR ACTS_BUILD_PLUGIN_PODIO)
         find_package(podio ${_acts_podio_fallback_version} CONFIG REQUIRED)
     endif()
     find_package(ROOT ${_acts_root_version} REQUIRED CONFIG COMPONENTS Core)
+=======
+  find_package(podio ${_acts_podio_version} REQUIRED CONFIG)
+  find_package(ROOT ${_acts_root_version} REQUIRED CONFIG COMPONENTS Core)
+>>>>>>> origin/clone_of_main
 endif()
 if(ACTS_BUILD_PLUGIN_EDM4HEP)
     find_package(EDM4HEP ${_acts_edm4hep_version} REQUIRED CONFIG)
@@ -538,7 +580,19 @@ if(ACTS_BUILD_EXAMPLES_HEPMC3)
     find_package(HepMC3 ${_acts_hepmc3_version} REQUIRED CONFIG)
 endif()
 if(ACTS_BUILD_EXAMPLES_PYTHIA8)
+<<<<<<< HEAD
     find_package(Pythia8 ${_acts_pythia8_version} REQUIRED)
+=======
+  find_package(Pythia8 REQUIRED)
+
+  if(DEFINED CMAKE_CXX_STANDARD)
+    if(${CMAKE_CXX_STANDARD} GREATER_EQUAL 20)
+      message(WARNING "ACTS is configured to build with C++20."
+        "As of version 309, Pythia8 does not compile under C++20."
+        "You can find a patch file at: https://gist.github.com/paulgessinger/7a823b4015d4511cf829472291c8ddcf")
+    endif()
+  endif()
+>>>>>>> origin/clone_of_main
 endif()
 # other dependencies
 if(ACTS_BUILD_DOCS)

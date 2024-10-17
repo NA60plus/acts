@@ -364,6 +364,7 @@ if args.reco:
             numMeasurementsCutOff=10,
             seedDeduplication=True,
             stayOnSeed=True,
+<<<<<<< HEAD
             pixelVolumes=[16, 17, 18],
             stripVolumes=[23, 24, 25],
             maxPixelHoles=1,
@@ -385,6 +386,8 @@ if args.reco:
                 29,
                 30,  # long strip
             ],
+=======
+>>>>>>> origin/clone_of_main
         ),
         outputDirRoot=outputDir if args.output_root else None,
         outputDirCsv=outputDir if args.output_csv else None,
@@ -438,7 +441,7 @@ if args.reco:
     addVertexFitting(
         s,
         field,
-        vertexFinder=VertexFinder.AMVF,
+        vertexFinder=VertexFinder.Iterative,
         outputDirRoot=outputDir if args.output_root else None,
     )
 

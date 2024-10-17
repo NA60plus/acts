@@ -68,9 +68,24 @@ set(ACTS_PYBIND11_SOURCE
 )
 mark_as_advanced(ACTS_PYBIND11_SOURCE)
 
+<<<<<<< HEAD
 set(ACTS_ANNOY_SOURCE
     "URL;https://github.com/spotify/annoy/archive/refs/tags/v${_acts_annoy_version}.tar.gz;URL_HASH;SHA256=c121d38cacd98f5103b24ca4e94ca097f18179eed3037e9eb93ad70ec1e6356e"
     CACHE STRING
     "Source to take Annoy from"
 )
 mark_as_advanced(ACTS_ANNOY_SOURCE)
+=======
+string(REPLACE "." "_" _acts_boost_recommended_version_ ${_acts_boost_recommended_version})
+set( ACTS_BOOST_SOURCE
+   "URL;https://boostorg.jfrog.io/artifactory/main/release/${_acts_boost_recommended_version}/source/boost_${_acts_boost_recommended_version_}.tar.gz" CACHE STRING "Source to take boost from")
+mark_as_advanced( ACTS_BOOST_SOURCE )
+
+set( ACTS_EIGEN3_SOURCE
+   "URL;https://gitlab.com/libeigen/eigen/-/archive/${_acts_eigen3_version}/${_acts_eigen3_version}.tar.gz" CACHE STRING "Source to take eigen3 from")
+mark_as_advanced( ACTS_EIGEN3_SOURCE )
+
+set( ACTS_PYBIND11_SOURCE
+   "GIT_REPOSITORY;https://github.com/pybind/pybind11.git;GIT_TAG;v2.10.1" CACHE STRING "Source to take pybind11 from")
+mark_as_advanced( ACTS_PYBIND11_SOURCE )
+>>>>>>> origin/clone_of_main

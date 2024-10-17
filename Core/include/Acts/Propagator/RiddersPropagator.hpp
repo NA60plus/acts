@@ -81,9 +81,12 @@ class RiddersPropagator {
     std::vector<double> deviationsDisc = {-3e-5, -1e-5, 1e-5, 3e-5};
   };
 
+<<<<<<< HEAD
   template <typename actor_list_t = ActorList<>>
   using Options = typename propagator_t::template Options<actor_list_t>;
 
+=======
+>>>>>>> origin/clone_of_main
   /// @brief Constructor using a propagator
   ///
   /// @param [in] propagator Underlying propagator that will be used

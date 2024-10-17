@@ -7,7 +7,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #pragma once
-
 #include "Acts/Utilities/Logger.hpp"
 #include "ActsExamples/EventData/GeometryContainers.hpp"
 #include "ActsExamples/EventData/Measurement.hpp"
@@ -16,8 +15,6 @@
 #include "ActsExamples/Framework/IReader.hpp"
 #include "ActsExamples/Framework/ProcessCode.hpp"
 #include <ActsExamples/EventData/Cluster.hpp>
-#include <ActsExamples/EventData/SimParticle.hpp>
-#include <ActsExamples/EventData/Track.hpp>
 
 #include <map>
 #include <memory>
@@ -47,14 +44,15 @@ class RootAthenaDumpReader : public IReader {
     // Name of inputfile
     std::string inputfile;
     // name of the output measurements
-    std::string outputMeasurements = "athena_measurements";
+    std::string outputMeasurements = "ath_meas";
     // name of the output pixel space points
-    std::string outputPixelSpacePoints = "athena_pixel_spacepoints";
+    std::string outputPixelSpacePoints = "outputPixelSpacepoints";
     // name of the output strip space points
-    std::string outputStripSpacePoints = "athena_strip_spacepoints";
+    std::string outputStripSpacePoints = "outputStripSpacepoints";
     // name of the output space points
-    std::string outputSpacePoints = "athena_spacepoints";
+    std::string outputSpacePoints = "output_spacepoints";
     // name of the output clusters
+<<<<<<< HEAD
     std::string outputClusters = "athena_clusters";
     // name of the output particles
     std::string outputParticles = "athena_particles";
@@ -90,6 +88,9 @@ class RootAthenaDumpReader : public IReader {
     /// tolerance should be allowed. If a value above zero is needed, this
     /// indicates that the ACTS surfaces do not 100% include the athena surfaces
     double absBoundaryTolerance = 0.0;
+=======
+    std::string outputClusters = "output_clusters";
+>>>>>>> origin/clone_of_main
   };
 
   RootAthenaDumpReader(const RootAthenaDumpReader &) = delete;
@@ -159,12 +160,6 @@ class RootAthenaDumpReader : public IReader {
   WriteDataHandle<SimSpacePointContainer> m_outputSpacePoints{
       this, "output_spacepoints"};
   WriteDataHandle<ClusterContainer> m_outputClusters{this, "output_clusters"};
-  WriteDataHandle<SimParticleContainer> m_outputParticles{this,
-                                                          "output_particles"};
-  WriteDataHandle<MeasurementContainer> m_outputMeasurements{
-      this, "output_measurements"};
-  WriteDataHandle<IndexMultimap<ActsFatras::Barcode>> m_outputMeasParticleMap{
-      this, "output_meas_part_map"};
 
   std::unique_ptr<const Acts::Logger> m_logger;
   std::mutex m_read_mutex;

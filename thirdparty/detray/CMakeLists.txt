@@ -7,7 +7,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # CMake include(s).
+<<<<<<< HEAD
 include(FetchContent)
+=======
+cmake_minimum_required( VERSION 3.11 )
+include( FetchContent )
+>>>>>>> origin/clone_of_main
 
 # Tell the user what's happening.
 message(STATUS "Building Detray as part of the Acts project")

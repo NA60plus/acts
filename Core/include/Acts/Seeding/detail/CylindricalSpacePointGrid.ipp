@@ -6,10 +6,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+<<<<<<< HEAD
 #include <concepts>
 
 template <typename external_spacepoint_t>
 Acts::CylindricalSpacePointGrid<external_spacepoint_t>
+=======
+#include <boost/container/flat_set.hpp>
+
+template <typename SpacePoint>
+Acts::CylindricalSpacePointGrid<SpacePoint>
+>>>>>>> origin/clone_of_main
 Acts::CylindricalSpacePointGridCreator::createGrid(
     const Acts::CylindricalSpacePointGridConfig& config,
     const Acts::CylindricalSpacePointGridOptions& options) {
@@ -26,10 +33,11 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
   using AxisScalar = Acts::Vector3::Scalar;
   using namespace Acts::UnitLiterals;
 
-  int phiBins = 0;
+  int phiBins = 1;
+  /*
   // for no magnetic field, create 100 phi-bins
   if (options.bFieldInZ == 0) {
-    phiBins = 100;
+    phiBins = 1;
   } else {
     // calculate circle intersections of helix and max detector radius
     float minHelixRadius =
@@ -98,7 +106,7 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
       phiBins = config.maxPhiBins;
     }
   }
-
+  */
   Acts::Axis<AxisType::Equidistant, AxisBoundaryType::Closed> phiAxis(
       config.phiMin, config.phiMax, phiBins);
 
@@ -165,6 +173,7 @@ void Acts::CylindricalSpacePointGridCreator::fillGrid(
         "SeedFinderOptions not in ACTS internal units in BinnedSPGroup");
   }
 
+<<<<<<< HEAD
   // Space points are assumed to be ALREADY CORRECTED for beamspot position
   // phi, z and r space point selection comes naturally from the
   // grid axis definition. Calling `isInside` will let us know if we are
@@ -174,23 +183,57 @@ void Acts::CylindricalSpacePointGridCreator::fillGrid(
   // and skip some computations.
   // Additional cuts can be applied by customizing the space point selector
   // in the config object.
+=======
+  // get region of interest (or full detector if configured accordingly)
+  float phiMin = config.phiMin;
+  float phiMax = config.phiMax;
+  float zMin = config.zMin;
+  float zMax = config.zMax;
+
+  // sort by radius
+  // add magnitude of beamPos to rMax to avoid excluding measurements
+  // create number of bins equal to number of millimeters rMax
+  // (worst case minR: configured minR + 1mm)
+  // binSizeR allows to increase or reduce numRBins if needed
+  std::size_t numRBins = static_cast<std::size_t>(
+      (config.rMax + options.beamPos.norm()) / config.binSizeR);
+>>>>>>> origin/clone_of_main
 
   // keep track of changed bins while sorting
-  std::vector<bool> usedBinIndex(grid.size(), false);
-  std::vector<std::size_t> rBinsIndex;
-  rBinsIndex.reserve(grid.size());
+  boost::container::flat_set<std::size_t> rBinsIndex;
 
   std::size_t counter = 0ul;
   for (external_spacepoint_iterator_t it = spBegin; it != spEnd;
        it++, ++counter) {
     const external_spacepoint_t& sp = *it;
 
+<<<<<<< HEAD
     // remove SPs according to experiment specific cuts
     if (!config.spacePointSelector(sp)) {
+=======
+    // remove SPs outside z and phi region
+    if (spZ > zMax || spZ < zMin) {
+      continue;
+    }
+    float spPhi = std::atan2(spY, spX);
+    if (spPhi > phiMax || spPhi < phiMin) {
+      continue;
+    }
+
+    auto isp = std::make_unique<InternalSpacePoint<external_spacepoint_t>>(
+        counter, sp, spPosition, options.beamPos, variance, spTime);
+    // calculate r-Bin index and protect against overflow (underflow not
+    // possible)
+    std::size_t rIndex =
+        static_cast<std::size_t>(isp->radius() / config.binSizeR);
+    // if index out of bounds, the SP is outside the region of interest
+    if (rIndex >= numRBins) {
+>>>>>>> origin/clone_of_main
       continue;
     }
 
     // fill rbins into grid
+<<<<<<< HEAD
     Acts::Vector3 position(sp.phi(), sp.z(), sp.radius());
     if (!grid.isInside(position)) {
       continue;
@@ -199,19 +242,30 @@ void Acts::CylindricalSpacePointGridCreator::fillGrid(
     std::size_t globIndex = grid.globalBinFromPosition(position);
     auto& rbin = grid.at(globIndex);
     rbin.push_back(&sp);
+=======
+    Acts::Vector2 spLocation(isp->phi(), isp->z());
+    std::vector<std::unique_ptr<InternalSpacePoint<external_spacepoint_t>>>&
+        rbin = grid.atPosition(spLocation);
+    rbin.push_back(std::move(isp));
+>>>>>>> origin/clone_of_main
 
     // keep track of the bins we modify so that we can later sort the SPs in
     // those bins only
-    if (rbin.size() > 1 && !usedBinIndex[globIndex]) {
-      usedBinIndex[globIndex] = true;
-      rBinsIndex.push_back(globIndex);
+    if (rbin.size() > 1) {
+      rBinsIndex.insert(grid.globalBinFromPosition(spLocation));
     }
   }
 
   /// sort SPs in R for each filled bin
-  for (std::size_t binIndex : rBinsIndex) {
+  for (auto& binIndex : rBinsIndex) {
     auto& rbin = grid.atPosition(binIndex);
+<<<<<<< HEAD
     std::ranges::sort(rbin, {}, [](const auto& rb) { return rb->radius(); });
+=======
+    std::sort(rbin.begin(), rbin.end(), [](const auto& a, const auto& b) {
+      return a->radius() < b->radius();
+    });
+>>>>>>> origin/clone_of_main
   }
 }
 

@@ -27,6 +27,7 @@
 #include "Acts/Surfaces/PerigeeSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
+#include "Acts/TrackFitting/GainMatrixSmoother.hpp"
 #include "Acts/TrackFitting/GainMatrixUpdater.hpp"
 #include "Acts/Utilities/Enumerate.hpp"
 #include "Acts/Utilities/Logger.hpp"
@@ -172,9 +173,13 @@ void visitSeedIdentifiers(const TrackProxy& track, Visitor visitor) {
 
 class BranchStopper {
  public:
+  using Config =
+      std::optional<std::variant<Acts::TrackSelector::Config,
+                                 Acts::TrackSelector::EtaBinnedConfig>>;
   using BranchStopperResult =
       Acts::CombinatorialKalmanFilterBranchStopperResult;
 
+<<<<<<< HEAD
   struct BranchState {
     std::size_t nPixelHoles = 0;
     std::size_t nStripHoles = 0;
@@ -183,15 +188,16 @@ class BranchStopper {
   static constexpr Acts::ProxyAccessor<BranchState> branchStateAccessor =
       Acts::ProxyAccessor<BranchState>(Acts::hashString("MyBranchState"));
 
+=======
+>>>>>>> origin/clone_of_main
   mutable std::atomic<std::size_t> m_nStoppedBranches{0};
 
-  explicit BranchStopper(const TrackFindingAlgorithm::Config& config)
-      : m_cfg(config) {}
+  explicit BranchStopper(const Config& config) : m_config(config) {}
 
   BranchStopperResult operator()(
-      const TrackContainer::TrackProxy& track,
-      const TrackContainer::TrackStateProxy& trackState) const {
-    if (!m_cfg.trackSelectorCfg.has_value()) {
+      const Acts::CombinatorialKalmanFilterTipState& tipState,
+      Acts::VectorMultiTrajectory::TrackStateProxy& trackState) const {
+    if (!m_config.has_value()) {
       return BranchStopperResult::Continue;
     }
 
@@ -207,13 +213,14 @@ class BranchStopper {
             return config.hasCuts(eta) ? &config.getCuts(eta) : nullptr;
           }
         },
-        *m_cfg.trackSelectorCfg);
+        *m_config);
 
     if (singleConfig == nullptr) {
       ++m_nStoppedBranches;
       return BranchStopperResult::StopAndDrop;
     }
 
+<<<<<<< HEAD
     bool tooManyHolesPS = false;
     if (!(m_cfg.pixelVolumeIds.empty() && m_cfg.stripVolumeIds.empty())) {
       auto& branchState = branchStateAccessor(track);
@@ -241,6 +248,12 @@ class BranchStopper {
     bool tooManyOutliers = track.nOutliers() > singleConfig->maxOutliers;
     bool tooManyHolesAndOutliers = (track.nHoles() + track.nOutliers()) >
                                    singleConfig->maxHolesAndOutliers;
+=======
+    bool enoughMeasurements =
+        tipState.nMeasurements >= singleConfig->minMeasurements;
+    bool tooManyHoles = tipState.nHoles > singleConfig->maxHoles;
+    bool tooManyOutliers = tipState.nOutliers > singleConfig->maxOutliers;
+>>>>>>> origin/clone_of_main
 
     if (tooManyHoles || tooManyOutliers || tooManyHolesAndOutliers) {
       ++m_nStoppedBranches;
@@ -252,7 +265,7 @@ class BranchStopper {
   }
 
  private:
-  const TrackFindingAlgorithm::Config& m_cfg;
+  Config m_config;
 };
 
 }  // namespace
@@ -294,6 +307,7 @@ TrackFindingAlgorithm::TrackFindingAlgorithm(Config config,
   m_inputInitialTrackParameters.initialize(m_cfg.inputInitialTrackParameters);
   m_inputSeeds.maybeInitialize(m_cfg.inputSeeds);
   m_outputTracks.initialize(m_cfg.outputTracks);
+  m_inputPrimaryVertex.initialize(m_cfg.inputPrimaryVertex);
 }
 
 ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
@@ -313,7 +327,7 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
 
   // Construct a perigee surface as the target surface
   auto pSurface = Acts::Surface::makeShared<Acts::PerigeeSurface>(
-      Acts::Vector3{0., 0., 0.});
+      Acts::Vector3{0., 0., 0*m_inputPrimaryVertex(ctx)});
 
   PassThroughCalibrator pcalibrator;
   MeasurementCalibratorAdapter calibrator(pcalibrator, measurements);
@@ -321,15 +335,17 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
   MeasurementSelector measSel{
       Acts::MeasurementSelector(m_cfg.measurementSelectorCfg)};
 
-  using Extensions = Acts::CombinatorialKalmanFilterExtensions<TrackContainer>;
+  using Extensions =
+      Acts::CombinatorialKalmanFilterExtensions<Acts::VectorMultiTrajectory>;
 
-  BranchStopper branchStopper(m_cfg);
+  BranchStopper branchStopper(m_cfg.trackSelectorCfg);
 
   Extensions extensions;
   extensions.calibrator.connect<&MeasurementCalibratorAdapter::calibrate>(
       &calibrator);
-  extensions.updater.connect<&Acts::GainMatrixUpdater::operator()<
-      typename TrackContainer::TrackStateContainerBackend>>(&kfUpdater);
+  extensions.updater.connect<
+      &Acts::GainMatrixUpdater::operator()<Acts::VectorMultiTrajectory>>(
+      &kfUpdater);
   extensions.measurementSelector.connect<&MeasurementSelector::select>(
       &measSel);
   extensions.branchStopper.connect<&BranchStopper::operator()>(&branchStopper);
@@ -340,22 +356,21 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
       slAccessorDelegate;
   slAccessorDelegate.connect<&IndexSourceLinkAccessor::range>(&slAccessor);
 
-  Acts::PropagatorPlainOptions firstPropOptions(ctx.geoContext,
-                                                ctx.magFieldContext);
+  Acts::PropagatorPlainOptions firstPropOptions;
   firstPropOptions.maxSteps = m_cfg.maxSteps;
   firstPropOptions.direction = m_cfg.reverseSearch ? Acts::Direction::Backward
                                                    : Acts::Direction::Forward;
   firstPropOptions.constrainToVolumeIds = m_cfg.constrainToVolumeIds;
   firstPropOptions.endOfWorldVolumeIds = m_cfg.endOfWorldVolumeIds;
 
-  Acts::PropagatorPlainOptions secondPropOptions(ctx.geoContext,
-                                                 ctx.magFieldContext);
+  Acts::PropagatorPlainOptions secondPropOptions;
   secondPropOptions.maxSteps = m_cfg.maxSteps;
   secondPropOptions.direction = firstPropOptions.direction.invert();
   secondPropOptions.constrainToVolumeIds = m_cfg.constrainToVolumeIds;
   secondPropOptions.endOfWorldVolumeIds = m_cfg.endOfWorldVolumeIds;
 
   // Set the CombinatorialKalmanFilter options
+<<<<<<< HEAD
   TrackFinderOptions firstOptions(ctx.geoContext, ctx.magFieldContext,
                                   ctx.calibContext, slAccessorDelegate,
                                   extensions, firstPropOptions);
@@ -373,13 +388,32 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
 
   Extrapolator extrapolator(
       Acts::SympyStepper(m_cfg.magneticField),
+=======
+  TrackFindingAlgorithm::TrackFinderOptions firstOptions(
+      ctx.geoContext, ctx.magFieldContext, ctx.calibContext, slAccessorDelegate,
+      extensions, firstPropOptions);
+
+  TrackFindingAlgorithm::TrackFinderOptions secondOptions(
+      ctx.geoContext, ctx.magFieldContext, ctx.calibContext, slAccessorDelegate,
+      extensions, secondPropOptions);
+  secondOptions.targetSurface = pSurface.get();
+
+  Acts::Propagator<Acts::EigenStepper<>, Acts::Navigator> extrapolator(
+      Acts::EigenStepper<>(m_cfg.magneticField),
+>>>>>>> origin/clone_of_main
       Acts::Navigator({m_cfg.trackingGeometry},
                       logger().cloneWithSuffix("Navigator")),
       logger().cloneWithSuffix("Propagator"));
 
+<<<<<<< HEAD
   ExtrapolatorOptions extrapolationOptions(ctx.geoContext, ctx.magFieldContext);
   extrapolationOptions.constrainToVolumeIds = m_cfg.constrainToVolumeIds;
   extrapolationOptions.endOfWorldVolumeIds = m_cfg.endOfWorldVolumeIds;
+=======
+  Acts::PropagatorOptions<Acts::ActionList<Acts::MaterialInteractor>,
+                          Acts::AbortList<Acts::EndOfWorldReached>>
+      extrapolationOptions(ctx.geoContext, ctx.magFieldContext);
+>>>>>>> origin/clone_of_main
 
   // Perform the track finding for all initial parameters
   ACTS_DEBUG("Invoke track finding with " << initialParameters.size()
@@ -395,10 +429,13 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
   TrackContainer tracks(trackContainer, trackStateContainer);
   TrackContainer tracksTemp(trackContainerTemp, trackStateContainerTemp);
 
+<<<<<<< HEAD
   // Note that not all backends support PODs as column types
   tracks.addColumn<BranchStopper::BranchState>("MyBranchState");
   tracksTemp.addColumn<BranchStopper::BranchState>("MyBranchState");
 
+=======
+>>>>>>> origin/clone_of_main
   tracks.addColumn<unsigned int>("trackGroup");
   tracksTemp.addColumn<unsigned int>("trackGroup");
   Acts::ProxyAccessor<unsigned int> seedNumber("trackGroup");
@@ -547,6 +584,13 @@ ProcessCode TrackFindingAlgorithm::execute(const AlgorithmContext& ctx) const {
 
             auto& secondTracksForSeed = secondResult.value();
             for (auto& secondTrack : secondTracksForSeed) {
+<<<<<<< HEAD
+=======
+              if (secondTrack.nTrackStates() < 2) {
+                continue;
+              }
+
+>>>>>>> origin/clone_of_main
               // TODO a copy of the track should not be necessary but is the
               //      safest way with the current EDM
               // TODO a lightweight copy without copying all the track state

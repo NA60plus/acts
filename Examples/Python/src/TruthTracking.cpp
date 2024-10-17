@@ -74,6 +74,8 @@ void addTruthTracking(Context& ctx) {
     ACTS_PYTHON_MEMBER(ptMin);
     ACTS_PYTHON_MEMBER(ptMax);
     ACTS_PYTHON_MEMBER(keepNeutral);
+    ACTS_PYTHON_MEMBER(keepPrimary);
+    ACTS_PYTHON_MEMBER(keepSecondary);
     ACTS_PYTHON_MEMBER(nHitsMin);
     ACTS_PYTHON_MEMBER(nHitsMax);
     ACTS_PYTHON_STRUCT_END();
@@ -131,7 +133,6 @@ void addTruthTracking(Context& ctx) {
     ACTS_PYTHON_MEMBER(removeCharged);
     ACTS_PYTHON_MEMBER(removeNeutral);
     ACTS_PYTHON_MEMBER(removeSecondaries);
-    ACTS_PYTHON_MEMBER(excludeAbsPdgs);
     ACTS_PYTHON_STRUCT_END();
 
     pythonRangeProperty(c, "rho", &Config::rhoMin, &Config::rhoMax);

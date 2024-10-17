@@ -18,7 +18,6 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Tests/CommonHelpers/FloatComparisons.hpp"
 #include "Acts/TrackFitting/GainMatrixUpdater.hpp"
-#include "Acts/TrackFitting/KalmanFitterError.hpp"
 #include "Acts/Utilities/CalibrationContext.hpp"
 #include "Acts/Utilities/Result.hpp"
 
@@ -94,6 +93,7 @@ BOOST_AUTO_TEST_CASE(Update) {
   CHECK_CLOSE_ABS(ts.chi2(), 1.33958, 1e-4);
 }
 
+<<<<<<< HEAD
 BOOST_AUTO_TEST_CASE(UpdateFailed) {
   // Make dummy measurement
   Vector2 measPar(-0.1, 0.45);
@@ -130,4 +130,6 @@ BOOST_AUTO_TEST_CASE(UpdateFailed) {
                   .error() == KalmanFitterError::UpdateFailed);
 }
 
+=======
+>>>>>>> origin/clone_of_main
 BOOST_AUTO_TEST_SUITE_END()

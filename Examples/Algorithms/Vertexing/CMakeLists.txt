@@ -1,4 +1,5 @@
 add_library(
+<<<<<<< HEAD
     ActsExamplesVertexing
     SHARED
     src/AdaptiveMultiVertexFinderAlgorithm.cpp
@@ -6,6 +7,16 @@ add_library(
     src/VertexFitterAlgorithm.cpp
     src/SingleSeedVertexFinderAlgorithm.cpp
     src/TruthVertexSeeder.cpp
+=======
+  ActsExamplesVertexing SHARED
+  src/AdaptiveMultiVertexFinderAlgorithm.cpp
+  src/IterativeVertexFinderAlgorithm.cpp
+  src/SecondaryVertexFinderAlgorithm.cpp
+  src/VertexFitterAlgorithm.cpp
+  src/SingleSeedVertexFinderAlgorithm.cpp
+  src/TrackletVertexingAlgorithm.cpp
+  #src/VertexingHelpers.hpp
+>>>>>>> origin/clone_of_main
 )
 target_include_directories(
     ActsExamplesVertexing

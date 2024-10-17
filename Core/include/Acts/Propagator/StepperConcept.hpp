@@ -13,7 +13,7 @@
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/EventData/detail/CorrectedTransformationFreeToBound.hpp"
 #include "Acts/Propagator/ConstrainedStep.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/Intersection.hpp"
@@ -59,8 +59,85 @@ concept CommonStepper = requires {
       { s.updateSurfaceStatus(t, sf, ui, d, bt, sc, l) };
     };
 
+<<<<<<< HEAD
     requires requires(const ConstrainedStep::Type st) {
       { s.releaseStepSize(t, st) } -> std::same_as<void>;
+=======
+// clang-format off
+template <typename S>
+constexpr bool MultiStepperStateConcept= require<
+  has_member<S, cov_transport_t, bool>,
+  has_member<S, path_accumulated_t, double>
+>;
+// clang-format on
+
+// clang-format off
+    template <typename S, typename state = typename S::State>
+      struct CommonStepperConcept {
+        constexpr static bool state_exists = exists<state_t, S>;
+        static_assert(state_exists, "State type not found");
+        constexpr static bool jacobian_exists = exists<jacobian_t, S>;
+        static_assert(jacobian_exists, "Jacobian type not found");
+        constexpr static bool covariance_exists = exists<covariance_t, S>;
+        static_assert(covariance_exists, "Covariance type not found");
+        constexpr static bool bound_state_exists = exists<bound_state_t, S>;
+        static_assert(bound_state_exists, "BoundState type not found");
+        constexpr static bool curvilinear_state_exists = exists<curvilinear_state_t, S>;
+        static_assert(curvilinear_state_exists, "CurvilinearState type not found");
+        constexpr static bool reset_state_exists = has_method<const S, void, reset_state_t, state&, const BoundVector&, const BoundSquareMatrix&, const Surface&, const double>;
+        static_assert(reset_state_exists, "resetState method not found");
+        constexpr static bool position_exists = has_method<const S, Vector3, position_t, const state&>;
+        static_assert(position_exists, "position method not found");
+        constexpr static bool direction_exists = has_method<const S, Vector3, direction_t, const state&>;
+        static_assert(direction_exists, "direction method not found");
+        constexpr static bool qop_exists = has_method<const S, double, qop_t, const state&>;
+        static_assert(qop_exists, "qOverP method not found");
+        constexpr static bool absolute_momentum_exists = has_method<const S, double, absolute_momentum_t, const state&>;
+        static_assert(absolute_momentum_exists, "absoluteMomentum method not found");
+        constexpr static bool momentum_exists = has_method<const S, Vector3, momentum_t, const state&>;
+        static_assert(momentum_exists, "momentum method not found");
+        constexpr static bool charge_exists = has_method<const S, double, charge_t, const state&>;
+        static_assert(charge_exists, "charge method not found");
+        constexpr static bool time_exists = has_method<const S, double, time_t, const state&>;
+        static_assert(time_exists, "time method not found");
+        constexpr static bool bound_state_method_exists= has_method<const S, Result<typename S::BoundState>, bound_state_method_t, state&, const Surface&, bool, const FreeToBoundCorrection&>;
+        static_assert(bound_state_method_exists, "boundState method not found");
+        constexpr static bool curvilinear_state_method_exists = has_method<const S, typename S::CurvilinearState, curvilinear_state_method_t, state&, bool>;
+        static_assert(curvilinear_state_method_exists, "curvilinearState method not found");
+        constexpr static bool covariance_transport_exists = require<has_method<const S, void, covariance_transport_curvilinear_t, state&>,
+                                                                    has_method<const S, void, covariance_transport_bound_t, state&, const Surface&, const FreeToBoundCorrection&>>;
+        static_assert(covariance_transport_exists, "covarianceTransport method not found");
+        constexpr static bool update_surface_exists = has_method<const S, Intersection3D::Status, update_surface_status_t, state&, const Surface&, std::uint8_t, Direction, const BoundaryCheck&, ActsScalar, const Logger&>;
+        static_assert(update_surface_exists, "updateSurfaceStatus method not found");
+        constexpr static bool update_step_size_exists = has_method<const S, void, update_step_size_t, state&, double, ConstrainedStep::Type, bool>;
+        static_assert(update_step_size_exists, "updateStepSize method not found");
+        constexpr static bool get_step_size_exists = has_method<const S, double, get_step_size_t, const state &, ConstrainedStep::Type>;
+        static_assert(get_step_size_exists, "getStepSize method not found");
+        constexpr static bool release_step_size_exists = has_method<const S, void, release_step_size_t, state&, ConstrainedStep::Type>;
+        static_assert(release_step_size_exists, "releaseStepSize method not found");
+        constexpr static bool output_step_size_exists = has_method<const S, std::string, output_step_size_t, const state&>;
+        static_assert(output_step_size_exists, "outputStepSize method not found");
+
+        constexpr static bool value = require<state_exists,
+                                              jacobian_exists,
+                                              covariance_exists,
+                                              bound_state_exists,
+                                              curvilinear_state_exists,
+                                              position_exists,
+                                              direction_exists,
+                                              qop_exists,
+                                              absolute_momentum_exists,
+                                              momentum_exists,
+                                              charge_exists,
+                                              time_exists,
+                                              bound_state_method_exists,
+                                              curvilinear_state_method_exists,
+                                              covariance_transport_exists,
+                                              update_surface_exists,
+                                              update_step_size_exists,
+                                              release_step_size_exists,
+                                              output_step_size_exists>;
+>>>>>>> origin/clone_of_main
 
       requires requires(double d, bool b) {
         { s.updateStepSize(t, d, st, b) } -> std::same_as<void>;

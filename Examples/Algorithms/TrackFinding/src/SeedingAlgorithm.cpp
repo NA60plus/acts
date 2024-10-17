@@ -177,6 +177,7 @@ ActsExamples::SeedingAlgorithm::SeedingAlgorithm(
     }
   }
 
+<<<<<<< HEAD
   if (m_cfg.useExtraCuts) {
     // This function will be applied to select space points during grid filling
     m_cfg.seedFinderConfig.spacePointSelector
@@ -194,6 +195,44 @@ ActsExamples::SeedingAlgorithm::SeedingAlgorithm(
       m_cfg.numPhiNeighbors, cfg.zBinNeighborsBottom, 0);
   m_topBinFinder = std::make_unique<const Acts::GridBinFinder<3ul>>(
       m_cfg.numPhiNeighbors, m_cfg.zBinNeighborsTop, 0);
+=======
+  if (m_cfg.seedFinderConfig.useDetailedDoubleMeasurementInfo) {
+    m_cfg.seedFinderConfig.getTopHalfStripLength.connect(
+        [](const void*, const SimSpacePoint& sp) -> float {
+          return sp.topHalfStripLength();
+        });
+
+    m_cfg.seedFinderConfig.getBottomHalfStripLength.connect(
+        [](const void*, const SimSpacePoint& sp) -> float {
+          return sp.bottomHalfStripLength();
+        });
+
+    m_cfg.seedFinderConfig.getTopStripDirection.connect(
+        [](const void*, const SimSpacePoint& sp) -> Acts::Vector3 {
+          return sp.topStripDirection();
+        });
+
+    m_cfg.seedFinderConfig.getBottomStripDirection.connect(
+        [](const void*, const SimSpacePoint& sp) -> Acts::Vector3 {
+          return sp.bottomStripDirection();
+        });
+
+    m_cfg.seedFinderConfig.getStripCenterDistance.connect(
+        [](const void*, const SimSpacePoint& sp) -> Acts::Vector3 {
+          return sp.stripCenterDistance();
+        });
+
+    m_cfg.seedFinderConfig.getTopStripCenterPosition.connect(
+        [](const void*, const SimSpacePoint& sp) -> Acts::Vector3 {
+          return sp.topStripCenterPosition();
+        });
+  }
+
+  m_bottomBinFinder = std::make_unique<const Acts::GridBinFinder<2ul>>(
+      m_cfg.numPhiNeighbors, m_cfg.zBinNeighborsBottom);
+  m_topBinFinder = std::make_unique<const Acts::GridBinFinder<2ul>>(
+      m_cfg.numPhiNeighbors, m_cfg.zBinNeighborsTop);
+>>>>>>> origin/clone_of_main
 
   m_cfg.seedFinderConfig.seedFilter =
       std::make_unique<Acts::SeedFilter<SpacePointProxy_type>>(
@@ -202,6 +241,15 @@ ActsExamples::SeedingAlgorithm::SeedingAlgorithm(
       Acts::SeedFinder<SpacePointProxy_type,
                        Acts::CylindricalSpacePointGrid<SpacePointProxy_type>>(
           m_cfg.seedFinderConfig);
+
+  
+  if (m_cfg.seedFinderConfig.verbose)
+    std::cout << "NA60+_m_cfg.gridOptions.bFieldInZ= "
+              << m_cfg.gridOptions.bFieldInZ
+              << " m_cfg.seedFinderOptions.bFieldInZ= "
+              << m_cfg.seedFinderOptions.bFieldInZ << std::endl;
+
+  m_inputPrimaryVertex.initialize(m_cfg.inputPrimaryVertex);
 }
 
 ActsExamples::ProcessCode ActsExamples::SeedingAlgorithm::execute(
@@ -225,6 +273,7 @@ ActsExamples::ProcessCode ActsExamples::SeedingAlgorithm::execute(
     }
   }
 
+<<<<<<< HEAD
   // Config
   Acts::SpacePointContainerConfig spConfig;
   spConfig.useDetailedDoubleMeasurementInfo =
@@ -232,6 +281,34 @@ ActsExamples::ProcessCode ActsExamples::SeedingAlgorithm::execute(
   // Options
   Acts::SpacePointContainerOptions spOptions;
   spOptions.beamPos = {0., 0.};
+=======
+  // construct the seeding tools
+  // covariance tool, extracts covariances per spacepoint as required
+  auto extractGlobalQuantities = [=](const SimSpacePoint& sp, float, float,
+                                     float) {
+    // modified to rotate our setup
+    Acts::Vector3 position{sp.x(), sp.z()-m_inputPrimaryVertex(ctx), -sp.y()};
+    Acts::Vector2 covariance{
+        50e-3, 30e-3};  // large values put by hand. Check??? in R is the Si
+                        // thickness and in z is the pixel pitch. Units is mm???
+    //    Acts::Vector3 position{sp.y(), sp.z(), sp.x()};
+    //    Acts::Vector2 covariance{50e-3, 30e-3};  //large values put by hand.
+    //    Check??? in R is the Si thickness and in z is the pixel pitch. Units
+    //    is mm??? Acts::Vector3 position{sp.x(), sp.y(), sp.z()}; Acts::Vector2
+    //    covariance{sp.varianceR(), sp.varianceZ()};
+
+    if (m_cfg.seedFinderConfig.verbose) {
+      std::cout << "NA60+_SeedingAlgorithm: sp.x()= " << sp.x()
+                << " sp.y()= " << sp.y() << " sp.z()= " << sp.z()-m_inputPrimaryVertex(ctx) << std::endl;
+
+      std::cout << "NA60+_position= " << position.x() << " " << position.y()
+                << " " << position.z() << std::endl;
+      std::cout << "NA60+_covariance.R= " << covariance.x()
+                << " covariance.Z= " << covariance.y() << std::endl;
+    }
+    return std::make_tuple(position, covariance, sp.t());
+  };
+>>>>>>> origin/clone_of_main
 
   // Prepare interface SpacePoint backend-ACTS
   ActsExamples::SpacePointContainer container(spacePointPtrs);
@@ -285,9 +362,9 @@ ActsExamples::ProcessCode ActsExamples::SeedingAlgorithm::execute(
   state.spacePointMutableData.resize(spContainer.size());
 
   for (const auto [bottom, middle, top] : spacePointsGrouping) {
-    m_seedFinder.createSeedsForGroup(m_cfg.seedFinderOptions, state,
-                                     spacePointsGrouping.grid(), seeds, bottom,
-                                     middle, top, rMiddleSPRange);
+    m_seedFinder.createSeedsForGroup(
+        m_cfg.seedFinderOptions, state, spacePointsGrouping.grid(),
+        std::back_inserter(seeds), bottom, middle, top, rMiddleSPRange, m_inputPrimaryVertex(ctx));
   }
 
   ACTS_DEBUG("Created " << seeds.size() << " track seeds from "

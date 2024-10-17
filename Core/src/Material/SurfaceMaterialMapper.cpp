@@ -241,8 +241,13 @@ void Acts::SurfaceMaterialMapper::mapInteraction(
   using ActorList = ActorList<MaterialSurfaceCollector, MaterialVolumeCollector,
                               EndOfWorldReached>;
 
+<<<<<<< HEAD
   StraightLinePropagator::Options<ActorList> options(mState.geoContext,
                                                      mState.magFieldContext);
+=======
+  PropagatorOptions<ActionList, AbortList> options(mState.geoContext,
+                                                   mState.magFieldContext);
+>>>>>>> origin/clone_of_main
 
   // Now collect the material layers by using the straight line propagator
   const auto& result = m_propagator.propagate(start, options).value();

@@ -1,6 +1,10 @@
 // This file is part of the ACTS project.
 //
+<<<<<<< HEAD
 // Copyright (C) 2016 CERN for the benefit of the ACTS project
+=======
+// Copyright (C) 2017 CERN for the benefit of the Acts project
+>>>>>>> origin/clone_of_main
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,8 +12,6 @@
 
 #include "ActsExamples/Io/Root/RootMeasurementWriter.hpp"
 
-#include "Acts/Definitions/TrackParametrization.hpp"
-#include "Acts/Utilities/Enumerate.hpp"
 #include "ActsExamples/EventData/AverageSimHits.hpp"
 #include "ActsExamples/EventData/Index.hpp"
 #include "ActsExamples/EventData/Measurement.hpp"
@@ -18,17 +20,17 @@
 
 #include <cstddef>
 #include <ios>
-#include <limits>
-#include <memory>
 #include <stdexcept>
 #include <utility>
 #include <variant>
 
 #include <TFile.h>
-#include <TTree.h>
 
-namespace ActsExamples {
+namespace Acts {
+class Surface;
+}  // namespace Acts
 
+<<<<<<< HEAD
 struct RootMeasurementWriter::DigitizationTree {
   const std::array<std::string, Acts::eBoundSize> bNames = {
       "loc0", "loc1", "phi", "theta", "qop", "time"};
@@ -206,6 +208,11 @@ struct RootMeasurementWriter::DigitizationTree {
 
 RootMeasurementWriter::RootMeasurementWriter(
     const RootMeasurementWriter::Config& config, Acts::Logging::Level level)
+=======
+ActsExamples::RootMeasurementWriter::RootMeasurementWriter(
+    const ActsExamples::RootMeasurementWriter::Config& config,
+    Acts::Logging::Level level)
+>>>>>>> origin/clone_of_main
     : WriterT(config.inputMeasurements, "RootMeasurementWriter", level),
       m_cfg(config) {
   // Input container for measurements is already checked by base constructor
@@ -217,9 +224,9 @@ RootMeasurementWriter::RootMeasurementWriter(
         "Missing hit-to-simulated-hits map input collection");
   }
 
-  m_inputClusters.maybeInitialize(m_cfg.inputClusters);
   m_inputSimHits.initialize(m_cfg.inputSimHits);
   m_inputMeasurementSimHitsMap.initialize(m_cfg.inputMeasurementSimHitsMap);
+  m_inputClusters.maybeInitialize(m_cfg.inputClusters);
 
   if (m_cfg.surfaceByIdentifier.empty()) {
     throw std::invalid_argument("Missing Surface-GeoID association map");
@@ -232,34 +239,59 @@ RootMeasurementWriter::RootMeasurementWriter(
 
   m_outputFile->cd();
 
-  std::vector bIndices = {Acts::eBoundLoc0, Acts::eBoundLoc1, Acts::eBoundTime};
-  m_outputTree =
-      std::make_unique<DigitizationTree>("measurements", bIndices, bIndices);
+  // Analyze the smearers
+  std::vector<
+      std::pair<Acts::GeometryIdentifier, std::unique_ptr<DigitizationTree>>>
+      dTrees;
+  if (!m_cfg.boundIndices.empty()) {
+    ACTS_DEBUG("Bound indices are declared, preparing trees.");
+    for (std::size_t ikv = 0; ikv < m_cfg.boundIndices.size(); ++ikv) {
+      auto geoID = m_cfg.boundIndices.idAt(ikv);
+      auto bIndices = m_cfg.boundIndices.valueAt(ikv);
+      auto dTree = std::make_unique<DigitizationTree>(geoID);
+      for (const auto& bIndex : bIndices) {
+        ACTS_VERBOSE("- setup branch for index: " << bIndex);
+        dTree->setupBoundRecBranch(bIndex);
+      }
+      if (!m_cfg.inputClusters.empty()) {
+        dTree->setupClusterBranch(bIndices);
+      }
+      dTrees.push_back({geoID, std::move(dTree)});
+    }
+  } else {
+    ACTS_DEBUG("Bound indices are not declared, no reco setup.");
+  }
+
+  m_outputTrees = Acts::GeometryHierarchyMap<std::unique_ptr<DigitizationTree>>(
+      std::move(dTrees));
 }
 
-RootMeasurementWriter::~RootMeasurementWriter() {
+ActsExamples::RootMeasurementWriter::~RootMeasurementWriter() {
   if (m_outputFile != nullptr) {
     m_outputFile->Close();
   }
 }
 
-ProcessCode RootMeasurementWriter::finalize() {
+ActsExamples::ProcessCode ActsExamples::RootMeasurementWriter::finalize() {
   /// Close the file if it's yours
   m_outputFile->cd();
-  m_outputTree->tree->Write();
+  for (auto dTree = m_outputTrees.begin(); dTree != m_outputTrees.end();
+       ++dTree) {
+    (*dTree)->tree->Write();
+  }
   m_outputFile->Close();
 
   return ProcessCode::SUCCESS;
 }
 
-ProcessCode RootMeasurementWriter::writeT(
+ActsExamples::ProcessCode ActsExamples::RootMeasurementWriter::writeT(
     const AlgorithmContext& ctx, const MeasurementContainer& measurements) {
   const auto& simHits = m_inputSimHits(ctx);
   const auto& hitSimHitsMap = m_inputMeasurementSimHitsMap(ctx);
 
-  const ClusterContainer* clusters = nullptr;
+  ClusterContainer clusters;
   if (!m_cfg.inputClusters.empty()) {
-    clusters = &m_inputClusters(ctx);
+    clusters = m_inputClusters(ctx);
   }
 
   // Exclusive access to the tree while writing
@@ -269,6 +301,7 @@ ProcessCode RootMeasurementWriter::writeT(
     const ConstVariableBoundMeasurementProxy meas =
         measurements.getMeasurement(hitIdx);
 
+<<<<<<< HEAD
     Acts::GeometryIdentifier geoId = meas.geometryId();
     // find the corresponding surface
     auto surfaceItr = m_cfg.surfaceByIdentifier.find(geoId);
@@ -301,9 +334,59 @@ ProcessCode RootMeasurementWriter::writeT(
 
     m_outputTree->fill();
     m_outputTree->clear();
+=======
+    std::visit(
+        [&](const auto& m) {
+          Acts::GeometryIdentifier geoId =
+              m.sourceLink().template get<IndexSourceLink>().geometryId();
+          // find the corresponding surface
+          auto surfaceItr = m_cfg.surfaceByIdentifier.find(geoId);
+          if (surfaceItr == m_cfg.surfaceByIdentifier.end()) {
+            return;
+          }
+          const Acts::Surface& surface = *(surfaceItr->second);
+          // find the corresponding output tree
+          auto dTreeItr = m_outputTrees.find(geoId);
+          if (dTreeItr == m_outputTrees.end()) {
+            return;
+          }
+          auto& dTree = *dTreeItr;
+
+          // Fill the identification
+          dTree->fillIdentification(ctx.eventNumber, geoId);
+
+          // Find the contributing simulated hits
+          auto indices = makeRange(hitSimHitsMap.equal_range(hitIdx));
+          // Use average truth in the case of multiple contributing sim hits
+          auto [local, pos4, dir] = averageSimHits(ctx.geoContext, surface,
+                                                   simHits, indices, logger());
+          Acts::RotationMatrix3 rot =
+              surface
+                  .referenceFrame(ctx.geoContext, pos4.segment<3>(Acts::ePos0),
+                                  dir)
+                  .inverse();
+          std::pair<double, double> angles =
+              Acts::VectorHelpers::incidentAngles(dir, rot);
+          dTree->fillTruthParameters(local, pos4, dir, angles);
+          dTree->fillBoundMeasurement(m);
+          if (!clusters.empty()) {
+            const auto& c = clusters[hitIdx];
+            dTree->fillCluster(c);
+          }
+          dTree->tree->Fill();
+          if (dTree->chValue != nullptr) {
+            dTree->chValue->clear();
+          }
+          if (dTree->chId[0] != nullptr) {
+            dTree->chId[0]->clear();
+          }
+          if (dTree->chId[1] != nullptr) {
+            dTree->chId[1]->clear();
+          }
+        },
+        meas);
+>>>>>>> origin/clone_of_main
   }
 
-  return ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
-
-}  // namespace ActsExamples

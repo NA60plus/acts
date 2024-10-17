@@ -10,7 +10,6 @@
 
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Propagator/Propagator.hpp"
-#include "Acts/Propagator/PropagatorOptions.hpp"
 #include "Acts/Surfaces/PerigeeSurface.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Utilities/MathHelpers.hpp"
@@ -311,6 +310,52 @@ Result<double> ImpactPointEstimator::calculateDistance(
   return res.value().first.template head<3>().norm();
 }
 
+Result<double> ImpactPointEstimator::calculateDistancez0(
+    const GeometryContext& gctx, const BoundTrackParameters& trkParams,
+    const Vector3& vtxPos, State& state) const {
+  auto res = getDistanceAndMomentumImpl(gctx, trkParams, vtxPos, m_cfg, state,
+                                        *m_logger);
+
+  if (!res.ok()) {
+    return res.error();
+  }
+
+  // Return distance (we get a 4D vector in all cases, but we only need the
+  // position norm)
+  //return res.value().first.template head<2>().norm();
+  return res.value().first[2];
+}
+
+Result<double> ImpactPointEstimator::calculateDistanced0(
+    const GeometryContext& gctx, const BoundTrackParameters& trkParams,
+    const Vector3& vtxPos, State& state) const {
+  auto res = getDistanceAndMomentumImpl(gctx, trkParams, vtxPos, m_cfg, state,
+                                        *m_logger);
+
+  if (!res.ok()) {
+    return res.error();
+  }
+
+  // Return distance (we get a 4D vector in all cases, but we only need the
+  // position norm)
+  return res.value().first.template head<2>().norm();
+}
+
+Result<std::pair<Vector4, Vector3>> ImpactPointEstimator::calculateDistanceMod(
+    const GeometryContext& gctx, const BoundTrackParameters& trkParams,
+    const Vector3& vtxPos, State& state) const {
+  auto res = getDistanceAndMomentumImpl(gctx, trkParams, vtxPos, m_cfg, state,
+                                        *m_logger);
+
+  if (!res.ok()) {
+    return res.error();
+  }
+
+  // Return distance (we get a 4D vector in all cases, but we only need the
+  // position norm)
+  return res.value();
+}
+
 Result<BoundTrackParameters> ImpactPointEstimator::estimate3DImpactParameters(
     const GeometryContext& gctx, const MagneticFieldContext& mctx,
     const BoundTrackParameters& trkParams, const Vector3& vtxPos,
@@ -364,11 +409,11 @@ Result<BoundTrackParameters> ImpactPointEstimator::estimate3DImpactParameters(
   auto intersection =
       planeSurface
           ->intersect(gctx, trkParams.position(gctx), trkParams.direction(),
-                      BoundaryTolerance::Infinite())
+                      BoundaryCheck(false))
           .closest();
 
   // Create propagator options
-  PropagatorPlainOptions pOptions(gctx, mctx);
+  PropagatorOptions<> pOptions(gctx, mctx);
   pOptions.direction =
       Direction::fromScalarZeroAsPositive(intersection.pathLength());
 
@@ -424,12 +469,11 @@ Result<ImpactParametersAndSigma> ImpactPointEstimator::getImpactParameters(
       Surface::makeShared<PerigeeSurface>(vtx.position());
 
   // Create propagator options
-  PropagatorPlainOptions pOptions(gctx, mctx);
-  auto intersection =
-      perigeeSurface
-          ->intersect(gctx, track.position(gctx), track.direction(),
-                      BoundaryTolerance::Infinite())
-          .closest();
+  PropagatorOptions<> pOptions(gctx, mctx);
+  auto intersection = perigeeSurface
+                          ->intersect(gctx, track.position(gctx),
+                                      track.direction(), BoundaryCheck(false))
+                          .closest();
   pOptions.direction =
       Direction::fromScalarZeroAsPositive(intersection.pathLength());
 
@@ -508,7 +552,7 @@ Result<std::pair<double, double>> ImpactPointEstimator::getLifetimeSignOfTrack(
       Surface::makeShared<PerigeeSurface>(vtx.position());
 
   // Create propagator options
-  PropagatorPlainOptions pOptions(gctx, mctx);
+  PropagatorOptions<> pOptions(gctx, mctx);
   pOptions.direction = Direction::Backward;
 
   // Do the propagation to the perigeee
@@ -547,7 +591,7 @@ Result<double> ImpactPointEstimator::get3DLifetimeSignOfTrack(
       Surface::makeShared<PerigeeSurface>(vtx.position());
 
   // Create propagator options
-  PropagatorPlainOptions pOptions(gctx, mctx);
+  PropagatorOptions<> pOptions(gctx, mctx);
   pOptions.direction = Direction::Backward;
 
   // Do the propagation to the perigeee

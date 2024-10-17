@@ -137,11 +137,19 @@ BOOST_AUTO_TEST_CASE(kalman_extrapolator) {
   using StepWiseActors = ActorList<StepWiseActor, EndOfWorldReached>;
 
   // Create some options
+<<<<<<< HEAD
   using StepWiseOptions = Propagator::Options<StepWiseActors>;
   StepWiseOptions swOptions(tgContext, mfContext);
 
   using PlainActors = ActorList<EndOfWorldReached>;
   using PlainOptions = Propagator::Options<PlainActors>;
+=======
+  using StepWiseOptions = PropagatorOptions<StepWiseActors, Aborters>;
+  StepWiseOptions swOptions(tgContext, mfContext);
+
+  using PlainActors = ActionList<>;
+  using PlainOptions = PropagatorOptions<PlainActors, Aborters>;
+>>>>>>> origin/clone_of_main
   PlainOptions pOptions(tgContext, mfContext);
 
   // Run the standard propagation

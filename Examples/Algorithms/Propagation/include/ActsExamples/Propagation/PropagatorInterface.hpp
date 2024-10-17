@@ -67,11 +67,19 @@ class ConcretePropagator : public PropagatorInterface {
     using SteppingLogger = Acts::detail::SteppingLogger;
     using EndOfWorld = Acts::EndOfWorldReached;
 
+<<<<<<< HEAD
     // Actor list
     using ActorList =
         Acts::ActorList<SteppingLogger, MaterialInteractor, EndOfWorld>;
     using PropagatorOptions =
         typename propagator_t::template Options<ActorList>;
+=======
+      // Action list and abort list
+      using ActionList = Acts::ActionList<SteppingLogger, MaterialInteractor>;
+      using AbortList = Acts::AbortList<EndOfWorld>;
+      using PropagatorOptions =
+          Acts::DenseStepperPropagatorOptions<ActionList, AbortList>;
+>>>>>>> origin/clone_of_main
 
     PropagatorOptions options(context.geoContext, context.magFieldContext);
     // Activate loop protection at some pt value
@@ -84,6 +92,7 @@ class ConcretePropagator : public PropagatorInterface {
     mInteractor.energyLoss = cfg.energyLoss;
     mInteractor.recordInteractions = cfg.recordMaterialInteractions;
 
+<<<<<<< HEAD
     // Switch the logger to sterile, e.g. for timing checks
     auto& sLogger = options.actorList.template get<SteppingLogger>();
     sLogger.sterile = cfg.sterileLogger;
@@ -91,6 +100,19 @@ class ConcretePropagator : public PropagatorInterface {
     options.stepping.maxStepSize = cfg.maxStepSize;
 
     auto state = m_propagator.makeState(startParameters, options);
+=======
+      // Switch the material interaction on/off & eventually into logging mode
+      auto& mInteractor = options.actionList.get<MaterialInteractor>();
+      mInteractor.multipleScattering = cfg.multipleScattering;
+      mInteractor.energyLoss = cfg.energyLoss;
+      mInteractor.recordInteractions = cfg.recordMaterialInteractions;
+
+      // Switch the logger to sterile, e.g. for timing checks
+      auto& sLogger = options.actionList.get<SteppingLogger>();
+      sLogger.sterile = cfg.sterileLogger;
+      // Set a maximum step size
+      options.maxStepSize = cfg.maxStepSize;
+>>>>>>> origin/clone_of_main
 
     // Propagate using the propagator
     auto resultTmp = m_propagator.propagate(state);

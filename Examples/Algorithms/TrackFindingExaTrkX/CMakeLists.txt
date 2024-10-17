@@ -1,10 +1,17 @@
 add_library(
+<<<<<<< HEAD
     ActsExamplesTrackFindingExaTrkX
     SHARED
     src/TrackFindingAlgorithmExaTrkX.cpp
     src/PrototracksToParameters.cpp
     src/TrackFindingFromPrototrackAlgorithm.cpp
     src/TruthGraphBuilder.cpp
+=======
+  ActsExamplesTrackFindingExaTrkX SHARED
+  src/TrackFindingAlgorithmExaTrkX.cpp
+  src/PrototracksToParameters.cpp
+  src/TrackFindingFromPrototrackAlgorithm.cpp
+>>>>>>> origin/clone_of_main
 )
 
 target_include_directories(

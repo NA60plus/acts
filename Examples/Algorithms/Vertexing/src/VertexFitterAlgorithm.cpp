@@ -42,8 +42,13 @@ ActsExamples::VertexFitterAlgorithm::VertexFitterAlgorithm(
 
 ActsExamples::ProcessCode ActsExamples::VertexFitterAlgorithm::execute(
     const ActsExamples::AlgorithmContext& ctx) const {
+<<<<<<< HEAD
   using Propagator = Acts::Propagator<Acts::SympyStepper>;
   using PropagatorOptions = Propagator::Options<>;
+=======
+  using Propagator = Acts::Propagator<Acts::EigenStepper<>>;
+  using PropagatorOptions = Acts::PropagatorOptions<>;
+>>>>>>> origin/clone_of_main
   using Linearizer = Acts::HelicalTrackLinearizer;
   using VertexFitter = Acts::FullBilloirVertexFitter;
   using VertexFitterOptions = Acts::VertexingOptions;

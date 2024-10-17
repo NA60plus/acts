@@ -181,6 +181,7 @@ BOOST_AUTO_TEST_CASE(CylinderSurfaceProperties) {
   /// Test isOnSurface
   Vector3 offSurface{100, 1, 2};
   BOOST_CHECK(cylinderSurfaceObject->isOnSurface(
+<<<<<<< HEAD
       testContext, globalPosition, momentum, BoundaryTolerance::None()));
   BOOST_CHECK(cylinderSurfaceObject->isOnSurface(testContext, globalPosition,
                                                  BoundaryTolerance::None()));
@@ -188,11 +189,16 @@ BOOST_AUTO_TEST_CASE(CylinderSurfaceProperties) {
       testContext, offSurface, momentum, BoundaryTolerance::None()));
   BOOST_CHECK(!cylinderSurfaceObject->isOnSurface(testContext, offSurface,
                                                   BoundaryTolerance::None()));
+=======
+      testContext, globalPosition, momentum, BoundaryCheck(true)));
+  BOOST_CHECK(!cylinderSurfaceObject->isOnSurface(
+      testContext, offSurface, momentum, BoundaryCheck(true)));
+>>>>>>> origin/clone_of_main
   //
   /// intersection test
   Vector3 direction{-1., 0, 0};
   auto sfIntersection = cylinderSurfaceObject->intersect(
-      testContext, offSurface, direction, BoundaryTolerance::Infinite());
+      testContext, offSurface, direction, BoundaryCheck(false));
   Intersection3D expectedIntersect{Vector3{1, 1, 2}, 99.,
                                    Intersection3D::Status::reachable};
   BOOST_CHECK(sfIntersection[0].isValid());

@@ -19,7 +19,19 @@
 #include <stdexcept>
 #include <vector>
 
+<<<<<<< HEAD
 #include "CsvOutputData.hpp"
+=======
+#include <dfe/dfe_io_dsv.hpp>
+#include <dfe/dfe_namedtuple.hpp>
+
+struct GraphData {
+  std::int64_t edge0;
+  std::int64_t edge1;
+  float weight;
+  DFE_NAMEDTUPLE(GraphData, edge0, edge1, weight);
+};
+>>>>>>> origin/clone_of_main
 
 ActsExamples::CsvExaTrkXGraphWriter::CsvExaTrkXGraphWriter(
     const ActsExamples::CsvExaTrkXGraphWriter::Config& config,
@@ -28,26 +40,20 @@ ActsExamples::CsvExaTrkXGraphWriter::CsvExaTrkXGraphWriter(
       m_cfg(config) {}
 
 ActsExamples::ProcessCode ActsExamples::CsvExaTrkXGraphWriter::writeT(
-    const ActsExamples::AlgorithmContext& ctx, const Graph& graph) {
-  assert(graph.weights.empty() ||
-         (graph.edges.size() / 2 == graph.weights.size()));
-  assert(graph.edges.size() % 2 == 0);
-
-  if (graph.weights.empty()) {
-    ACTS_DEBUG("No weights provide, write default value of 1");
-  }
-
+    const ActsExamples::AlgorithmContext& ctx,
+    const std::pair<std::vector<std::int64_t>, std::vector<float>>& graph) {
   std::string path = perEventFilepath(
       m_cfg.outputDir, m_cfg.outputStem + ".csv", ctx.eventNumber);
 
   ActsExamples::NamedTupleCsvWriter<GraphData> writer(path);
 
-  const auto nEdges = graph.edges.size() / 2;
-  for (auto i = 0ul; i < nEdges; ++i) {
+  const auto& [edges, weights] = graph;
+
+  for (auto i = 0ul; i < weights.size(); ++i) {
     GraphData edge{};
-    edge.edge0 = graph.edges[2 * i];
-    edge.edge1 = graph.edges[2 * i + 1];
-    edge.weight = graph.weights.empty() ? 1.f : graph.weights[i];
+    edge.edge0 = edges[2 * i];
+    edge.edge1 = edges[2 * i + 1];
+    edge.weight = weights[i];
     writer.append(edge);
   }
 

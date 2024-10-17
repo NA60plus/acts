@@ -29,7 +29,11 @@ env:
 jobs:
   build_debug:
     runs-on: ubuntu-latest
+<<<<<<< HEAD
     container: ghcr.io/acts-project/ubuntu2404:58
+=======
+    container: ghcr.io/acts-project/ubuntu2204:v41
+>>>>>>> origin/clone_of_main
     steps:
 
       - uses: actions/checkout@v4
@@ -49,6 +53,12 @@ jobs:
           --preset=github-ci
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_FLAGS="-Werror --coverage -g -gz -g1"
+<<<<<<< HEAD
+=======
+          -DACTS_BUILD_UNITTESTS=on
+          -DACTS_BUILD_EXAMPLES_UNITTESTS=off
+          -DACTS_BUILD_EVERYTHING=ON
+>>>>>>> origin/clone_of_main
           -DACTS_BUILD_ODD=OFF
       - name: Build
         run: cmake --build build
@@ -86,7 +96,11 @@ jobs:
 
   build_performance:
     runs-on: ubuntu-latest
+<<<<<<< HEAD
     container: ghcr.io/acts-project/ubuntu2404:58
+=======
+    container: ghcr.io/acts-project/ubuntu2204:v41
+>>>>>>> origin/clone_of_main
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4

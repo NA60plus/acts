@@ -82,7 +82,7 @@ struct Gx2FitterExtensions {
                     const SourceLink&, TrackStateProxy)>;
 
   using Updater = Delegate<Result<void>(const GeometryContext&, TrackStateProxy,
-                                        const Logger&)>;
+                                        Direction, const Logger&)>;
 
   using OutlierFinder = Delegate<bool(ConstTrackStateProxy)>;
 
@@ -627,8 +627,23 @@ class Gx2Fitter {
         return;
       }
 
+<<<<<<< HEAD
       // We are only interested in surfaces. If we are not on a surface, we
       // continue the navigation
+=======
+      // Add the measurement surface as external surface to the navigator.
+      // We will try to hit those surface by ignoring boundary checks.
+      if (state.navigation.externalSurfaces.size() == 0) {
+        for (auto measurementIt = inputMeasurements->begin();
+             measurementIt != inputMeasurements->end(); measurementIt++) {
+          navigator.insertExternalSurface(state.navigation,
+                                          measurementIt->first);
+        }
+      }
+
+      // Update:
+      // - Waiting for a current surface
+>>>>>>> origin/clone_of_main
       auto surface = navigator.currentSurface(state.navigation);
       if (surface == nullptr) {
         return;
@@ -1021,7 +1036,11 @@ class Gx2Fitter {
     using GX2FResult = typename GX2FActor::result_type;
     using Actors = Acts::ActorList<GX2FActor>;
 
+<<<<<<< HEAD
     using PropagatorOptions = typename propagator_t::template Options<Actors>;
+=======
+    using PropagatorOptions = Acts::PropagatorOptions<Actors, Aborters>;
+>>>>>>> origin/clone_of_main
 
     start_parameters_t params = sParameters;
     BoundVector deltaParams = BoundVector::Zero();
@@ -1077,6 +1096,7 @@ class Gx2Fitter {
       Acts::MagneticFieldContext magCtx = gx2fOptions.magFieldContext;
       // Set options for propagator
       PropagatorOptions propagatorOptions(geoCtx, magCtx);
+<<<<<<< HEAD
 
       // Add the measurement surface as external surface to the navigator.
       // We will try to hit those surface by ignoring boundary checks.
@@ -1085,6 +1105,9 @@ class Gx2Fitter {
       }
 
       auto& gx2fActor = propagatorOptions.actorList.template get<GX2FActor>();
+=======
+      auto& gx2fActor = propagatorOptions.actionList.template get<GX2FActor>();
+>>>>>>> origin/clone_of_main
       gx2fActor.inputMeasurements = &inputMeasurements;
       gx2fActor.multipleScattering = multipleScattering;
       gx2fActor.extensions = gx2fOptions.extensions;

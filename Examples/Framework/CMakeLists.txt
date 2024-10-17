@@ -3,6 +3,7 @@ include(ActsTargetLinkLibrariesSystem)
 set(ActsExamplesFramework_SOURCES)
 
 add_library(
+<<<<<<< HEAD
     ActsExamplesFramework
     SHARED
     src/EventData/Measurement.cpp
@@ -24,6 +25,28 @@ add_library(
     src/Validation/TrackClassification.cpp
     src/Validation/TrackSummaryPlotTool.cpp
 )
+=======
+  ActsExamplesFramework SHARED
+  src/EventData/MeasurementCalibration.cpp
+  src/EventData/ScalingCalibrator.cpp
+  src/Framework/IAlgorithm.cpp
+  src/Framework/SequenceElement.cpp
+  src/Framework/WhiteBoard.cpp
+  src/Framework/RandomNumbers.cpp
+  src/Framework/Sequencer.cpp
+  src/Utilities/EventDataTransforms.cpp
+  src/Utilities/Paths.cpp
+  src/Utilities/Options.cpp
+  src/Utilities/Helpers.cpp
+  src/Validation/DuplicationPlotTool.cpp
+  src/Validation/EffPlotTool.cpp
+  src/Validation/FakeRatePlotTool.cpp
+  src/Validation/ResPlotTool.cpp
+  src/Validation/TrackClassification.cpp
+  src/Validation/TrackSummaryPlotTool.cpp
+  src/Validation/TrkVtxPlotTool.cpp
+  )
+>>>>>>> origin/clone_of_main
 
 target_include_directories(
     ActsExamplesFramework

@@ -7,6 +7,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # CMake include(s).
+cmake_minimum_required(VERSION 3.14)
 include(FetchContent)
 
 # Tell the user what's happening.
@@ -77,4 +78,8 @@ set(ALGEBRA_PLUGINS_SETUP_BENCHMARK
 )
 
 # Now set up its build.
+<<<<<<< HEAD
 FetchContent_MakeAvailable(AlgebraPlugins)
+=======
+FetchContent_MakeAvailable( AlgebraPlugins )
+>>>>>>> origin/clone_of_main

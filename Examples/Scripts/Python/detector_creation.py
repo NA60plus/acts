@@ -82,6 +82,7 @@ if "__main__" == __name__:
     xyFile.addObjects(xyView)
     xyFile.write("odd_xy.svg")
 
+<<<<<<< HEAD
     # Longitudinal view
     zrRange = acts.Extent([[acts.BinningValue.binPhi, [-0.1, 0.1]]])
     zrView = acts.svg.drawDetector(
@@ -94,3 +95,6 @@ if "__main__" == __name__:
     zrFile = acts.svg.file()
     zrFile.addObjects(zrView)
     zrFile.write("odd_zr.svg")
+=======
+    acts.examples.writeDetectorToJsonDetray(geoContext, detector, "odd-detray")
+>>>>>>> origin/clone_of_main

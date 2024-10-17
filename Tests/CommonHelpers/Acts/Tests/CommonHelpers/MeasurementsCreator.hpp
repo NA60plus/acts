@@ -154,6 +154,7 @@ Measurements createMeasurements(const propagator_t& propagator,
                                 const MeasurementResolutionMap& resolutions,
                                 std::default_random_engine& rng,
                                 std::size_t sourceId = 0u) {
+<<<<<<< HEAD
   using ActorList =
       Acts::ActorList<MeasurementsCreator, Acts::EndOfWorldReached>;
   using PropagatorOptions = typename propagator_t::template Options<ActorList>;
@@ -161,6 +162,14 @@ Measurements createMeasurements(const propagator_t& propagator,
   // Set options for propagator
   PropagatorOptions options(geoCtx, magCtx);
   auto& creator = options.actorList.template get<MeasurementsCreator>();
+=======
+  using Actions = Acts::ActionList<MeasurementsCreator>;
+  using Aborters = Acts::AbortList<Acts::EndOfWorldReached>;
+
+  // Set options for propagator
+  Acts::PropagatorOptions<Actions, Aborters> options(geoCtx, magCtx);
+  auto& creator = options.actionList.get<MeasurementsCreator>();
+>>>>>>> origin/clone_of_main
   creator.resolutions = resolutions;
   creator.rng = &rng;
   creator.sourceId = sourceId;

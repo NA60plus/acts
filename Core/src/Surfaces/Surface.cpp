@@ -49,20 +49,29 @@ Acts::Surface::~Surface() = default;
 bool Acts::Surface::isOnSurface(const GeometryContext& gctx,
                                 const Vector3& position,
                                 const Vector3& direction,
+<<<<<<< HEAD
                                 const BoundaryTolerance& boundaryTolerance,
                                 double tolerance) const {
   // global to local transformation
   auto lpResult = globalToLocal(gctx, position, direction, tolerance);
   if (!lpResult.ok()) {
     return false;
+=======
+                                const BoundaryCheck& bcheck) const {
+  // global to local transformation
+  auto lpResult = globalToLocal(gctx, position, direction);
+  if (lpResult.ok()) {
+    return bcheck.isEnabled() ? bounds().inside(lpResult.value(), bcheck)
+                              : true;
+>>>>>>> origin/clone_of_main
   }
-  return bounds().inside(lpResult.value(), boundaryTolerance);
+  return false;
 }
 
 Acts::AlignmentToBoundMatrix Acts::Surface::alignmentToBoundDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction, const FreeVector& pathDerivative) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // 1) Calculate the derivative of bound parameter local position w.r.t.
   // alignment parameters without path length correction
@@ -86,7 +95,7 @@ Acts::Surface::alignmentToBoundDerivativeWithoutCorrection(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
   (void)direction;
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The vector between position and center
   const auto pcRowVec = (position - center(gctx)).transpose().eval();
@@ -126,7 +135,7 @@ Acts::Surface::alignmentToBoundDerivativeWithoutCorrection(
 Acts::AlignmentToPathMatrix Acts::Surface::alignmentToPathDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The vector between position and center
   const auto pcRowVec = (position - center(gctx)).transpose().eval();
@@ -249,10 +258,9 @@ const Acts::Transform3& Acts::Surface::transform(
   return *m_transform;
 }
 
-bool Acts::Surface::insideBounds(
-    const Vector2& lposition,
-    const BoundaryTolerance& boundaryTolerance) const {
-  return bounds().inside(lposition, boundaryTolerance);
+bool Acts::Surface::insideBounds(const Vector2& lposition,
+                                 const BoundaryCheck& bcheck) const {
+  return bounds().inside(lposition, bcheck);
 }
 
 Acts::RotationMatrix3 Acts::Surface::referenceFrame(
@@ -264,7 +272,7 @@ Acts::RotationMatrix3 Acts::Surface::referenceFrame(
 Acts::BoundToFreeMatrix Acts::Surface::boundToFreeJacobian(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // retrieve the reference frame
   const auto rframe = referenceFrame(gctx, position, direction);
@@ -285,7 +293,7 @@ Acts::BoundToFreeMatrix Acts::Surface::boundToFreeJacobian(
 Acts::FreeToBoundMatrix Acts::Surface::freeToBoundJacobian(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The measurement frame of the surface
   RotationMatrix3 rframeT =
@@ -307,7 +315,7 @@ Acts::FreeToBoundMatrix Acts::Surface::freeToBoundJacobian(
 Acts::FreeToPathMatrix Acts::Surface::freeToPathDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The measurement frame of the surface
   const RotationMatrix3 rframe = referenceFrame(gctx, position, direction);

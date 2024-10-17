@@ -103,6 +103,11 @@ if(TARGET std::filesystem)
     return()
 endif()
 
+<<<<<<< HEAD
+=======
+cmake_minimum_required(VERSION 3.10)
+
+>>>>>>> origin/clone_of_main
 include(CMakePushCheckState)
 include(CheckIncludeFileCXX)
 

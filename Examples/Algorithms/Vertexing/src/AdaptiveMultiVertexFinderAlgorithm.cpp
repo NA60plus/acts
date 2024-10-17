@@ -43,11 +43,10 @@
 #include "TruthVertexSeeder.hpp"
 #include "VertexingHelpers.hpp"
 
-namespace ActsExamples {
-
-AdaptiveMultiVertexFinderAlgorithm::AdaptiveMultiVertexFinderAlgorithm(
-    const Config& config, Acts::Logging::Level level)
-    : IAlgorithm("AdaptiveMultiVertexFinder", level),
+ActsExamples::AdaptiveMultiVertexFinderAlgorithm::
+    AdaptiveMultiVertexFinderAlgorithm(const Config& config,
+                                       Acts::Logging::Level level)
+    : ActsExamples::IAlgorithm("AdaptiveMultiVertexFinder", level),
       m_cfg(config),
       m_propagator{[&]() {
         // Set up SympyStepper
@@ -103,6 +102,7 @@ AdaptiveMultiVertexFinderAlgorithm::AdaptiveMultiVertexFinderAlgorithm(
   m_outputVertices.initialize(m_cfg.outputVertices);
 }
 
+<<<<<<< HEAD
 std::unique_ptr<Acts::IVertexFinder>
 AdaptiveMultiVertexFinderAlgorithm::makeVertexSeeder() const {
   if (m_cfg.seedFinder == SeedFinder::TruthSeeder) {
@@ -113,6 +113,11 @@ AdaptiveMultiVertexFinderAlgorithm::makeVertexSeeder() const {
     return std::make_unique<Seeder>(seederConfig);
   }
 
+=======
+auto ActsExamples::AdaptiveMultiVertexFinderAlgorithm::makeVertexFinder() const
+    -> Acts::AdaptiveMultiVertexFinder {
+  std::shared_ptr<const Acts::IVertexFinder> seedFinder;
+>>>>>>> origin/clone_of_main
   if (m_cfg.seedFinder == SeedFinder::GaussianSeeder) {
     using Seeder = Acts::TrackDensityVertexFinder;
     Acts::GaussianTrackDensity::Config trkDensityCfg;
@@ -146,13 +151,15 @@ Acts::AdaptiveMultiVertexFinder
 AdaptiveMultiVertexFinderAlgorithm::makeVertexFinder(
     std::shared_ptr<const Acts::IVertexFinder> seedFinder) const {
   // Set up deterministic annealing with user-defined temperatures
-  Acts::AnnealingUtility annealingUtility(m_cfg.annealingConfig);
+  Acts::AnnealingUtility::Config annealingConfig;
+  annealingConfig.setOfTemperatures = {1.};
+  Acts::AnnealingUtility annealingUtility(annealingConfig);
 
   // Set up the vertex fitter with user-defined annealing
   Fitter::Config fitterCfg(m_ipEstimator);
   fitterCfg.annealingTool = annealingUtility;
-  fitterCfg.minWeight = m_cfg.minWeight;
-  fitterCfg.doSmoothing = m_cfg.doSmoothing;
+  fitterCfg.minWeight = 0.001;
+  fitterCfg.doSmoothing = true;
   fitterCfg.useTime = m_cfg.useTime;
   fitterCfg.extractParameters.connect<&Acts::InputTrack::extractParameters>();
   fitterCfg.trackLinearizer.connect<&Linearizer::linearizeTrack>(&m_linearizer);
@@ -164,14 +171,14 @@ AdaptiveMultiVertexFinderAlgorithm::makeVertexFinder(
   // Set the initial variance of the 4D vertex position. Since time is on a
   // numerical scale, we have to provide a greater value in the corresponding
   // dimension.
-  finderConfig.initialVariances = m_cfg.initialVariances;
-  finderConfig.tracksMaxZinterval = m_cfg.tracksMaxZinterval;
-  finderConfig.maxIterations = m_cfg.maxIterations;
+  finderConfig.initialVariances << 1e+2, 1e+2, 1e+2, 1e+8;
+  finderConfig.tracksMaxZinterval = 1. * Acts::UnitConstants::mm;
+  finderConfig.maxIterations = 200;
   finderConfig.useTime = m_cfg.useTime;
   // 5 corresponds to a p-value of ~0.92 using `chi2(x=5,ndf=2)`
   finderConfig.tracksMaxSignificance = 5;
   // This should be used consistently with and without time
-  finderConfig.doFullSplitting = m_cfg.doFullSplitting;
+  finderConfig.doFullSplitting = false;
   // 3 corresponds to a p-value of ~0.92 using `chi2(x=3,ndf=1)`
   finderConfig.maxMergeVertexSignificance = 3;
   if (m_cfg.useTime) {
@@ -189,6 +196,7 @@ AdaptiveMultiVertexFinderAlgorithm::makeVertexFinder(
   finderConfig.extractParameters
       .template connect<&Acts::InputTrack::extractParameters>();
 
+<<<<<<< HEAD
   if (m_cfg.seedFinder == SeedFinder::TruthSeeder) {
     finderConfig.doNotBreakWhileSeeding = true;
   }
@@ -199,13 +207,23 @@ AdaptiveMultiVertexFinderAlgorithm::makeVertexFinder(
       m_cfg.maxMergeVertexSignificance.value_or(
           finderConfig.maxMergeVertexSignificance);
 
+=======
+>>>>>>> origin/clone_of_main
   // Instantiate the finder
   return Acts::AdaptiveMultiVertexFinder(std::move(finderConfig),
                                          logger().clone());
 }
 
+<<<<<<< HEAD
 ProcessCode AdaptiveMultiVertexFinderAlgorithm::execute(
     const AlgorithmContext& ctx) const {
+=======
+ActsExamples::ProcessCode
+ActsExamples::AdaptiveMultiVertexFinderAlgorithm::execute(
+    const ActsExamples::AlgorithmContext& ctx) const {
+  // retrieve input tracks and convert into the expected format
+
+>>>>>>> origin/clone_of_main
   const auto& inputTrackParameters = m_inputTrackParameters(ctx);
 
   auto inputTracks = makeInputTracks(inputTrackParameters);
@@ -299,7 +317,5 @@ ProcessCode AdaptiveMultiVertexFinderAlgorithm::execute(
   // store found vertices
   m_outputVertices(ctx, std::move(vertices));
 
-  return ProcessCode::SUCCESS;
+  return ActsExamples::ProcessCode::SUCCESS;
 }
-
-}  // namespace ActsExamples

@@ -1,9 +1,17 @@
 add_library(
+<<<<<<< HEAD
     ActsExamplesDetectorDD4hep
     SHARED
     src/DD4hepDetector.cpp
     src/DD4hepGeometryService.cpp
 )
+=======
+  ActsExamplesDetectorDD4hep SHARED
+  src/DD4hepDetector.cpp
+  src/DD4hepGeometryService.cpp
+  src/DetUtils.cpp)
+
+>>>>>>> origin/clone_of_main
 
 target_include_directories(
     ActsExamplesDetectorDD4hep
