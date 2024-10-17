@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 include(FetchContent)
+=======
+cmake_minimum_required( VERSION 3.11 )
+include( FetchContent )
+>>>>>>> main
 
 # Tell the user what's happening.
 message(STATUS "Building pybind11 as part of the ACTS project")

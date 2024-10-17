@@ -347,6 +347,7 @@ struct ProtoTrackData {
   DFE_NAMEDTUPLE(ProtoTrackData, trackId, measurementId, x, y, z);
 };
 
+<<<<<<< HEAD
 struct GraphData {
   std::int64_t edge0 = 0;
   std::int64_t edge1 = 0;
@@ -380,4 +381,6 @@ struct SpacePointBucketData {
                  measurement_id[19]);
 };
 
+=======
+>>>>>>> main
 }  // namespace ActsExamples

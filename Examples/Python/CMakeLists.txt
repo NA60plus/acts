@@ -29,7 +29,13 @@ pybind11_add_module(ActsPythonBindings
   src/Vertexing.cpp
   src/AmbiguityResolution.cpp
   src/EventData.cpp
+<<<<<<< HEAD
   src/Utilities.cpp
+=======
+  src/FilterMeasurements.cpp
+  src/MergeContainers.cpp
+  #src/Matching.cpp
+>>>>>>> main
 )
 install(TARGETS ActsPythonBindings DESTINATION ${_python_install_dir})
 
@@ -42,6 +48,7 @@ set_target_properties(
     PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${_python_dir}/acts
 )
 
+<<<<<<< HEAD
 target_link_libraries(
     ActsPythonBindings
     PUBLIC
@@ -68,6 +75,36 @@ target_link_libraries(
         ActsExamplesDetectorTelescope
         ActsExamplesUtilities
         ActsExamplesAmbiguityResolution
+=======
+target_link_libraries(ActsPythonBindings PUBLIC
+  ActsCore
+  ActsPythonUtilities
+  ActsExamplesFramework
+  ActsExamplesGeometry
+  ActsExamplesDetectorGeneric
+  ActsExamplesDetectorContextual
+  ActsExamplesDetectorTGeo
+  ActsExamplesMagneticField
+  ActsExamplesIoRoot
+  ActsExamplesIoNuclearInteractions
+  ActsExamplesIoCsv
+  ActsExamplesIoObj
+  ActsExamplesIoJson
+  ActsExamplesIoPerformance
+  ActsExamplesGenerators
+  ActsExamplesPrinters
+  ActsExamplesTrackFinding
+  ActsExamplesTrackFitting
+  ActsExamplesVertexing
+  ActsExamplesFatras
+  ActsExamplesDetectorTelescope
+  ActsExamplesUtilities
+  ActsExamplesAmbiguityResolution
+  ActsExamplesFilterMeasurements
+  ActsExamplesMergeContainers
+  ActsExamplesMatching
+  ActsExamplesTransportParticles
+>>>>>>> main
 )
 
 set(py_files
@@ -94,6 +131,7 @@ else()
     target_sources(ActsPythonBindings PRIVATE src/GeoModelStub.cpp)
 endif()
 
+<<<<<<< HEAD
 if(ACTS_BUILD_PLUGIN_TRACCC)
     target_link_libraries(ActsPythonBindings PUBLIC ActsPluginDetray)
     target_sources(ActsPythonBindings PRIVATE src/Detray.cpp)
@@ -107,6 +145,8 @@ else()
     target_sources(ActsPythonBindings PRIVATE src/TracccStub.cpp)
 endif()
 
+=======
+>>>>>>> main
 if(ACTS_BUILD_PLUGIN_ACTSVG)
     target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesIoSvg)
     target_sources(ActsPythonBindings PRIVATE src/Svg.cpp)

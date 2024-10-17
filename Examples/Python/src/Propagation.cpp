@@ -139,7 +139,7 @@ void addPropagation(Context& ctx) {
 
   {
     addPropagator<Acts::EigenStepper<>, Acts::Experimental::DetectorNavigator>(
-        prop, "EigenDetector");
+        prop, "EigenNext");
   }
 
   // ATLAS based stepper
@@ -151,6 +151,7 @@ void addPropagation(Context& ctx) {
   }
 
   {
+<<<<<<< HEAD
     addPropagator<Acts::AtlasStepper, Acts::Experimental::DetectorNavigator>(
         prop, "AtlasDetector");
   }
@@ -170,18 +171,14 @@ void addPropagation(Context& ctx) {
 
   // Straight line stepper
   {
+=======
+>>>>>>> main
     auto stepper =
         py::class_<Acts::StraightLineStepper>(m, "StraightLineStepper");
     stepper.def(py::init<>());
 
     addPropagator<Acts::StraightLineStepper, Acts::Navigator>(prop,
                                                               "StraightLine");
-  }
-
-  {
-    addPropagator<Acts::StraightLineStepper,
-                  Acts::Experimental::DetectorNavigator>(
-        prop, "StraightLineDetector");
   }
 }
 

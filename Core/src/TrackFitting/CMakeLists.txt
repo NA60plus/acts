@@ -1,4 +1,5 @@
 target_sources(
+<<<<<<< HEAD
     ActsCore
     PRIVATE
         KalmanFitterError.cpp
@@ -11,6 +12,19 @@ target_sources(
         GsfMixtureReduction.cpp
         GlobalChiSquareFitter.cpp
         MbfSmoother.cpp
+=======
+  ActsCore
+  PRIVATE
+    KalmanFitterError.cpp
+    GainMatrixUpdater.cpp
+    GainMatrixSmoother.cpp
+    GlobalChiSquareFitterError.cpp
+    GsfError.cpp
+    GsfUtils.cpp
+    BetheHeitlerApprox.cpp
+    GsfMixtureReduction.cpp
+    GlobalChiSquareFitter.cpp
+>>>>>>> main
 )
 
 foreach(DIM RANGE 1 6)

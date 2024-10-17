@@ -1,4 +1,5 @@
 add_library(
+<<<<<<< HEAD
     ActsExamplesTrackFinding
     SHARED
     src/SeedingAlgorithm.cpp
@@ -10,6 +11,19 @@ add_library(
     src/TrackParamsEstimationAlgorithm.cpp
     src/MuonHoughSeeder.cpp
     src/GbtsSeedingAlgorithm.cpp
+=======
+  ActsExamplesTrackFinding SHARED
+  src/SeedingAlgorithm.cpp
+  src/SeedingAlgorithmNA60.cpp
+  src/SeedingOrthogonalAlgorithm.cpp
+  src/SpacePointMaker.cpp
+  src/TrackFindingAlgorithm.cpp
+  src/TrackFindingAlgorithmFunction.cpp
+  src/HoughTransformSeeder.cpp
+  src/TrackParamsEstimationAlgorithm.cpp
+  src/MuonHoughSeeder.cpp
+  src/GbtsSeedingAlgorithm.cpp
+>>>>>>> main
 )
 
 target_include_directories(

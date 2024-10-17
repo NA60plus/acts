@@ -1,19 +1,28 @@
 // This file is part of the ACTS project.
 //
+<<<<<<< HEAD
 // Copyright (C) 2016 CERN for the benefit of the ACTS project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+=======
+// Copyright (C) 2023 CERN for the benefit of the Acts project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+>>>>>>> main
 #include <boost/test/unit_test.hpp>
 
-#include "Acts/Definitions/Units.hpp"
-#include "Acts/EventData/ProxyAccessor.hpp"
 #include "Acts/EventData/VectorMultiTrajectory.hpp"
 #include "Acts/EventData/VectorTrackContainer.hpp"
+<<<<<<< HEAD
 #include "Acts/Surfaces/CurvilinearSurface.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
+=======
+>>>>>>> main
 #include "Acts/Utilities/Zip.hpp"
 
 #include <algorithm>
@@ -22,68 +31,10 @@
 using namespace Acts;
 using namespace Acts::HashedStringLiteral;
 using MultiTrajectoryTraits::IndexType;
-using namespace Acts::UnitLiterals;
-
-template <typename track_container_t, typename traj_t,
-          template <typename> class holder_t>
-struct Factory {};
-
-template <typename track_container_t, typename traj_t>
-struct Factory<track_container_t, traj_t, detail::RefHolder> {
-  using track_container_type =
-      TrackContainer<track_container_t, traj_t, detail::RefHolder>;
-
-  track_container_t vtc;
-  traj_t mtj;
-  track_container_type tc{vtc, mtj};
-
-  auto& trackContainer() { return tc; }
-  auto& trackStateContainer() { return mtj; }
-  auto& backend() { return vtc; }
-};
-
-template <typename track_container_t, typename traj_t>
-struct Factory<track_container_t, traj_t, detail::ValueHolder> {
-  using track_container_type =
-      TrackContainer<track_container_t, traj_t, detail::ValueHolder>;
-
-  track_container_type tc{track_container_t{}, traj_t{}};
-
-  auto& trackContainer() { return tc; }
-  auto& trackStateContainer() { return tc.trackStateContainer(); }
-  auto& backend() { return tc.container(); }
-};
-
-template <typename track_container_t, typename traj_t>
-struct Factory<track_container_t, traj_t, std::shared_ptr> {
-  using track_container_type =
-      TrackContainer<track_container_t, traj_t, std::shared_ptr>;
-
-  std::shared_ptr<track_container_t> vtc{std::make_shared<track_container_t>()};
-  std::shared_ptr<traj_t> mtj{std::make_shared<traj_t>()};
-  track_container_type tc{vtc, mtj};
-
-  auto& trackContainer() { return tc; }
-  auto& trackStateContainer() { return *mtj; }
-  auto& backend() { return *vtc; }
-};
-
-template <typename track_container_t, typename traj_t,
-          template <typename> class... holders>
-using holder_types_t =
-    std::tuple<Factory<track_container_t, traj_t, holders>...>;
-
-using holder_types = holder_types_t<VectorTrackContainer, VectorMultiTrajectory,
-                                    // detail_tc::ValueHolder,
-                                    // detail_tc::RefHolder,
-                                    std::shared_ptr>;
-
-using const_holder_types =
-    holder_types_t<ConstVectorTrackContainer, ConstVectorMultiTrajectory,
-                   detail::ValueHolder, detail::RefHolder, std::shared_ptr>;
 
 BOOST_AUTO_TEST_SUITE(EventDataTrack)
 
+<<<<<<< HEAD
 BOOST_AUTO_TEST_CASE(BuildDefaultHolder) {
   VectorMultiTrajectory mtj{};
   VectorTrackContainer vtc{};
@@ -260,6 +211,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Build, factory_t, holder_types) {
   // ctp.covariance().setRandom();
 }
 
+=======
+>>>>>>> main
 BOOST_AUTO_TEST_CASE(CopyTracksIncludingDynamicColumns) {
   // mutable source
   VectorTrackContainer vtc{};

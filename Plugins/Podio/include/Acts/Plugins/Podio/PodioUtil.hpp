@@ -13,10 +13,12 @@
 #include "Acts/Geometry/TrackingGeometry.hpp"
 #include "Acts/Plugins/Podio/PodioDynamicColumns.hpp"
 #include "Acts/Utilities/HashedString.hpp"
+#include "Acts/Utilities/Helpers.hpp"
 
 #include <limits>
 #include <memory>
 
+<<<<<<< HEAD
 #include <podio/podioVersion.h>
 
 #if podio_VERSION_MAJOR >= 1 || \
@@ -27,18 +29,18 @@
 #include <podio/ROOTFrameReader.h>
 #include <podio/ROOTFrameWriter.h>
 #endif
+=======
+#include <podio/Frame.h>
+>>>>>>> main
 
 namespace ActsPodioEdm {
 class Surface;
 }
 
-namespace podio {
-class Frame;
-}
-
 namespace Acts {
 namespace PodioUtil {
 
+<<<<<<< HEAD
 // We want to support podio 0.16 and 1.x for now
 
 // See https://github.com/AIDASoft/podio/pull/549
@@ -70,6 +72,8 @@ decltype(auto) getReferenceSurfaceMutable(T&& object) {
   }
 }
 
+=======
+>>>>>>> main
 using Identifier = std::uint64_t;
 constexpr Identifier kNoIdentifier = std::numeric_limits<Identifier>::max();
 constexpr int kNoSurface = -1;

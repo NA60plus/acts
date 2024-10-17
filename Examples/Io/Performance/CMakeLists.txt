@@ -1,4 +1,5 @@
 add_library(
+<<<<<<< HEAD
     ActsExamplesIoPerformance
     SHARED
     ActsExamples/Io/Performance/CKFPerformanceWriter.cpp
@@ -6,6 +7,15 @@ add_library(
     ActsExamples/Io/Performance/TrackFinderPerformanceWriter.cpp
     ActsExamples/Io/Performance/TrackFitterPerformanceWriter.cpp
     ActsExamples/Io/Performance/VertexPerformanceWriter.cpp
+=======
+  ActsExamplesIoPerformance SHARED
+  ActsExamples/Io/Performance/CKFPerformanceWriter.cpp
+  ActsExamples/Io/Performance/SeedingPerformanceWriter.cpp
+  ActsExamples/Io/Performance/TrackFinderPerformanceWriter.cpp
+  ActsExamples/Io/Performance/TrackFitterPerformanceWriter.cpp
+  ActsExamples/Io/Performance/VertexPerformanceWriter.cpp
+  ActsExamples/Io/Performance/TrackletVertexingPerformanceWriter.cpp
+>>>>>>> main
 )
 target_include_directories(
     ActsExamplesIoPerformance
