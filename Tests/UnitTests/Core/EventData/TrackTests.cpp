@@ -1,10 +1,10 @@
-// This file is part of the Acts project.
+// This file is part of the ACTS project.
 //
-// Copyright (C) 2023-2024 CERN for the benefit of the Acts project
+// Copyright (C) 2016 CERN for the benefit of the ACTS project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <boost/test/unit_test.hpp>
 
@@ -14,7 +14,6 @@
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/ProxyAccessor.hpp"
 #include "Acts/EventData/TrackContainer.hpp"
-#include "Acts/EventData/TrackHelpers.hpp"
 #include "Acts/EventData/TrackProxy.hpp"
 #include "Acts/EventData/TrackStatePropMask.hpp"
 #include "Acts/EventData/VectorMultiTrajectory.hpp"
@@ -25,6 +24,7 @@
 #include "Acts/Utilities/HashedString.hpp"
 #include "Acts/Utilities/Holders.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <memory>
@@ -228,9 +228,9 @@ BOOST_AUTO_TEST_CASE(IteratorConcept) {
     BOOST_CHECK(*it == tc.getTrack(0));
     std::advance(it, 4);
     BOOST_CHECK(*it == tc.getTrack(4));
-    BOOST_CHECK(*(it[-1]) == tc.getTrack(3));
-    BOOST_CHECK(*(it[0]) == tc.getTrack(4));
-    BOOST_CHECK(*(it[1]) == tc.getTrack(5));
+    BOOST_CHECK(*(it + (-1)) == tc.getTrack(3));
+    BOOST_CHECK(*(it + 0) == tc.getTrack(4));
+    BOOST_CHECK(*(it + 1) == tc.getTrack(5));
     BOOST_CHECK(*(it - 2) == tc.getTrack(2));
   }
 
@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE(ForwardIteration) {
     indices.push_back(ts.index());
   }
 
-  std::reverse(indices.begin(), indices.end());
+  std::ranges::reverse(indices);
 
   std::vector<IndexType> act;
   for (auto ts : t.trackStates()) {
@@ -464,44 +464,6 @@ BOOST_AUTO_TEST_CASE(ForwardIteration) {
 
   BOOST_CHECK_EQUAL_COLLECTIONS(indices.rbegin(), indices.rend(), act.begin(),
                                 act.end());
-}
-
-BOOST_AUTO_TEST_CASE(CalculateQuantities) {
-  TrackContainer tc{VectorTrackContainer{}, VectorMultiTrajectory{}};
-  auto t = tc.makeTrack();
-
-  auto ts = t.appendTrackState();
-  ts.typeFlags().set(MeasurementFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(OutlierFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(MeasurementFlag);
-  ts.typeFlags().set(SharedHitFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(HoleFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(OutlierFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(HoleFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(MeasurementFlag);
-  ts.typeFlags().set(SharedHitFlag);
-
-  ts = t.appendTrackState();
-  ts.typeFlags().set(OutlierFlag);
-
-  calculateTrackQuantities(t);
-
-  BOOST_CHECK_EQUAL(t.nHoles(), 2);
-  BOOST_CHECK_EQUAL(t.nMeasurements(), 3);
-  BOOST_CHECK_EQUAL(t.nOutliers(), 3);
-  BOOST_CHECK_EQUAL(t.nSharedHits(), 2);
 }
 
 BOOST_AUTO_TEST_CASE(ShallowCopy) {

@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+from collections import namedtuple
 from pathlib import Path
 from typing import Optional
 import acts
@@ -75,8 +76,9 @@ def getOpenDataDetector(
     }
 
     def geoid_hook(geoid, surface):
+        gctx = acts.GeometryContext()
         if geoid.volume() in volumeRadiusCutsMap:
-            r = math.sqrt(surface.center()[0] ** 2 + surface.center()[1] ** 2)
+            r = math.sqrt(surface.center(gctx)[0] ** 2 + surface.center(gctx)[1] ** 2)
 
             geoid.setExtra(1)
             for cut in volumeRadiusCutsMap[geoid.volume()]:
@@ -99,6 +101,22 @@ def getOpenDataDetector(
             level=customLogLevel(minLevel=acts.logging.WARNING),
         )
 
-    trackingGeometry, deco = detector.finalize(dd4hepConfig, mdecorator)
+    trackingGeometry, decorators = detector.finalize(dd4hepConfig, mdecorator)
 
-    return detector, trackingGeometry, deco
+    OpenDataDetector = namedtuple(
+        "OpenDataDetector", ["detector", "trackingGeometry", "decorators"]
+    )
+
+    class OpenDataDetectorContextManager(OpenDataDetector):
+        def __new__(cls, detector, trackingGeometry, decorators):
+            return super(OpenDataDetectorContextManager, cls).__new__(
+                cls, detector, trackingGeometry, decorators
+            )
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.detector.drop()
+
+    return OpenDataDetectorContextManager(detector, trackingGeometry, decorators)
