@@ -512,23 +512,40 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
   auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
   auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
   TrackContainer tracks(trackContainer, trackStateContainer);
+  int counter = 0;
 
-  /*
-  std::cout<<"MY REFITTING"<<std::endl;
   for (auto& pair : trackPairs) {
     auto trackMS = pair.first;
     auto trackVT = pair.second;
+    std::cout<<"pair: "<<counter<<"\n";
+    //std::cout<<"trackMS: "<<trackMS<<"\n";
+    //std::cout<<"trackVT: "<<trackVT<<"\n";
 
     trackSourceLinks.clear();
     surfSequence.clear();
+    Acts::PropagatorPlainOptions pOptionsTmp(ctx.geoContext, ctx.magFieldContext);
 
     TrackFitterFunction::GeneralFitterOptions options{
         ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-        &trackVT.referenceSurface(), Acts::PropagatorPlainOptions()};
+        &trackVT.referenceSurface(), pOptionsTmp};
 
     const Acts::BoundTrackParameters initialParams(
         trackVT.referenceSurface().getSharedPtr(), trackVT.parameters(),
         trackVT.covariance(), trackVT.particleHypothesis());
+    
+
+    // Fill the source links via their indices from the container
+    /*
+    for (auto hitIndex : protoTrack) {
+      if (auto it = sourceLinks.nth(hitIndex); it != sourceLinks.end()) {
+        const IndexSourceLink& sourceLink = *it;
+        trackSourceLinks.push_back(Acts::SourceLink{sourceLink});
+      } else {
+        ACTS_FATAL("Proto track " << itrack << " contains invalid hit index"
+                                  << hitIndex);
+        return ProcessCode::ABORT;
+      }
+    }
 
     for (auto state : trackVT.trackStatesReversed()) {
       surfSequence.push_back(&state.referenceSurface());
@@ -536,52 +553,52 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
       trackSourceLinks.push_back(Acts::SourceLink{sl});
     }
     */
-  /*
-  for (auto state : trackMS.trackStatesReversed()) {
-    surfSequence.push_back(&state.referenceSurface());
-    auto sl = RefittingCalibrator::RefittingSourceLink{state};
-    trackSourceLinks.push_back(Acts::SourceLink{sl});
+
+    for (auto state : trackMS.trackStatesReversed()) {
+      surfSequence.push_back(&state.referenceSurface());
+      auto sl = RefittingCalibrator::RefittingSourceLink{state};
+      trackSourceLinks.push_back(Acts::SourceLink{sl});
+    }
+
+    if (surfSequence.empty()) {
+      std::cout<<"Empty surf found.\n";
+      ACTS_WARNING("Empty surf found.");
+      continue;
+    }
+    
+    if (trackSourceLinks.empty()) {
+      std::cout<<"Empty track found.\n";
+      ACTS_WARNING("Empty track found.");
+      continue;
+    }
+    
+    std::cout<<"bef fit\n";
+    auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options, calibrator, surfSequence, tracks);
+    std::cout<<"fail in fit\n";
+    if (result.ok()) {
+      // Get the fit output object
+      const auto& refittedTrack = result.value();
+      if (refittedTrack.hasReferenceSurface()) {
+        ACTS_VERBOSE("Refitted parameters for track ");
+        ACTS_VERBOSE("  " << trackMS.parameters().transpose());
+      } else {
+        ACTS_DEBUG("No refitted parameters for track ");
+      }
+    } else {
+      ACTS_WARNING("Fit failed for track with error: "
+                   << result.error() << ", " << result.error().message());
+    }
   }
-  */
-  /*
-   if (surfSequence.empty()) {
-     ACTS_WARNING("Empty track found.");
-     continue;
-   }
-   //auto result = (*m_cfg.fit)(trackSourceLinks, initialParams);
-   //auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options);
-   //auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options,
- calibrator);
-   //auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options,
- calibrator, surfSequence); auto result = (*m_cfg.fit)(trackSourceLinks,
- initialParams, options, calibrator, surfSequence, tracks);
+  // m_outputTrackParameters(ctx, std::move(outputTrackParameter));
+  ConstTrackContainer constTracks{
+      std::make_shared<Acts::ConstVectorTrackContainer>(
+          std::move(*trackContainer)),
+      std::make_shared<Acts::ConstVectorMultiTrajectory>(
+          std::move(*trackStateContainer))};
 
+  m_outputTracks(ctx, std::move(constTracks));
 
-   if (result.ok()) {
-     // Get the fit output object
-     const auto& refittedTrack = result.value();
-     if (refittedTrack.hasReferenceSurface()) {
-       ACTS_VERBOSE("Refitted parameters for track ");
-       ACTS_VERBOSE("  " << trackMS.parameters().transpose());
-     } else {
-       ACTS_DEBUG("No refitted parameters for track ");
-     }
-   } else {
-     ACTS_WARNING("Fit failed for track with error: " << result.error() << ", "
-                  << result.error().message());
-   }
-
- }
- //m_outputTrackParameters(ctx, std::move(outputTrackParameter));
- ConstTrackContainer constTracks{
-     std::make_shared<Acts::ConstVectorTrackContainer>(
-         std::move(*trackContainer)),
-     std::make_shared<Acts::ConstVectorMultiTrajectory>(
-         std::move(*trackStateContainer))};
-
- m_outputTracks(ctx, std::move(constTracks));
- */
-
+  m_outputMatchedTracks(ctx, std::move(trackPairs));
   m_outputMatchedTracks(ctx, std::move(trackPairs));
 
   return ActsExamples::ProcessCode::SUCCESS;

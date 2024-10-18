@@ -139,6 +139,14 @@ class DigitizationConfig {
   std::string outputSourceLinks = "sourcelinks";
   /// Output measurements collection.
   std::string outputMeasurements = "measurements";
+  /// Output source links collection.
+  std::string outputSourceLinksVT = "sourcelinksVT";
+  /// Output measurements collection.
+  std::string outputMeasurementsVT = "measurementsVT";
+  /// Output source links collection.
+  std::string outputSourceLinksMS = "sourcelinksMS";
+  /// Output measurements collection.
+  std::string outputMeasurementsMS = "measurementsMS";
   /// Output cluster collection.
   std::string outputClusters = "clusters";
   /// Output collection to map measured hits to contributing particles.

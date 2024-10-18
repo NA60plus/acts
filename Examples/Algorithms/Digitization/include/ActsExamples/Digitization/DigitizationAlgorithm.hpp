@@ -103,6 +103,14 @@ class DigitizationAlgorithm final : public IAlgorithm {
       this, "SourceLinks"};
   WriteDataHandle<MeasurementContainer> m_measurementWriteHandle{
       this, "Measurements"};
+  WriteDataHandle<IndexSourceLinkContainer> m_sourceLinkWriteHandleVT{
+      this, "SourceLinksVT"};
+  WriteDataHandle<MeasurementContainer> m_measurementWriteHandleVT{
+      this, "MeasurementsVT"};
+  WriteDataHandle<IndexSourceLinkContainer> m_sourceLinkWriteHandleMS{
+      this, "SourceLinksMS"};
+  WriteDataHandle<MeasurementContainer> m_measurementWriteHandleMS{
+      this, "MeasurementsMS"};
   WriteDataHandle<ClusterContainer> m_clusterWriteHandle{this, "Clusters"};
   WriteDataHandle<IndexMultimap<ActsFatras::Barcode>>
       m_measurementParticlesMapWriteHandle{this, "MeasurementParticlesMap"};

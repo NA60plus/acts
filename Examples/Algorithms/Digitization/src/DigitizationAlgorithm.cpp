@@ -50,6 +50,18 @@ ActsExamples::DigitizationAlgorithm::DigitizationAlgorithm(
   if (m_cfg.outputSourceLinks.empty()) {
     throw std::invalid_argument("Missing source links output collection");
   }
+  if (m_cfg.outputMeasurementsVT.empty()) {
+    throw std::invalid_argument("Missing measurements output collection");
+  }
+  if (m_cfg.outputSourceLinksVT.empty()) {
+    throw std::invalid_argument("Missing source links output collection");
+  }
+  if (m_cfg.outputMeasurementsMS.empty()) {
+    throw std::invalid_argument("Missing measurements output collection");
+  }
+  if (m_cfg.outputSourceLinksMS.empty()) {
+    throw std::invalid_argument("Missing source links output collection");
+  }
   if (m_cfg.outputMeasurementParticlesMap.empty()) {
     throw std::invalid_argument(
         "Missing hit-to-particles map output collection");
@@ -72,6 +84,10 @@ ActsExamples::DigitizationAlgorithm::DigitizationAlgorithm(
   m_simContainerReadHandle.initialize(m_cfg.inputSimHits);
   m_sourceLinkWriteHandle.initialize(m_cfg.outputSourceLinks);
   m_measurementWriteHandle.initialize(m_cfg.outputMeasurements);
+  m_sourceLinkWriteHandleVT.initialize(m_cfg.outputSourceLinksVT);
+  m_measurementWriteHandleVT.initialize(m_cfg.outputMeasurementsVT);
+  m_sourceLinkWriteHandleMS.initialize(m_cfg.outputSourceLinksMS);
+  m_measurementWriteHandleMS.initialize(m_cfg.outputMeasurementsMS);
   m_clusterWriteHandle.initialize(m_cfg.outputClusters);
   m_measurementParticlesMapWriteHandle.initialize(
       m_cfg.outputMeasurementParticlesMap);
@@ -140,11 +156,19 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
   // need list here for stable addresses
   IndexSourceLinkContainer sourceLinks;
   MeasurementContainer measurements;
+  IndexSourceLinkContainer sourceLinksVT;
+  MeasurementContainer measurementsVT;
+  IndexSourceLinkContainer sourceLinksMS;
+  MeasurementContainer measurementsMS;
   ClusterContainer clusters;
   IndexMultimap<ActsFatras::Barcode> measurementParticlesMap;
   IndexMultimap<Index> measurementSimHitsMap;
   sourceLinks.reserve(simHits.size());
   measurements.reserve(simHits.size());
+  sourceLinksVT.reserve(simHits.size());
+  measurementsVT.reserve(simHits.size());
+  sourceLinksMS.reserve(simHits.size());
+  measurementsMS.reserve(simHits.size());
   measurementParticlesMap.reserve(simHits.size());
   measurementSimHitsMap.reserve(simHits.size());
 
@@ -316,6 +340,20 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
             measurements.emplace_back(
                 createMeasurement(dParameters, sourceLink));
             clusters.emplace_back(std::move(dParameters.cluster));
+            if(dParameters.variances[0] < 0.01){
+              sourceLinksVT.insert(sourceLinksVT.end(), sourceLink);
+
+              measurementsVT.emplace_back(
+                  createMeasurement(dParameters, sourceLink));
+
+            }
+            else{
+              sourceLinksMS.insert(sourceLinksMS.end(), sourceLink);
+
+              measurementsMS.emplace_back(
+                  createMeasurement(dParameters, sourceLink));
+
+            }
             // this digitization does hit merging so there can be more than one
             // mapping entry for each digitized hit.
             for (auto simHitIdx : simhits) {
@@ -338,6 +376,10 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
 
   m_sourceLinkWriteHandle(ctx, std::move(sourceLinks));
   m_measurementWriteHandle(ctx, std::move(measurements));
+  m_sourceLinkWriteHandleVT(ctx, std::move(sourceLinksVT));
+  m_measurementWriteHandleVT(ctx, std::move(measurementsVT));
+  m_sourceLinkWriteHandleMS(ctx, std::move(sourceLinksMS));
+  m_measurementWriteHandleMS(ctx, std::move(measurementsMS));
   m_clusterWriteHandle(ctx, std::move(clusters));
   m_measurementParticlesMapWriteHandle(ctx, std::move(measurementParticlesMap));
   m_measurementSimHitsMapWriteHandle(ctx, std::move(measurementSimHitsMap));
