@@ -141,6 +141,14 @@ class DigitizationConfig {
   std::string outputMeasurements = "measurements";
   /// Output cells map (geoID -> collection of cells).
   std::string outputCells = "cells";
+  /// Output source links collection.
+  std::string outputSourceLinksVT = "sourcelinksVT";
+  /// Output measurements collection.
+  std::string outputMeasurementsVT = "measurementsVT";
+  /// Output source links collection.
+  std::string outputSourceLinksMS = "sourcelinksMS";
+  /// Output measurements collection.
+  std::string outputMeasurementsMS = "measurementsMS";
   /// Output cluster collection.
   std::string outputClusters = "clusters";
   /// Output collection to map measured hits to contributing particles.
@@ -170,6 +178,15 @@ class DigitizationConfig {
   /// Table 35.10)
   /// @NOTE The default is set to 0 because this works only well with Geant4
   double minEnergyDeposit = 0.0;  // 1000 * 3.65 * Acts::UnitConstants::eV;
+  //new configurable for NA60+
+  double  efficiency=1;
+  bool applyDeadAreas=false;
+  bool applyFastSimSelections=false;
+  bool applyReadout=false;
+  bool applyBackbone=false;
+  bool applyHole=false;
+  bool applyEndcapShort=false;
+  bool applyEndcapLong=false;
   /// The digitizers per GeometryIdentifiers
   Acts::GeometryHierarchyMap<DigiComponentsConfig> digitizationConfigs;
 

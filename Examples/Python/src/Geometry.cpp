@@ -42,6 +42,8 @@
 #include "Acts/Utilities/RangeXD.hpp"
 #include "Acts/Visualization/ViewConfig.hpp"
 #include "ActsExamples/Geometry/VolumeAssociationTest.hpp"
+#include "Acts/Material/ProtoSurfaceMaterial.hpp"
+#include "Acts/Utilities/BinUtility.hpp"
 
 #include <array>
 #include <memory>
@@ -116,7 +118,6 @@ void addGeometry(Context& ctx) {
           return ss.str();
         });
   }
-
   {
     py::class_<Acts::Surface, std::shared_ptr<Acts::Surface>>(m, "Surface")
         // Can't bind directly because GeometryObject is virtual base of Surface
@@ -390,6 +391,30 @@ void addExperimentalGeometry(Context& ctx) {
         .def(py::init<Acts::BinningValue, Acts::AxisBoundaryType, std::size_t,
                       std::size_t>(),
              "bValue"_a, "bType"_a, "nbins"_a, "exp"_a = 0u);
+  }
+
+  {
+    // Be able to construct a BinUtility
+    py::class_<BinUtility>(m, "BinUtility")
+        .def(py::init<std::size_t, float, float, Acts::BinningOption,
+                      Acts::BinningValue>())
+        .def(py::init<std::vector<float>&, Acts::BinningOption,
+                      Acts::BinningValue>())
+        .def("__add__", &BinUtility::operator+=);
+  }
+  /*
+  {
+    // Be able to construct a BinUtility
+    py::class_<ProtoSurfaceMaterial, std::shared_ptr<const ProtoSurfaceMaterial>>(m, "ProtoSurfaceMaterial")
+        .def(py::init<Acts::BinUtility>());
+        
+  }
+  */
+  {
+    // Be able to construct a BinUtility
+    py::class_<ProtoSurfaceMaterial, std::shared_ptr<ProtoSurfaceMaterial>>(m, "ProtoSurfaceMaterial")
+        .def(py::init<Acts::BinUtility>());
+        
   }
 
   {

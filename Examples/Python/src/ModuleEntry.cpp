@@ -69,6 +69,8 @@ void addTrackFinding(Context& ctx);
 void addVertexing(Context& ctx);
 void addAmbiguityResolution(Context& ctx);
 void addUtilities(Context& ctx);
+void addFilterMeasurements(Context& ctx);
+void addMergeContainers(Context& ctx);
 
 // Plugins
 void addDigitization(Context& ctx);
@@ -139,6 +141,8 @@ PYBIND11_MODULE(ActsPythonBindings, m) {
   addVertexing(ctx);
   addAmbiguityResolution(ctx);
   addUtilities(ctx);
+  addFilterMeasurements(ctx);
+  addMergeContainers(ctx);
 
   addDigitization(ctx);
   addPythia8(ctx);

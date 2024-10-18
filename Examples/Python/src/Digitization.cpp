@@ -64,6 +64,10 @@ void addDigitization(Context& ctx) {
     ACTS_PYTHON_MEMBER(inputSimHits);
     ACTS_PYTHON_MEMBER(outputSourceLinks);
     ACTS_PYTHON_MEMBER(outputMeasurements);
+    ACTS_PYTHON_MEMBER(outputSourceLinksVT);
+    ACTS_PYTHON_MEMBER(outputMeasurementsVT);
+    ACTS_PYTHON_MEMBER(outputSourceLinksMS);
+    ACTS_PYTHON_MEMBER(outputMeasurementsMS);
     ACTS_PYTHON_MEMBER(outputClusters);
     ACTS_PYTHON_MEMBER(outputMeasurementParticlesMap);
     ACTS_PYTHON_MEMBER(outputMeasurementSimHitsMap);
@@ -74,6 +78,14 @@ void addDigitization(Context& ctx) {
     ACTS_PYTHON_MEMBER(doMerge);
     ACTS_PYTHON_MEMBER(minEnergyDeposit);
     ACTS_PYTHON_MEMBER(digitizationConfigs);
+    ACTS_PYTHON_MEMBER(efficiency);
+    ACTS_PYTHON_MEMBER(applyDeadAreas);
+    ACTS_PYTHON_MEMBER(applyFastSimSelections);
+    ACTS_PYTHON_MEMBER(applyReadout);
+    ACTS_PYTHON_MEMBER(applyBackbone);
+    ACTS_PYTHON_MEMBER(applyHole);
+    ACTS_PYTHON_MEMBER(applyEndcapShort);
+    ACTS_PYTHON_MEMBER(applyEndcapLong);
     ACTS_PYTHON_STRUCT_END();
 
     c.def_readonly("mergeNsigma", &Config::mergeNsigma);
