@@ -2464,7 +2464,6 @@ def addVertexFitting(
     maxIterations: Optional[int] = None,
     initialVariances: Optional[List[float]] = None,
     useTime: Optional[bool] = False,
-    seeder: Optional[acts.VertexSeedFinder] = acts.VertexSeedFinder.GaussianSeeder,
     spatialBinExtent: Optional[float] = None,
     temporalBinExtent: Optional[float] = None,
     trackSelectorConfig: Optional[TrackSelectorConfig] = None,
@@ -2575,7 +2574,8 @@ def addVertexFitting(
             maxTracks=maxTracks,
             cutOffTrackWeight=cutOffTrackWeight,
             cutOffTrackWeightReassign=cutOffTrackWeightReassign,
-            rejectedFraction=rejectedFraction
+            rejectedFraction=rejectedFraction,
+            bField=field
         )
         s.addAlgorithm(findVertices)
     elif vertexFinder == VertexFinder.AMVF:

@@ -151,10 +151,8 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
   // Set up EigenStepper
   Acts::EigenStepper<> stepper(m_cfg.magneticField);
 
-  Acts::PropagatorOptions<Acts::ActionList<Acts::MaterialInteractor>,
-                          Acts::AbortList<Acts::EndOfWorldReached>>
-      extrapolationOptions(ctx.geoContext, ctx.magFieldContext);
-  Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
+  Acts::PropagatorPlainOptions pOptions(ctx.geoContext, ctx.magFieldContext);
+  //Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
 
   Acts::FullBilloirVertexFitter::Config vertexFitterCfg;
   vertexFitterCfg.extractParameters

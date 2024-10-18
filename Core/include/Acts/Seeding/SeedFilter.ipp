@@ -224,9 +224,7 @@ void SeedFilter<external_spacepoint_t>::filterSeeds_2SpFixed(
 
       if (m_cfg.verbose)
         std::cout << "NA60+_deltaSeedConf="
-                  << (compatibleSeedR.size() + 1 - seedFilterState.nTopSeedConf)
-                  << " seedFilterState.numQualitySeeds= "
-                  << seedFilterState.numQualitySeeds << std::endl;
+                  << (compatibleSeedR.size() + 1 - seedFilterState.nTopSeedConf) << std::endl;
 
       int deltaSeedConf =
           compatibleSeedR.size() + 1 - seedFilterState.nTopSeedConf;
@@ -284,10 +282,6 @@ void SeedFilter<external_spacepoint_t>::filterSeeds_2SpFixed(
         candidates_collector.push(bottomSP, middleSP, *topSpVec[topSPIndex],
                                   weight, zOrigin, true);
 
-        if (seedFilterState.numQualitySeeds < m_cfg.maxQualitySeedsPerSpMConf) {
-          // fill high quality seed
-          seedFilterState.numQualitySeeds++;
-        }
         if (m_cfg.verbose)
           std::cout << "NA60+_SeedFilter_confirmation_push " << std::endl;
 
@@ -304,14 +298,6 @@ void SeedFilter<external_spacepoint_t>::filterSeeds_2SpFixed(
 
       candidates_collector.push(bottomSP, middleSP, *topSpVec[topSPIndex],
                                 weight, zOrigin, false);
-
-      if (seedFilterState.numSeeds < m_cfg.maxSeedsPerSpMConf) {
-        // fill seed
-        seedFilterState.numSeeds++;
-        if (m_cfg.verbose)
-          std::cout << "NA60+_seedFilterState.numSeeds= "
-                    << seedFilterState.numSeeds << std::endl;
-      }
     }
   }  // loop on tops
   // if no high quality seed was found for a certain middle+bottom SP pair,

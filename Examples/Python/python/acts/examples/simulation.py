@@ -186,6 +186,7 @@ def addParticleGun(
 
     return s
 
+
 def addParticleReader(
     s: acts.examples.Sequencer,
     inputDir: Optional[Union[Path, str]] = None,
@@ -212,7 +213,7 @@ def addParticleReader(
 
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
-    evReader = acts.examples.CsvParticleReader(
+    evReader = CsvParticleReader(
             acts.logging.WARNING,
             inputDir=str(inputDir),
             inputStem="particles",
@@ -565,9 +566,10 @@ def addFatras(
 
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
+    particlesSelected = inputParticles
     # Selector
     if preSelectParticles is not None:
-        particles_selected = "particles_selected"+det_suffix
+        particlesSelected = "particles_selected"+det_suffix
         addParticleSelection(
             s,
             preSelectParticles,
@@ -575,8 +577,6 @@ def addFatras(
             outputParticles=particlesSelected,
         )
         s.addWhiteboardAlias("particles_selected", particlesSelected)
-    else:
-        particlesSelected = inputParticles
 
     # Simulation
     alg = acts.examples.FatrasSimulation(

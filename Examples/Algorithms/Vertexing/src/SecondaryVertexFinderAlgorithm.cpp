@@ -130,7 +130,10 @@ ActsExamples::ProcessCode ActsExamples::SecondaryVertexFinderAlgorithm::execute(
   // charge selection
 
   // Create propagator options
-  Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
+  //Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
+
+  Acts::PropagatorPlainOptions pOptions(ctx.geoContext, ctx.magFieldContext);
+
 
   float mass1 = 0.13957039;
   float mass2 = 0.13957039;
