@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Geometry/CylinderVolumeBounds.hpp"
 
@@ -163,6 +163,7 @@ std::vector<OrientedSurface> CylinderVolumeBounds::orientedSurfaces(
 }
 
 void CylinderVolumeBounds::buildSurfaceBounds() {
+  
   if (get(eMinR) > s_epsilon) {
     m_innerCylinderBounds = std::make_shared<const CylinderBounds>(
         get(eMinR), get(eHalfLengthZ), get(eHalfPhiSector), get(eAveragePhi),
@@ -257,18 +258,18 @@ std::vector<ActsScalar> CylinderVolumeBounds::values() const {
 }
 
 void CylinderVolumeBounds::checkConsistency() {
-  if (get(eMinR) < 0. || get(eMaxR) <= 0.) {
-    throw std::invalid_argument(
-        "CylinderVolumeBounds: invalid radial input: minR (" +
-        std::to_string(get(eMinR)) + ") < 0 or maxR (" +
-        std::to_string(get(eMaxR)) + ") <= 0");
-  }
-  if (get(eMinR) >= get(eMaxR)) {
-    throw std::invalid_argument(
-        "CylinderVolumeBounds: invalid radial input: minR (" +
-        std::to_string(get(eMinR)) + ") >= (" + std::to_string(get(eMaxR)) +
-        ")");
-  }
+//   if (get(eMinR) < 0. || get(eMaxR) <= 0.) {
+//     throw std::invalid_argument(
+//         "CylinderVolumeBounds: invalid radial input: minR (" +
+//         std::to_string(get(eMinR)) + ") < 0 or maxR (" +
+//         std::to_string(get(eMaxR)) + ") <= 0");
+//   }
+//   if (get(eMinR) >= get(eMaxR)) {
+//     throw std::invalid_argument(
+//         "CylinderVolumeBounds: invalid radial input: minR (" +
+//         std::to_string(get(eMinR)) + ") >= (" + std::to_string(get(eMaxR)) +
+//         ")");
+//   }
   if (get(eHalfLengthZ) <= 0) {
     throw std::invalid_argument(
         "CylinderVolumeBounds: invalid longitudinal input: hlZ (" +

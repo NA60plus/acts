@@ -1,15 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Utilities/BinningType.hpp"
 
 #include <algorithm>
-#include <ostream>
 #include <stdexcept>
 
 namespace Acts {
@@ -32,7 +31,8 @@ const std::vector<BinningValue>& allBinningValues() {
 }
 
 BinningValue binningValueFromName(const std::string& name) {
-  auto it = std::ranges::find(s_binningValueNames, name);
+  auto it =
+      std::find(s_binningValueNames.begin(), s_binningValueNames.end(), name);
   if (it == s_binningValueNames.end()) {
     throw std::invalid_argument("Unknown binning value name: " + name);
   }

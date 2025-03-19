@@ -1,25 +1,23 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/tools/output_test_stream.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include "Acts/Definitions/Algebra.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/RectangleBounds.hpp"
 #include "Acts/Surfaces/SurfaceBounds.hpp"
 #include "Acts/Surfaces/TrapezoidBounds.hpp"
-#include "Acts/Surfaces/detail/BoundaryCheckHelper.hpp"
 
 #include <algorithm>
 #include <array>
-#include <optional>
 #include <ostream>
 #include <random>
 #include <stdexcept>
@@ -133,13 +131,11 @@ BOOST_AUTO_TEST_CASE(TrapezoidBoundsProperties) {
       "(1.0000000, 6.0000000, 2.0000000, 0.0000000)"));
   //
   /// Test inside
-  BOOST_CHECK(
-      trapezoidBoundsObject.inside(inRectangle, BoundaryTolerance::None()));
-  BOOST_CHECK(
-      !trapezoidBoundsObject.inside(outside, BoundaryTolerance::None()));
+  BOOST_CHECK(trapezoidBoundsObject.inside(inRectangle, BoundaryCheck(true)));
+  BOOST_CHECK(!trapezoidBoundsObject.inside(outside, BoundaryCheck(true)));
 
   const auto vertices = trapezoidBoundsObject.vertices();
-  BoundaryTolerance tolerance = BoundaryTolerance::None();
+  BoundaryCheck bc{true};
 
   std::vector<Vector2> testPoints = {
       // inside
@@ -176,9 +172,8 @@ BOOST_AUTO_TEST_CASE(TrapezoidBoundsProperties) {
 
   for (const auto& p : testPoints) {
     BOOST_TEST_CONTEXT("p=" << p.transpose()) {
-      BOOST_CHECK_EQUAL(
-          detail::insidePolygon(vertices, tolerance, p, std::nullopt),
-          trapezoidBoundsObject.inside(p, tolerance));
+      BOOST_CHECK_EQUAL(bc.isInside(p, vertices),
+                        trapezoidBoundsObject.inside(p, bc));
     }
   }
 }
@@ -198,15 +193,14 @@ BOOST_DATA_TEST_CASE(
   static const TrapezoidBounds trapezoidBoundsObject(minHalfX, maxHalfX, halfY);
   static const auto vertices = trapezoidBoundsObject.vertices();
 
-  BoundaryTolerance tolerance = BoundaryTolerance::None();
+  BoundaryCheck bc{true};
 
   if (tol != 0.0) {
-    tolerance = BoundaryTolerance::AbsoluteBound{tol, tol};
+    bc = BoundaryCheck{true, true, tol, tol};
   }
 
-  BOOST_CHECK_EQUAL(
-      detail::insidePolygon(vertices, tolerance, {x, y}, std::nullopt),
-      trapezoidBoundsObject.inside({x, y}, tolerance));
+  BOOST_CHECK_EQUAL(bc.isInside({x, y}, vertices),
+                    trapezoidBoundsObject.inside({x, y}, bc));
 }
 
 /// Unit test for testing TrapezoidBounds assignment

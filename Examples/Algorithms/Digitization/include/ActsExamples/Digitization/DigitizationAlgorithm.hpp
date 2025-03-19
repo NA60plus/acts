@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -96,17 +96,15 @@ class DigitizationAlgorithm final : public IAlgorithm {
   /// Geometric digtizer
   ActsFatras::Channelizer m_channelizer;
 
-  using CellsMap =
-      std::map<Acts::GeometryIdentifier, std::vector<Cluster::Cell>>;
-
   ReadDataHandle<SimHitContainer> m_simContainerReadHandle{this,
                                                            "SimHitContainer"};
 
+  ReadDataHandle<SimParticleContainer> m_inputParticles{this, "InputParticles"};
+  
   WriteDataHandle<IndexSourceLinkContainer> m_sourceLinkWriteHandle{
       this, "SourceLinks"};
   WriteDataHandle<MeasurementContainer> m_measurementWriteHandle{
       this, "Measurements"};
-  WriteDataHandle<CellsMap> m_cellsWriteHandle{this, "Cells"};
   WriteDataHandle<IndexSourceLinkContainer> m_sourceLinkWriteHandleVT{
       this, "SourceLinksVT"};
   WriteDataHandle<MeasurementContainer> m_measurementWriteHandleVT{
@@ -119,6 +117,18 @@ class DigitizationAlgorithm final : public IAlgorithm {
   WriteDataHandle<IndexMultimap<ActsFatras::Barcode>>
       m_measurementParticlesMapWriteHandle{this, "MeasurementParticlesMap"};
   WriteDataHandle<IndexMultimap<Index>> m_measurementSimHitsMapWriteHandle{
+      this, "MeasurementSimHitsMap"};
+
+  WriteDataHandle<ClusterContainer> m_clusterWriteHandleVT{this, "Clusters"};
+  WriteDataHandle<IndexMultimap<ActsFatras::Barcode>>
+      m_measurementParticlesMapWriteHandleVT{this, "MeasurementParticlesMap"};
+  WriteDataHandle<IndexMultimap<Index>> m_measurementSimHitsMapWriteHandleVT{
+      this, "MeasurementSimHitsMap"};
+
+  WriteDataHandle<ClusterContainer> m_clusterWriteHandleMS{this, "Clusters"};
+  WriteDataHandle<IndexMultimap<ActsFatras::Barcode>>
+      m_measurementParticlesMapWriteHandleMS{this, "MeasurementParticlesMap"};
+  WriteDataHandle<IndexMultimap<Index>> m_measurementSimHitsMapWriteHandleMS{
       this, "MeasurementSimHitsMap"};
 
   /// Construct a fixed-size smearer from a configuration.

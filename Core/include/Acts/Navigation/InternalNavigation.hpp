@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -25,71 +25,39 @@
 namespace Acts::Experimental {
 
 struct AllPortalsNavigation : public IInternalNavigation {
-  /// Fills all portals into the navigation state
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState is the navigation state to be updated
-  ///
-  /// @note no intersection ordering is done at this stage
-  inline void fill([[maybe_unused]] const GeometryContext& gctx,
-                   NavigationState& nState) const {
-    if (nState.currentVolume == nullptr) {
-      throw std::runtime_error(
-          "AllPortalsNavigation: no detector volume set to navigation state.");
-    }
-    // Fill internal portals if existing
-    for (const auto v : nState.currentVolume->volumes()) {
-      const auto& iPortals = v->portals();
-      PortalsFiller::fill(nState, iPortals);
-    }
-    // Filling the new portal candidates
-    const auto& portals = nState.currentVolume->portals();
-    PortalsFiller::fill(nState, portals);
-  }
-
-  /// A ordered portal provider - update method that calls fill and initialize
+  /// A ordered portal provider
   ///
   /// @param gctx is the Geometry context of this call
   /// @param nState is the navigation state to be updated
   ///
   /// @note that the intersections are ordered, such that the
   /// smallest intersection pathlength >= overstep tolerance is the lowest
+  ///
+  /// @return an ordered list of portal candidates
   inline void update(const GeometryContext& gctx,
                      NavigationState& nState) const {
-    fill(gctx, nState);
-    intitializeCandidates(gctx, nState);
+    if (nState.currentVolume == nullptr) {
+      throw std::runtime_error(
+          "AllPortalsNavigation: no detector volume set to navigation state.");
+    }
+    // Retrieval necessary
+    if (nState.surfaceCandidates.empty()) {
+      // Fill internal portals if existing
+      for (const auto v : nState.currentVolume->volumes()) {
+        const auto& iPortals = v->portals();
+        PortalsFiller::fill(nState, iPortals);
+      }
+      // Filling the new portal candidates
+      const auto& portals = nState.currentVolume->portals();
+      PortalsFiller::fill(nState, portals);
+    }
+    // Sort and update
+    updateCandidates(gctx, nState);
   }
 };
 
 struct AllPortalsAndSurfacesNavigation : public IInternalNavigation {
-  /// Fills all portals and surfaces into the navigation state
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState is the navigation state to be updated
-  ///
-  /// @note no intersection ordering is done at this stage
-  inline void fill([[maybe_unused]] const GeometryContext& gctx,
-                   NavigationState& nState) const {
-    if (nState.currentDetector == nullptr) {
-      throw std::runtime_error(
-          "AllPortalsAndSurfacesNavigation: no detector volume set to "
-          "navigation "
-          "state.");
-    }
-    // A volume switch has happened, update list of portals & surfaces
-    for (const auto v : nState.currentVolume->volumes()) {
-      const auto& iPortals = v->portals();
-      PortalsFiller::fill(nState, iPortals);
-    }
-    // Assign the new volume
-    const auto& portals = nState.currentVolume->portals();
-    const auto& surfaces = nState.currentVolume->surfaces();
-    PortalsFiller::fill(nState, portals);
-    SurfacesFiller::fill(nState, surfaces);
-  }
-
-  /// A ordered list of portals and surfaces provider
-  /// - update method that calls fill and initialize
+  /// An ordered list of portals and surfaces provider
   ///
   /// @param gctx is the Geometry context of this call
   /// @param nState is the navigation state to be updated
@@ -100,8 +68,27 @@ struct AllPortalsAndSurfacesNavigation : public IInternalNavigation {
   /// @return an ordered list of portal and surface candidates
   inline void update(const GeometryContext& gctx,
                      NavigationState& nState) const {
-    fill(gctx, nState);
-    intitializeCandidates(gctx, nState);
+    if (nState.currentDetector == nullptr) {
+      throw std::runtime_error(
+          "AllPortalsAndSurfacesNavigation: no detector volume set to "
+          "navigation "
+          "state.");
+    }
+    // A volume switch has happened, update list of portals & surfaces
+    if (nState.surfaceCandidates.empty()) {
+      // Fill internal portals if existing
+      for (const auto v : nState.currentVolume->volumes()) {
+        const auto& iPortals = v->portals();
+        PortalsFiller::fill(nState, iPortals);
+      }
+      // Assign the new volume
+      const auto& portals = nState.currentVolume->portals();
+      const auto& surfaces = nState.currentVolume->surfaces();
+      PortalsFiller::fill(nState, portals);
+      SurfacesFiller::fill(nState, surfaces);
+    }
+    // Update internal candidates
+    updateCandidates(gctx, nState);
   }
 };
 
@@ -137,31 +124,14 @@ struct AdditionalSurfacesNavigation : public IInternalNavigation {
   /// The volumes held by this collection
   std::vector<const Surface*> surfaces = {};
 
-  /// Extract the additional surfaces from the this volume
+  /// Extract the sub volumes from the volume
   ///
   /// @param gctx the geometry contextfor this extraction call (ignored)
   /// @param nState is the navigation state
   ///
-  /// @note no intersection ordering is done at this stage
-  inline void fill([[maybe_unused]] const GeometryContext& gctx,
-                   NavigationState& nState) const {
-    SurfacesFiller::fill(nState, surfaces);
-  }
-
-  /// Extract the additional surfaces from the this volume
-  /// - update method that calls fill and initialize
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState is the navigation state to be updated
-  ///
-  /// @note that the intersections are ordered, such that the
-  /// smallest intersection pathlength >= overstep tolerance is the lowest
-  ///
-  /// @return an ordered list of portal and surface candidates
-  inline void update(const GeometryContext& gctx,
+  inline void update([[maybe_unused]] const GeometryContext& gctx,
                      NavigationState& nState) const {
-    fill(gctx, nState);
-    intitializeCandidates(gctx, nState);
+    SurfacesFiller::fill(nState, surfaces);
   }
 };
 

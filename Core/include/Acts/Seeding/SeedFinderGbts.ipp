@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // SeedFinderGbts.ipp
 // TODO: update to C++17 style
@@ -17,7 +17,6 @@
 #include "Acts/Seeding/SeedFinderUtils.hpp"
 #include "Acts/Utilities/BinningType.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <functional>
@@ -315,12 +314,12 @@ void SeedFinderGbts<external_spacepoint_t>::runGbts_TrackFinder(
                   nEdges++;
                 }
               }  // loop over n2 (outer) nodes
-            }  // loop over n1 (inner) nodes
-          }  // loop over source eta bins
-        }  // loop over dst eta bins
-      }  // loop over L2(L1) layers
-    }  // loop over dst layers
-  }  // loop over the stages of doublet making
+            }    // loop over n1 (inner) nodes
+          }      // loop over source eta bins
+        }        // loop over dst eta bins
+      }          // loop over L2(L1) layers
+    }            // loop over dst layers
+  }              // loop over the stages of doublet making
 
   std::vector<const GbtsNode<external_spacepoint_t>*> vNodes;
 
@@ -353,8 +352,8 @@ void SeedFinderGbts<external_spacepoint_t>::runGbts_TrackFinder(
       out_sort[outIdx].first = pS->m_p[0];
     }
 
-    std::ranges::sort(in_sort);
-    std::ranges::sort(out_sort);
+    std::sort(in_sort.begin(), in_sort.end());
+    std::sort(out_sort.begin(), out_sort.end());
 
     unsigned int last_out = 0;
 
@@ -496,8 +495,8 @@ void SeedFinderGbts<external_spacepoint_t>::runGbts_TrackFinder(
 
   m_triplets.clear();
 
-  std::ranges::sort(
-      vSeeds, typename Acts::GbtsEdge<external_spacepoint_t>::CompareLevel());
+  std::sort(vSeeds.begin(), vSeeds.end(),
+            typename Acts::GbtsEdge<external_spacepoint_t>::CompareLevel());
 
   if (vSeeds.empty()) {
     return;
@@ -590,8 +589,9 @@ void SeedFinderGbts<external_spacepoint_t>::runGbts_TrackFinder(
           }
           const double A = (vo - vi) / du;
           const double B = vi - A * ui;
+          const double R_squ = (1 + A * A) / (B * B);
 
-          if ((1 + A * A) < (B * B) * m_minR_squ) {
+          if (R_squ < m_minR_squ) {
             continue;
           }
 
@@ -701,9 +701,7 @@ void SeedFinderGbts<external_spacepoint_t>::createSeeds(
     float Vertex = 0;
     float Quality = triplet.Q();
     // make a new seed, add to vector of seeds
-    out_cont.emplace_back(*S1, *S2, *S3);
-    out_cont.back().setVertexZ(Vertex);
-    out_cont.back().setQuality(Quality);
+    out_cont.emplace_back(*S1, *S2, *S3, Vertex, Quality);
   }
 }
 

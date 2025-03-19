@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -18,12 +18,9 @@
 #include <tuple>
 #include <vector>
 
-namespace HepGeom {
-class Transform3D;
-}
+#include "G4Transform3D.hh"
 
 class G4VPhysicalVolume;
-using G4Transform3D = HepGeom::Transform3D;
 
 namespace Acts {
 
@@ -67,7 +64,7 @@ class Geant4DetectorSurfaceFactory {
     /// Convert the length scale
     ActsScalar scaleConversion = 1.;
     /// Convert the material
-    bool convertMaterial = false;
+    bool convertMaterial = true;
     /// Converted material thickness (< 0 indicates keeping original thickness)
     ActsScalar convertedMaterialThickness = -1;
     /// A selector for sensitive surfaces

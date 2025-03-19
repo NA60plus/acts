@@ -1,29 +1,30 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "Acts/Geometry/PortalError.hpp"
+#include "Acts/Surfaces/SurfaceError.hpp"
 
 #include <string>
 
 namespace {
 
-class PortalErrorCategory : public std::error_category {
+class SurfaceErrorCategory : public std::error_category {
  public:
   // Return a short descriptive name for the category.
-  const char* name() const noexcept final { return "PortalError"; }
+  const char* name() const noexcept final { return "SurfaceError"; }
 
   // Return what each enum means in text.
   std::string message(int c) const final {
-    using Acts::PortalError;
+    using Acts::SurfaceError;
 
-    switch (static_cast<PortalError>(c)) {
-      case PortalError::PositionNotOnAnyChildPortalLink:
-        return "Position not on any of the composite child portal links";
+    switch (static_cast<SurfaceError>(c)) {
+      case SurfaceError::GlobalPositionNotOnSurface:
+        return "Global to local transformation failed: position not on "
+               "surface.";
       default:
         return "unknown";
     }
@@ -32,7 +33,7 @@ class PortalErrorCategory : public std::error_category {
 
 }  // namespace
 
-std::error_code Acts::make_error_code(Acts::PortalError e) {
-  static PortalErrorCategory c;
+std::error_code Acts::make_error_code(Acts::SurfaceError e) {
+  static SurfaceErrorCategory c;
   return {static_cast<int>(e), c};
 }

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Csv/CsvParticleReader.hpp"
 
@@ -13,7 +13,6 @@
 #include "Acts/Utilities/Logger.hpp"
 #include "ActsExamples/EventData/SimParticle.hpp"
 #include "ActsExamples/Framework/AlgorithmContext.hpp"
-#include "ActsExamples/Io/Csv/CsvInputOutput.hpp"
 #include "ActsExamples/Utilities/Paths.hpp"
 #include "ActsFatras/EventData/Barcode.hpp"
 #include "ActsFatras/EventData/Particle.hpp"
@@ -25,6 +24,8 @@
 #include <string>
 #include <map>
 #include <iostream>
+
+#include <dfe/dfe_io_dsv.hpp>
 
 #include "CsvOutputData.hpp"
 
@@ -66,13 +67,13 @@ ActsExamples::ProcessCode ActsExamples::CsvParticleReader::read(
   auto path = perEventFilepath(m_cfg.inputDir, m_cfg.inputStem + ".csv",
                                ctx.eventNumber);
   // vt and m are an optional columns
-  ActsExamples::NamedTupleCsvReader<ParticleData> reader(path, {"vt", "m"});
+  dfe::NamedTupleCsvReader<ParticleData> reader(path, {"vt", "m"});
   ParticleData data;
   
   while (reader.read(data)) {
     ActsFatras::Barcode particle_id(data.particle_id);
     ActsFatras::Barcode vertex_id = particle_id.vertexId();
-  
+    if(!data.q) continue;
     ActsFatras::Particle particle(particle_id,
                                   Acts::PdgParticle{data.particle_type},
                                   data.q * Acts::UnitConstants::e,

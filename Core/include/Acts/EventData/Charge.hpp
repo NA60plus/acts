@@ -1,16 +1,17 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/Units.hpp"
 #include "Acts/EventData/ChargeConcept.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -92,7 +93,7 @@ struct Neutral {
   }
 };
 
-static_assert(ChargeConcept<Neutral>, "Neutral does not fulfill ChargeConcept");
+ACTS_STATIC_CHECK_CONCEPT(ChargeConcept, Neutral);
 
 /// Charge and momentum interpretation for particles with +-e charge.
 struct SinglyCharged {
@@ -135,8 +136,7 @@ struct SinglyCharged {
   }
 };
 
-static_assert(ChargeConcept<SinglyCharged>,
-              "SinglyCharged does not fulfill ChargeConcept");
+ACTS_STATIC_CHECK_CONCEPT(ChargeConcept, SinglyCharged);
 
 /// Charge and momentum interpretation for arbitrarily charged but not neutral
 /// particles.
@@ -174,8 +174,7 @@ class NonNeutralCharge {
   float m_absQ{};
 };
 
-static_assert(ChargeConcept<NonNeutralCharge>,
-              "NonNeutralCharge does not fulfill ChargeConcept");
+ACTS_STATIC_CHECK_CONCEPT(ChargeConcept, NonNeutralCharge);
 
 /// Charge and momentum interpretation for arbitrarily charged particles.
 ///
@@ -216,8 +215,7 @@ class AnyCharge {
   float m_absQ{};
 };
 
-static_assert(ChargeConcept<AnyCharge>,
-              "AnyCharge does not fulfill ChargeConcept");
+ACTS_STATIC_CHECK_CONCEPT(ChargeConcept, AnyCharge);
 
 /// @}
 

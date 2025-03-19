@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -20,7 +20,6 @@
 #include "Acts/Utilities/IAxis.hpp"
 #include "Acts/Utilities/VectorHelpers.hpp"
 
-#include <algorithm>
 #include <array>
 #include <memory>
 
@@ -35,43 +34,32 @@ namespace Acts::Experimental {
 /// @param nState [in,out] is the navigation state to be updated
 ///
 /// @todo for surfaces skip the non-reached ones, while keep for portals
-inline void intitializeCandidates(const GeometryContext& gctx,
-                                  NavigationState& nState) {
+inline void updateCandidates(const GeometryContext& gctx,
+                             NavigationState& nState) {
   const auto& position = nState.position;
   const auto& direction = nState.direction;
 
-  nState.surfaceCandidateIndex = 0;
+  NavigationState::SurfaceCandidates nextSurfaceCandidates;
 
-  NavigationState::SurfaceCandidates confirmedCandidates;
-  confirmedCandidates.reserve(nState.surfaceCandidates.size());
-
-  for (auto& sc : nState.surfaceCandidates) {
+  for (NavigationState::SurfaceCandidate c : nState.surfaceCandidates) {
     // Get the surface representation: either native surface of portal
-    const Surface& surface =
-        sc.surface != nullptr ? *sc.surface : sc.portal->surface();
-    // Only allow overstepping if it's not a portal
-    ActsScalar overstepTolerance =
-        sc.portal != nullptr ? s_onSurfaceTolerance : nState.overstepTolerance;
-    // Boundary tolerance is forced to 0 for portals
-    BoundaryTolerance boundaryTolerance =
-        sc.portal != nullptr ? BoundaryTolerance::None() : sc.boundaryTolerance;
-    // Check the surface intersection
-    auto sIntersection = surface.intersect(
-        gctx, position, direction, boundaryTolerance, s_onSurfaceTolerance);
+    const Surface& sRep =
+        c.surface != nullptr ? *c.surface : c.portal->surface();
+
+    // Get the intersection @todo make a templated intersector
+    // TODO surface tolerance
+    auto sIntersection = sRep.intersect(gctx, position, direction,
+                                        c.boundaryCheck, s_onSurfaceTolerance);
     for (auto& si : sIntersection.split()) {
-      if (si.isValid() && si.pathLength() > overstepTolerance) {
-        confirmedCandidates.emplace_back(NavigationState::SurfaceCandidate{
-            si, sc.surface, sc.portal, boundaryTolerance});
+      c.objectIntersection = si;
+      if (c.objectIntersection &&
+          c.objectIntersection.pathLength() > nState.overstepTolerance) {
+        nextSurfaceCandidates.emplace_back(c);
       }
     }
   }
 
-  std::ranges::sort(confirmedCandidates, {}, [](const auto& c) {
-    return c.objectIntersection.pathLength();
-  });
-
-  nState.surfaceCandidates = std::move(confirmedCandidates);
-  nState.surfaceCandidateIndex = 0;
+  nState.surfaceCandidates = std::move(nextSurfaceCandidates);
 }
 
 /// @brief This sets a single object, e.g. single surface or single volume
@@ -92,32 +80,15 @@ class SingleObjectNavigation : public navigation_type {
     }
   }
 
-  /// @brief Fill the navigation state with a single object that it holds
+  /// @brief updates the navigation state with a single object that is filled in
   ///
   /// @param gctx is the Geometry context of this call
   /// @param nState the navigation state to which the surfaces are attached
   ///
   /// @note this is attaching objects without intersecting nor checking
-  void fill([[maybe_unused]] const GeometryContext& gctx,
-            NavigationState& nState) const {
-    filler_type::fill(nState, m_object);
-  }
-
-  /// @brief Update the navigation state with a single object that it holds
-  ///
-  /// @note it calls fill and then initializes the candidates (including intersection)
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState the navigation state to which the surfaces are attached
-  ///
-  /// @note this is attaching objects and will perform a check
   void update([[maybe_unused]] const GeometryContext& gctx,
               NavigationState& nState) const {
-    fill(gctx, nState);
-    // If the delegate type is of type IInternalNavigation
-    if constexpr (std::is_base_of_v<IInternalNavigation, navigation_type>) {
-      intitializeCandidates(gctx, nState);
-    }
+    filler_type::fill(nState, m_object);
   }
 
   /// Const Access to the object
@@ -128,7 +99,7 @@ class SingleObjectNavigation : public navigation_type {
   const object_type* m_object = nullptr;
 };
 
-/// @brief This uses stateless extractor and fillers to manipulate
+/// @brief This uses state less extractor and fillers to manipulate
 /// the navigation state
 ///
 /// @tparam navigation_type distinguishes between internal and external navigation
@@ -139,33 +110,16 @@ template <typename navigation_type, typename extractor_type,
           typename filler_type>
 class StaticAccessNavigation : public navigation_type {
  public:
-  /// @brief fills the navigation state with extracted objects
+  /// @brief updates the navigation state with a single object that is filled in
   ///
   /// @param gctx is the Geometry context of this call
   /// @param nState the navigation state to which the surfaces are attached
   ///
   /// @note this is attaching objects without intersecting nor checking
-  void fill([[maybe_unused]] const GeometryContext& gctx,
-            NavigationState& nState) const {
-    auto extracted = extractor_type::extract(gctx, nState);
-    filler_type::fill(nState, extracted);
-  }
-
-  /// @brief Update the navigation state with extracted objects
-  ///
-  /// @note it calls fill and then initializes the candidates (including intersection)
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState the navigation state to which the surfaces are attached
-  ///
-  /// @note this will perform the intersection test
   void update([[maybe_unused]] const GeometryContext& gctx,
               NavigationState& nState) const {
-    fill(gctx, nState);
-    // If the delegate type is of type IInternalNavigation
-    if constexpr (std::is_base_of_v<IInternalNavigation, navigation_type>) {
-      intitializeCandidates(gctx, nState);
-    }
+    auto extracted = extractor_type::extract(gctx, nState);
+    filler_type::fill(nState, extracted);
   }
 };
 
@@ -181,6 +135,7 @@ class StaticAccessNavigation : public navigation_type {
 /// @tparam grid_t is the type of the grid
 /// @tparam extractor_type is the helper to extract the object
 /// @tparam filler_type is the helper to fill the object into the nState
+///
 template <typename navigation_type, typename grid_t, typename extractor_type,
           typename filler_type>
 class IndexedGridNavigation : public navigation_type {
@@ -211,43 +166,32 @@ class IndexedGridNavigation : public navigation_type {
 
   IndexedGridNavigation() = delete;
 
-  /// @brief fill the navigation state with objects from the grid entries
-  /// AFTER applying `p3loc = transform * p3` and casting to subsbpace
+  /// @brief updates the navigation state with objects from the grid according
+  /// to the filling type AFTER applying `p3loc = transform * p3`
   ///
   /// @param gctx is the Geometry context of this call
   /// @param nState the navigation state to which the surfaces are attached
   ///
-  /// @note this will only fill the state without intersecting
-  void fill(const GeometryContext& gctx, NavigationState& nState) const {
-    // Extract the index grid entry a
+  /// @note this is attaching objects without intersecting nor checking
+  void update(const GeometryContext& gctx, NavigationState& nState) const {
+    // Extract the index grid entry
     const auto& entry =
         grid.atPosition(GridAccessHelpers::castPosition<grid_type>(
             transform * nState.position, casts));
     auto extracted = extractor.extract(gctx, nState, entry);
     filler_type::fill(nState, extracted);
-  }
 
-  /// @brief Update the navigation state with objects from the entries
-  /// AFTER applying `p3loc = transform * p3` and casting to subsbpace
-  ///
-  /// @note it calls fill and then initializes the candidates (including intersection)
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState the navigation state to which the surfaces are attached
-  ///
-  /// @note this will perform the intersection test for internal navigation paths
-  void update(const GeometryContext& gctx, NavigationState& nState) const {
-    fill(gctx, nState);
     // If the delegate type is of type IInternalNavigation
     if constexpr (std::is_base_of_v<IInternalNavigation, navigation_type>) {
-      // Update the candidates: initial update
-      intitializeCandidates(gctx, nState);
+      // Update the candidates
+      updateCandidates(gctx, nState);
     }
   }
 };
 
-/// This is a chained updated, which can either performed a chained filling,
-/// or a chaine update (which included intersection test)
+/// This is a chained extractor/filler implementation
+/// Since there is no control whether it is a static or
+/// payload extractor, these have to be provided by a tuple
 ///
 /// @tparam navigation_type distinguishes between internal and external navigation
 /// @tparam updators_t the updators that will be called in sequence
@@ -265,30 +209,16 @@ class ChainedNavigation : public navigation_type {
   ChainedNavigation(const std::tuple<updators_t...>&& upts)
       : updators(std::move(upts)) {}
 
-  /// A combined navigation state updated to fill the candidates from
-  /// a sequence of pre-defined updators
+  /// A combined navigation state updator w/o intersection specifics
   ///
   /// @param gctx is the Geometry context of this call
   /// @param nState the navigation state to which the objects are attached
   ///
-  void fill(const GeometryContext& gctx, NavigationState& nState) const {
-    // Unfold the tuple and add the attachers
-    std::apply([&](auto&&... updator) { ((updator.fill(gctx, nState)), ...); },
-               updators);
-  }
-
-  /// A combined navigation state to fill & update the candidatesthe candidates
-  ///
-  /// @param gctx is the Geometry context of this call
-  /// @param nState the navigation state to which the objects are attached
-  ///
-  /// @note It will call the chained filling and then perform a single update on
-  /// the candidates to avoid copying and multiple intersection tests
   void update(const GeometryContext& gctx, NavigationState& nState) const {
     // Unfold the tuple and add the attachers
-    fill(gctx, nState);
-    // Update the candidates: initial update
-    intitializeCandidates(gctx, nState);
+    std::apply(
+        [&](auto&&... updator) { ((updator.update(gctx, nState)), ...); },
+        updators);
   }
 };
 

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/unit_test.hpp>
 
@@ -21,8 +21,7 @@
 #include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Propagator/ConstrainedStep.hpp"
 #include "Acts/Propagator/StraightLineStepper.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
-#include "Acts/Surfaces/CurvilinearSurface.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Tests/CommonHelpers/FloatComparisons.hpp"
@@ -320,7 +319,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
   BOOST_CHECK_EQUAL(slsStateCopy.tolerance, ps.stepping.tolerance);
 
   /// Repeat with surface related methods
-  auto plane = CurvilinearSurface(pos, dir).planeSurface();
+  auto plane = Surface::makeShared<PlaneSurface>(pos, dir);
   auto bp = BoundTrackParameters::create(
                 plane, tgContext, makeVector4(pos, time), dir, charge / absMom,
                 cov, ParticleHypothesis::pion())
@@ -330,9 +329,9 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
 
   // Test the intersection in the context of a surface
   auto targetSurface =
-      CurvilinearSurface(pos + navDir * 2. * dir, dir).planeSurface();
+      Surface::makeShared<PlaneSurface>(pos + navDir * 2. * dir, dir);
   sls.updateSurfaceStatus(slsState, *targetSurface, 0, navDir,
-                          BoundaryTolerance::Infinite());
+                          BoundaryCheck(false));
   CHECK_CLOSE_ABS(slsState.stepSize.value(ConstrainedStep::actor), navDir * 2.,
                   1e-6);
 
@@ -341,8 +340,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
       slsState,
       targetSurface
           ->intersect(slsState.geoContext, sls.position(slsState),
-                      navDir * sls.direction(slsState),
-                      BoundaryTolerance::Infinite())
+                      navDir * sls.direction(slsState), BoundaryCheck(false))
           .closest(),
       navDir, false);
   CHECK_CLOSE_ABS(slsState.stepSize.value(), 2, 1e-6);
@@ -351,8 +349,7 @@ BOOST_AUTO_TEST_CASE(straight_line_stepper_test) {
       slsState,
       targetSurface
           ->intersect(slsState.geoContext, sls.position(slsState),
-                      navDir * sls.direction(slsState),
-                      BoundaryTolerance::Infinite())
+                      navDir * sls.direction(slsState), BoundaryCheck(false))
           .closest(),
       navDir, true);
   CHECK_CLOSE_ABS(slsState.stepSize.value(), 2, 1e-6);

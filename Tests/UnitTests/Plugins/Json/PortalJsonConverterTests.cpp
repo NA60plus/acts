@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/unit_test.hpp>
 
@@ -14,7 +14,6 @@
 #include "Acts/Detector/detail/PortalHelper.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Plugins/Json/PortalJsonConverter.hpp"
-#include "Acts/Surfaces/CurvilinearSurface.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Tests/CommonHelpers/FloatComparisons.hpp"
@@ -34,9 +33,8 @@ BOOST_AUTO_TEST_SUITE(PortalJsonConverter)
 BOOST_AUTO_TEST_CASE(PortalUnconnected) {
   std::ofstream out;
 
-  auto surface = Acts::CurvilinearSurface(Acts::Vector3(0., 0., 0.),
-                                          Acts::Vector3(0., 1., 0.))
-                     .planeSurface();
+  auto surface = Acts::Surface::makeShared<Acts::PlaneSurface>(
+      Acts::Vector3(0., 0., 0.), Acts::Vector3(0., 1., 0.));
 
   auto portal =
       std::make_shared<Acts::Experimental::Portal>(std::move(surface));
@@ -68,9 +66,8 @@ BOOST_AUTO_TEST_CASE(PortalSingleConnected) {
   auto forwardVolume = std::make_shared<Acts::Experimental::DetectorVolume>();
   auto backwardVolume = std::make_shared<Acts::Experimental::DetectorVolume>();
 
-  auto surface = Acts::CurvilinearSurface(Acts::Vector3(0., 0., 0.),
-                                          Acts::Vector3(0., 1., 0.))
-                     .planeSurface();
+  auto surface = Acts::Surface::makeShared<Acts::PlaneSurface>(
+      Acts::Vector3(0., 0., 0.), Acts::Vector3(0., 1., 0.));
 
   auto portal =
       std::make_shared<Acts::Experimental::Portal>(std::move(surface));
@@ -115,9 +112,8 @@ BOOST_AUTO_TEST_CASE(PortalMultiConnected) {
 
   auto backwardVolume = std::make_shared<Acts::Experimental::DetectorVolume>();
 
-  auto surface = Acts::CurvilinearSurface(Acts::Vector3(0., 0., 0.),
-                                          Acts::Vector3(0., 1., 0.))
-                     .planeSurface();
+  auto surface = Acts::Surface::makeShared<Acts::PlaneSurface>(
+      Acts::Vector3(0., 0., 0.), Acts::Vector3(0., 1., 0.));
 
   auto portal =
       std::make_shared<Acts::Experimental::Portal>(std::move(surface));

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+from acts.examples import TGeoDetector
 import argparse
 
 import acts
@@ -59,11 +60,14 @@ def runMaterialMapping(
             fileList=[
                 os.path.join(
                     inputDir,
-                    (
+#                    (
                         mapName + "_tracks.root"
                         if readCachedSurfaceInformation
-                        else "geant4_material_tracks.root"
-                    ),
+#                        else "/home/arnaldi/cernbox/ACTS/MyCode/geomMuons/geant4_material_tracks_longsetup_segmentedabs_target.root",
+#                        else "/home/arnaldi/cernbox/ACTS/MyCode/geomMuons/geant4_material_tracks_longsetup_segmentedabs.root",
+                        else "geant4_material_tracks.root",
+#                        else "/home/arnaldi/cernbox/ACTS/MyCode/geomVTMS/geant4_material_tracks_VTMSlongsetup_Wabs.root",
+#                    ),
                 )
             ],
             readCachedSurfaceInformation=readCachedSurfaceInformation,
@@ -153,9 +157,32 @@ if "__main__" == __name__:
         )
         exit()
 
+#    matDeco = acts.IMaterialDecorator.fromFile("Mapping/geometry-map_muons_longsetup_segmentedabs_target.json")
+#    jsonFile="Mapping/tgeo-config_muons_longsetup_segmentedabs_target.json"
+#    tgeo_fileName= "Mapping/geom_muons_longsetup_segmentedabs_target.root"
+#    matDeco = acts.IMaterialDecorator.fromFile("Mapping/geometry-map-VTMSlongsetup_Wabs.json")
+#    jsonFile="Mapping/tgeo-config_VTMSlongsetup_Wabs.json"
+#    tgeo_fileName= "Mapping/geom_VT_MSlongsetup_Wabs.root"
+    matDeco = acts.IMaterialDecorator.fromFile("geometry-map.json")
+    jsonFile="/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/geoRuben/tgeoRubenVol.json"
+    tgeo_fileName= "/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/geoRuben/geometry_Ruben.root"
+
+    logLevel=acts.logging.INFO
+    customLogLevel = acts.examples.defaultLogging(logLevel=logLevel)
+
+    detector, trackingGeometry, decorators = TGeoDetector.create(jsonFile=str(jsonFile),
+             fileName=str(tgeo_fileName),
+             surfaceLogLevel=customLogLevel(),
+             layerLogLevel=customLogLevel(),
+             volumeLogLevel=customLogLevel(),
+             mdecorator=matDeco,
+         )
+
+
     mapName = args.outFile.split(".")[0]
 
-    detector, trackingGeometry, decorators = getOpenDataDetector(None)
+#    matDeco = acts.IMaterialDecorator.fromFile("geometry-map.json")
+#    detector, trackingGeometry, decorators = getOpenDataDetector(matDeco)
 
     runMaterialMapping(
         trackingGeometry,

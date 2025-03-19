@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Plugins/Json/MaterialMapJsonConverter.hpp"
 
@@ -144,9 +144,9 @@ Acts::SurfaceAndMaterialWithContext defaultSurfaceMaterial(
         Acts::BinUtility(1, annulusBounds->get(Acts::AnnulusBounds::eMinPhiRel),
                          annulusBounds->get(Acts::AnnulusBounds::eMaxPhiRel),
                          Acts::open, Acts::BinningValue::binPhi);
-    bUtility += Acts::BinUtility(1, static_cast<float>(annulusBounds->rMin()),
-                                 static_cast<float>(annulusBounds->rMax()),
-                                 Acts::open, Acts::BinningValue::binR);
+    bUtility +=
+        Acts::BinUtility(1, annulusBounds->rMin(), annulusBounds->rMax(),
+                         Acts::open, Acts::BinningValue::binR);
   }
   if (rectangleBounds != nullptr) {
     bUtility +=
@@ -176,8 +176,8 @@ Acts::SurfaceAndMaterialWithContext defaultSurfaceMaterial(
 Acts::TrackingVolumeAndMaterial defaultVolumeMaterial(
     const Acts::TrackingVolume* volume) {
   Acts::BinUtility bUtility;
-  if (volume->volumeMaterialPtr() != nullptr) {
-    return {volume, volume->volumeMaterialPtr()};
+  if (volume->volumeMaterialSharedPtr() != nullptr) {
+    return {volume, volume->volumeMaterialSharedPtr()};
   }
   // Check which type of bound is associated to the volume
   auto cyBounds = dynamic_cast<const Acts::CylinderVolumeBounds*>(
@@ -210,9 +210,8 @@ Acts::TrackingVolumeAndMaterial defaultVolumeMaterial(
         1, cutcylBounds->get(Acts::CutoutCylinderVolumeBounds::eMinR),
         cutcylBounds->get(Acts::CutoutCylinderVolumeBounds::eMaxR), Acts::open,
         Acts::BinningValue::binR);
-    bUtility +=
-        Acts::BinUtility(1, -static_cast<float>(M_PI), static_cast<float>(M_PI),
-                         Acts::closed, Acts::BinningValue::binPhi);
+    bUtility += Acts::BinUtility(1, -M_PI, M_PI, Acts::closed,
+                                 Acts::BinningValue::binPhi);
     bUtility += Acts::BinUtility(
         1, -cutcylBounds->get(Acts::CutoutCylinderVolumeBounds::eHalfLengthZ),
         cutcylBounds->get(Acts::CutoutCylinderVolumeBounds::eHalfLengthZ),
@@ -336,10 +335,12 @@ void Acts::MaterialMapJsonConverter::convertToHierarchy(
         std::pair<GeometryIdentifier, Acts::SurfaceAndMaterialWithContext>>&
         surfaceHierarchy,
     const Acts::TrackingVolume* tVolume) {
-  auto sameId = [tVolume](const auto& pair) {
-    return (tVolume->geometryId() == pair.first);
-  };
-  if (std::ranges::any_of(volumeHierarchy, sameId)) {
+  auto sameId =
+      [tVolume](
+          const std::pair<GeometryIdentifier, Acts::TrackingVolumeAndMaterial>&
+              pair) { return (tVolume->geometryId() == pair.first); };
+  if (std::find_if(volumeHierarchy.begin(), volumeHierarchy.end(), sameId) !=
+      volumeHierarchy.end()) {
     // this volume was already visited
     return;
   }

@@ -23,12 +23,12 @@ summary = []
 
 with open(args.results) as f:
     reader = csv.reader(f)
-    for title, html_path, ec in reader:
+    for title, slug, ec in reader:
         summary.append(
             {
                 "title": title,
                 "total": ec == "0",
-                "path": html_path,
+                "path": f"{slug}.html",
             }
         )
 

@@ -189,7 +189,8 @@ Developers can use the provided Docker image to format their project or
 install clang-format locally. Developers should be aware that
 clang-format will behave differently for different versions, so
 installing `the same clang version as used in the
-CI is recommended. There are several instructions available on how to
+CI <https://github.com/acts-project/machines/blob/master/format10/Dockerfile>`_
+is recommended. There are several instructions available on how to
 integrate clang-format with your favourite IDE (e.g. `Xcode <https://github.com/travisjeffery/ClangFormat-Xcode>`_,
 `emacs <https://clang.llvm.org/docs/ClangFormat.html#emacs-integration>`_).
 The Acts CI system will automatically check code formatting using the
@@ -220,7 +221,7 @@ bugfix should happen in a different branch. The recommended procedure
 for handling this situation is the following:
 
 #. Get into a clean state of your working directory on your feature
-   branch (either by committing open changes or by stashing them).
+   branch (either by commiting open changes or by stashing them).
 #. Checkout the branch the bugfix should be merged into (either *main*
    or *release/X.Y.Z*) and get the most recent version.
 #. Create a new branch for the bugfix.
@@ -238,7 +239,7 @@ Example: Backporting a feature or bugfix
 
 Suppose you have a bugfix or feature branch that is eventually going to
 be merged in ``main``. You might want to have the feature/bugfix
-available in a patch (say ``0.25.1``) tag. To to that, find the
+avilable in a patch (say ``0.25.1``) tag. To to that, find the
 corresponding release branch, for this example that would be
 ``release/v0.25.X``. You must create a dedicated branch that **only**
 contains the commits that relate to your feature/bugfix, otherwise the

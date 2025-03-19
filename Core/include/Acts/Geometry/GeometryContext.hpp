@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -25,12 +25,7 @@ namespace Acts {
 /// It is propagated through the code to allow for event/thread
 /// dependent geometry changes
 
-class GeometryContext : public ContextType {
- public:
-  /// Inherit all constructors
-  using ContextType::ContextType;
-  using ContextType::operator=;
-};
+using GeometryContext = ContextType;
 
 /// Helper struct that stores an object and a context, and will print it to
 /// an outstream.

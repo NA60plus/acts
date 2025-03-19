@@ -1,0 +1,8 @@
+mtllib /home/giacomo/acts_for_NA60+/acts_old/Examples/Scripts/Python/obj/World_PositiveEndcap_sensitives_l17.mtl
+usemtl material_0_180_240
+v -1590 -1590 5900
+v 1590 -1590 5900
+v 1590 1590 5900
+v -1590 1590 5900
+usemtl material_0_180_240
+f 1 2 3 4

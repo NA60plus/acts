@@ -1,15 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Surfaces/ConeSurface.hpp"
 
 #include "Acts/Geometry/GeometryObject.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
 #include "Acts/Surfaces/SurfaceError.hpp"
 #include "Acts/Surfaces/detail/AlignmentHelper.hpp"
 #include "Acts/Surfaces/detail/FacesHelper.hpp"
@@ -183,18 +182,19 @@ const Acts::ConeBounds& Acts::ConeSurface::bounds() const {
 }
 
 Acts::Polyhedron Acts::ConeSurface::polyhedronRepresentation(
-    const GeometryContext& gctx, unsigned int quarterSegments) const {
+    const GeometryContext& gctx, std::size_t lseg) const {
   // Prepare vertices and faces
   std::vector<Vector3> vertices;
   std::vector<Polyhedron::FaceType> faces;
   std::vector<Polyhedron::FaceType> triangularMesh;
-  ActsScalar minZ = bounds().get(ConeBounds::eMinZ);
-  ActsScalar maxZ = bounds().get(ConeBounds::eMaxZ);
+
+  double minZ = bounds().get(ConeBounds::eMinZ);
+  double maxZ = bounds().get(ConeBounds::eMaxZ);
 
   if (minZ == -std::numeric_limits<double>::infinity() ||
       maxZ == std::numeric_limits<double>::infinity()) {
     throw std::domain_error(
-        "Polyhedron representation of boundless surface is not possible");
+        "Polyhedron repr of boundless surface not possible");
   }
 
   auto ctransform = transform(gctx);
@@ -207,53 +207,64 @@ Acts::Polyhedron Acts::ConeSurface::polyhedronRepresentation(
   }
 
   // Cone parameters
-  ActsScalar hPhiSec = bounds().get(ConeBounds::eHalfPhiSector);
-  ActsScalar avgPhi = bounds().get(ConeBounds::eAveragePhi);
-  std::vector<ActsScalar> refPhi = {};
-  if (bool fullCone = (hPhiSec == M_PI); !fullCone) {
-    refPhi = {avgPhi};
-  }
+  double hPhiSec = bounds().get(ConeBounds::eHalfPhiSector);
+  double avgPhi = bounds().get(ConeBounds::eAveragePhi);
+  bool fullCone = (hPhiSec == M_PI);
 
-  // Add the cone sizes
-  std::vector<ActsScalar> coneSides;
+  // Get the phi segments from the helper
+  auto phiSegs = fullCone ? detail::VerticesHelper::phiSegments()
+                          : detail::VerticesHelper::phiSegments(
+                                avgPhi - hPhiSec, avgPhi + hPhiSec,
+                                {static_cast<ActsScalar>(avgPhi)});
+
+  // Negative cone if exists
+  std::vector<double> coneSides;
   if (std::abs(minZ) > s_onSurfaceTolerance) {
     coneSides.push_back(minZ);
   }
   if (std::abs(maxZ) > s_onSurfaceTolerance) {
     coneSides.push_back(maxZ);
   }
-
   for (auto& z : coneSides) {
+    // Remember the first vertex
     std::size_t firstIv = vertices.size();
     // Radius and z offset
     double r = std::abs(z) * bounds().tanAlpha();
     Vector3 zoffset(0., 0., z);
-    auto svertices = detail::VerticesHelper::segmentVertices(
-        {r, r}, avgPhi - hPhiSec, avgPhi + hPhiSec, refPhi, quarterSegments,
-        zoffset, ctransform);
-    vertices.insert(vertices.end(), svertices.begin(), svertices.end());
-    // If the tip exists, the faces need to be triangular
+    for (unsigned int iseg = 0; iseg < phiSegs.size() - 1; ++iseg) {
+      int addon = (iseg == phiSegs.size() - 2 && !fullCone) ? 1 : 0;
+      detail::VerticesHelper::createSegment(vertices, {r, r}, phiSegs[iseg],
+                                            phiSegs[iseg + 1], lseg, addon,
+                                            zoffset, ctransform);
+    }
+    // Create the faces
     if (tipExists) {
-      for (std::size_t iv = firstIv + 1; iv < svertices.size() + firstIv;
-           ++iv) {
-        std::size_t one = 0, two = iv, three = iv - 1;
+      for (std::size_t iv = firstIv + 2; iv < vertices.size() + 1; ++iv) {
+        std::size_t one = 0, two = iv - 1, three = iv - 2;
         if (z < 0.) {
           std::swap(two, three);
         }
         faces.push_back({one, two, three});
       }
+      // Complete cone if necessary
+      if (fullCone) {
+        if (z > 0.) {
+          faces.push_back({0, firstIv, vertices.size() - 1});
+        } else {
+          faces.push_back({0, vertices.size() - 1, firstIv});
+        }
+      }
     }
   }
-
   // if no tip exists, connect the two bows
   if (tipExists) {
     triangularMesh = faces;
   } else {
-    auto facesMesh = detail::FacesHelper::cylindricalFaceMesh(vertices);
+    auto facesMesh =
+        detail::FacesHelper::cylindricalFaceMesh(vertices, fullCone);
     faces = facesMesh.first;
     triangularMesh = facesMesh.second;
   }
-
   return Polyhedron(vertices, faces, triangularMesh, false);
 }
 
@@ -282,7 +293,7 @@ Acts::detail::RealQuadraticEquation Acts::ConeSurface::intersectionSolver(
 
 Acts::SurfaceMultiIntersection Acts::ConeSurface::intersect(
     const GeometryContext& gctx, const Vector3& position,
-    const Vector3& direction, const BoundaryTolerance& boundaryTolerance,
+    const Vector3& direction, const BoundaryCheck& bcheck,
     ActsScalar tolerance) const {
   // Solve the quadratic equation
   auto qe = intersectionSolver(gctx, position, direction);
@@ -298,8 +309,7 @@ Acts::SurfaceMultiIntersection Acts::ConeSurface::intersect(
                                        ? Intersection3D::Status::onSurface
                                        : Intersection3D::Status::reachable;
 
-  if (!boundaryTolerance.isInfinite() &&
-      !isOnSurface(gctx, solution1, direction, boundaryTolerance)) {
+  if (bcheck.isEnabled() && !isOnSurface(gctx, solution1, direction, bcheck)) {
     status1 = Intersection3D::Status::missed;
   }
 
@@ -308,8 +318,7 @@ Acts::SurfaceMultiIntersection Acts::ConeSurface::intersect(
   Intersection3D::Status status2 = std::abs(qe.second) < std::abs(tolerance)
                                        ? Intersection3D::Status::onSurface
                                        : Intersection3D::Status::reachable;
-  if (!boundaryTolerance.isInfinite() &&
-      !isOnSurface(gctx, solution2, direction, boundaryTolerance)) {
+  if (bcheck.isEnabled() && !isOnSurface(gctx, solution2, direction, bcheck)) {
     status2 = Intersection3D::Status::missed;
   }
 
@@ -327,7 +336,7 @@ Acts::SurfaceMultiIntersection Acts::ConeSurface::intersect(
 Acts::AlignmentToPathMatrix Acts::ConeSurface::alignmentToPathDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The vector between position and center
   const auto pcRowVec = (position - center(gctx)).transpose().eval();

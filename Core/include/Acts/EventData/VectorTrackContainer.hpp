@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -15,6 +15,7 @@
 #include "Acts/EventData/TrackContainerBackendConcept.hpp"
 #include "Acts/EventData/detail/DynamicColumn.hpp"
 #include "Acts/EventData/detail/DynamicKeyIterator.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/HashedString.hpp"
 
 #include <any>
@@ -43,14 +44,14 @@ class VectorTrackContainerBase {
       MultiTrajectoryTraits::MeasurementSizeMax;
 
   using Parameters =
-      typename detail_lt::FixedSizeTypes<eBoundSize, false>::CoefficientsMap;
+      typename detail_lt::Types<eBoundSize, false>::CoefficientsMap;
   using Covariance =
-      typename detail_lt::FixedSizeTypes<eBoundSize, false>::CovarianceMap;
+      typename detail_lt::Types<eBoundSize, false>::CovarianceMap;
 
   using ConstParameters =
-      typename detail_lt::FixedSizeTypes<eBoundSize, true>::CoefficientsMap;
+      typename detail_lt::Types<eBoundSize, true>::CoefficientsMap;
   using ConstCovariance =
-      typename detail_lt::FixedSizeTypes<eBoundSize, true>::CovarianceMap;
+      typename detail_lt::Types<eBoundSize, true>::CovarianceMap;
 
  protected:
   VectorTrackContainerBase() = default;
@@ -147,7 +148,7 @@ class VectorTrackContainerBase {
     using namespace Acts::HashedStringLiteral;
     switch (key) {
       default:
-        return m_dynamic.contains(key);
+        return m_dynamic.find(key) != m_dynamic.end();
     }
   }
 
@@ -173,9 +174,8 @@ class VectorTrackContainerBase {
   std::vector<IndexType> m_tipIndex;
   std::vector<IndexType> m_stemIndex;
   std::vector<ParticleHypothesis> m_particleHypothesis;
-  std::vector<typename detail_lt::FixedSizeTypes<eBoundSize>::Coefficients>
-      m_params;
-  std::vector<typename detail_lt::FixedSizeTypes<eBoundSize>::Covariance> m_cov;
+  std::vector<typename detail_lt::Types<eBoundSize>::Coefficients> m_params;
+  std::vector<typename detail_lt::Types<eBoundSize>::Covariance> m_cov;
   std::vector<std::shared_ptr<const Surface>> m_referenceSurfaces;
 
   std::vector<unsigned int> m_nMeasurements;
@@ -224,8 +224,8 @@ class VectorTrackContainer final : public detail_vtc::VectorTrackContainerBase {
   void removeTrack_impl(IndexType itrack);
 
   template <typename T>
-  constexpr void addColumn_impl(const std::string_view& key) {
-    HashedString hashedKey = hashString(key);
+  constexpr void addColumn_impl(std::string_view key) {
+    Acts::HashedString hashedKey = hashString(key);
     m_dynamic.insert({hashedKey, std::make_unique<detail::DynamicColumn<T>>()});
   }
 
@@ -267,8 +267,7 @@ class VectorTrackContainer final : public detail_vtc::VectorTrackContainerBase {
   // END INTERFACE
 };
 
-static_assert(TrackContainerBackend<VectorTrackContainer>,
-              "VectorTrackContainer does not fulfill TrackContainerBackend");
+ACTS_STATIC_CHECK_CONCEPT(TrackContainerBackend, VectorTrackContainer);
 
 class ConstVectorTrackContainer;
 
@@ -311,9 +310,8 @@ class ConstVectorTrackContainer final
   // END INTERFACE
 };
 
-static_assert(
-    TrackContainerBackend<ConstVectorTrackContainer>,
-    "ConstVectorTrackContainer does not fulfill TrackContainerBackend");
+ACTS_STATIC_CHECK_CONCEPT(ConstTrackContainerBackend,
+                          ConstVectorTrackContainer);
 
 inline VectorTrackContainer::VectorTrackContainer(
     const ConstVectorTrackContainer& other)

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Plugins/GeoModel/detail/GeoModelExtentHelper.hpp"
 
@@ -61,8 +61,8 @@ Acts::detail::GeoModelExentHelper::readBinningConstraints(
     std::vector<std::string> sbTokens;
     boost::split(sbTokens, sbe, boost::is_any_of(","));
     BinningValue bv =
-        Acts::detail::GeoModelBinningHelper::toBinningValue(sbTokens[0]);
-    if (sbTokens.size() > 1u) {
+        Acts::detail::GeoModelBinningHelper::toBinningValue(sbTokens[0], false);
+    if (bv != numBinningValues() && sbTokens.size() > 1u) {
       std::vector<std::string> valueTokens = {sbTokens.begin() + 1,
                                               sbTokens.end()};
       if (!valueTokens.empty() && valueTokens[0] == "bound") {

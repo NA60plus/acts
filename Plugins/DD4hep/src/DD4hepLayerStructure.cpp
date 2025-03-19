@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Plugins/DD4hep/DD4hepLayerStructure.hpp"
 
@@ -26,7 +26,7 @@ Acts::Experimental::DD4hepLayerStructure::builder(
     DD4hepDetectorElement::Store& dd4hepStore, const GeometryContext& gctx,
     const dd4hep::DetElement& dd4hepElement, const Options& options) const {
   // Check for misconfiguration with double naming
-  if (dd4hepStore.contains(options.name)) {
+  if (dd4hepStore.find(options.name) != dd4hepStore.end()) {
     std::string reMessage = "DD4hepLayerStructure: structure with name '";
     reMessage += options.name;
     reMessage += "' already registered in DetectorElementStore";
@@ -38,7 +38,7 @@ Acts::Experimental::DD4hepLayerStructure::builder(
   fCache.sExtent = options.extent;
   fCache.pExtent = options.extent;
   fCache.extentConstraints = options.extentConstraints;
-  fCache.nExtentQSegments = options.quarterSegments;
+  fCache.nExtentSegments = options.nSegments;
   m_surfaceFactory->construct(fCache, gctx, dd4hepElement,
                               options.conversionOptions);
 
@@ -93,14 +93,14 @@ Acts::Experimental::DD4hepLayerStructure::builder(
   cElements.reserve(fCache.sensitiveSurfaces.size());
 
   // Fill them in to the surface provider struct and detector store
-  for (const auto& [de, ds] : fCache.sensitiveSurfaces) {
+  for (auto [de, ds] : fCache.sensitiveSurfaces) {
     lSurfaces.push_back(ds);
     cElements.push_back(de);
   }
   dd4hepStore[options.name] = cElements;
 
   // Passive surfaces to be added
-  for (const auto& [ps, toAll] : fCache.passiveSurfaces) {
+  for (auto [ps, toAll] : fCache.passiveSurfaces) {
     // Passive surface is not declared to be added to all navigation bins
     if (!toAll) {
       lSurfaces.push_back(ps);

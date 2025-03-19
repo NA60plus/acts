@@ -1,33 +1,26 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // Must be on top to avoid some conflict between forward declare and typedef
-// Needed until https://gitlab.cern.ch/GeoModelDev/GeoModel/-/merge_requests/351
-// is deployed
 // clang-format off
-#include <GeoModelRead/ReadGeoModel.h>
+#include "GeoModelRead/ReadGeoModel.h"
 // clang-format on
 
 #include "Acts/Detector/CylindricalContainerBuilder.hpp"
 #include "Acts/Plugins/GeoModel/GeoModelBlueprintCreater.hpp"
 #include "Acts/Plugins/GeoModel/GeoModelConverters.hpp"
 #include "Acts/Plugins/GeoModel/GeoModelDetectorElement.hpp"
-#include "Acts/Plugins/GeoModel/GeoModelDetectorElementITk.hpp"
-#include "Acts/Plugins/GeoModel/GeoModelDetectorObjectFactory.hpp"
+#include "Acts/Plugins/GeoModel/GeoModelDetectorSurfaceFactory.hpp"
 #include "Acts/Plugins/GeoModel/GeoModelReader.hpp"
 #include "Acts/Plugins/GeoModel/GeoModelTree.hpp"
 #include "Acts/Plugins/GeoModel/IGeoShapeConverter.hpp"
 #include "Acts/Plugins/Python/Utilities.hpp"
-#include "Acts/Surfaces/AnnulusBounds.hpp"
-#include "Acts/Surfaces/DiscSurface.hpp"
-#include "Acts/Surfaces/PlaneSurface.hpp"
-#include "Acts/Surfaces/RectangleBounds.hpp"
-#include "ActsExamples/ITkModuleSplitting/ITkModuleSplitting.hpp"
+#include "Acts/Surfaces/Surface.hpp"
 
 #include <string>
 
@@ -51,13 +44,7 @@ void addGeoModel(Context& ctx) {
 
   py::class_<Acts::GeoModelDetectorElement,
              std::shared_ptr<Acts::GeoModelDetectorElement>>(
-      gm, "GeoModelDetectorElement")
-      .def("logVolName", &Acts::GeoModelDetectorElement::logVolName)
-      .def("databaseEntryName",
-           &Acts::GeoModelDetectorElement::databaseEntryName)
-      .def("surface", [](Acts::GeoModelDetectorElement self) {
-        return self.surface().getSharedPtr();
-      });
+      gm, "GeoModelDetectorElement");
 
   // Shape converters
   {
@@ -109,47 +96,42 @@ void addGeoModel(Context& ctx) {
         .def("toPassiveSurface", &Acts::GeoShiftConverter::toPassiveSurface);
   }
 
-  // Volume factory
+  // Surface factory
   {
-    auto a =
-        py::class_<Acts::GeoModelDetectorObjectFactory,
-                   std::shared_ptr<Acts::GeoModelDetectorObjectFactory>>(
-            gm, "GeoModelDetectorObjectFactory")
+    auto f =
+        py::class_<Acts::GeoModelDetectorSurfaceFactory,
+                   std::shared_ptr<Acts::GeoModelDetectorSurfaceFactory>>(
+            gm, "GeoModelDetectorSurfaceFactory")
             .def(py::init(
-                [](const Acts::GeoModelDetectorObjectFactory::Config& cfg,
+                [](const Acts::GeoModelDetectorSurfaceFactory::Config& cfg,
                    Acts::Logging::Level level) {
-                  return std::make_shared<Acts::GeoModelDetectorObjectFactory>(
+                  return std::make_shared<Acts::GeoModelDetectorSurfaceFactory>(
                       cfg, Acts::getDefaultLogger(
-                               "GeoModelDetectorObjectFactory", level));
+                               "GeoModelDetectorSurfaceFactory", level));
                 }))
-            .def("construct", &Acts::GeoModelDetectorObjectFactory::construct);
+            .def("construct", &Acts::GeoModelDetectorSurfaceFactory::construct);
 
-    py::class_<Acts::GeoModelDetectorObjectFactory::Config>(a, "Config")
+    py::class_<Acts::GeoModelDetectorSurfaceFactory::Config>(f, "Config")
         .def(py::init<>())
         .def_readwrite(
-            "convertSubVolumes",
-            &Acts::GeoModelDetectorObjectFactory::Config::convertSubVolumes)
+            "shapeConverters",
+            &Acts::GeoModelDetectorSurfaceFactory::Config::shapeConverters)
         .def_readwrite("nameList",
-                       &Acts::GeoModelDetectorObjectFactory::Config::nameList)
-        .def_readwrite("convertBox",
-                       &Acts::GeoModelDetectorObjectFactory::Config::convertBox)
+                       &Acts::GeoModelDetectorSurfaceFactory::Config::nameList)
         .def_readwrite(
             "materialList",
-            &Acts::GeoModelDetectorObjectFactory::Config::materialList);
+            &Acts::GeoModelDetectorSurfaceFactory::Config::materialList);
 
-    py::class_<Acts::GeoModelDetectorObjectFactory::Cache>(a, "Cache")
+    py::class_<Acts::GeoModelDetectorSurfaceFactory::Cache>(f, "Cache")
         .def(py::init<>())
         .def_readwrite(
             "sensitiveSurfaces",
-            &Acts::GeoModelDetectorObjectFactory::Cache::sensitiveSurfaces)
-        .def_readwrite(
-            "boundingBoxes",
-            &Acts::GeoModelDetectorObjectFactory::Cache::boundingBoxes);
+            &Acts::GeoModelDetectorSurfaceFactory::Cache::sensitiveSurfaces);
 
-    py::class_<Acts::GeoModelDetectorObjectFactory::Options>(a, "Options")
+    py::class_<Acts::GeoModelDetectorSurfaceFactory::Options>(f, "Options")
         .def(py::init<>())
         .def_readwrite("queries",
-                       &Acts::GeoModelDetectorObjectFactory::Options::queries);
+                       &Acts::GeoModelDetectorSurfaceFactory::Options::queries);
   }
 
   {
@@ -192,60 +174,8 @@ void addGeoModel(Context& ctx) {
         .def_readwrite(
             "topBoundsOverride",
             &Acts::GeoModelBlueprintCreater::Options::topBoundsOverride)
-        .def_readwrite("table", &Acts::GeoModelBlueprintCreater::Options::table)
-        .def_readwrite("dotGraph",
-                       &Acts::GeoModelBlueprintCreater::Options::dotGraph);
+        .def_readwrite("table",
+                       &Acts::GeoModelBlueprintCreater::Options::table);
   }
-
-  gm.def(
-      "splitBarrelModule",
-      [](const Acts::GeometryContext& gctx,
-         std::shared_ptr<const GeoModelDetectorElement> detElement,
-         unsigned nSegments, Acts::Logging::Level logLevel) {
-        auto logger = Acts::getDefaultLogger("ITkSlitBarrel", logLevel);
-        auto name = detElement->databaseEntryName();
-
-        auto factory = [&](const auto& trafo, const auto& bounds) {
-          return Acts::GeoModelDetectorElement::createDetectorElement<
-              Acts::PlaneSurface, Acts::RectangleBounds>(
-              detElement->physicalVolume(), bounds, trafo,
-              detElement->thickness());
-        };
-
-        return ActsExamples::ITk::splitBarrelModule(gctx, detElement, nSegments,
-                                                    factory, name, *logger);
-      },
-      "gxtx"_a, "detElement"_a, "nSegments"_a,
-      "logLevel"_a = Acts::Logging::INFO);
-
-  gm.def(
-      "splitDiscModule",
-      [](const Acts::GeometryContext& gctx,
-         std::shared_ptr<const GeoModelDetectorElement> detElement,
-         const std::vector<std::pair<double, double>>& patterns,
-         Acts::Logging::Level logLevel) {
-        auto logger = Acts::getDefaultLogger("ITkSlitBarrel", logLevel);
-        auto name = detElement->databaseEntryName();
-
-        auto factory = [&](const auto& trafo, const auto& bounds) {
-          return Acts::GeoModelDetectorElement::createDetectorElement<
-              Acts::DiscSurface, Acts::AnnulusBounds>(
-              detElement->physicalVolume(), bounds, trafo,
-              detElement->thickness());
-        };
-
-        return ActsExamples::ITk::splitDiscModule(gctx, detElement, patterns,
-                                                  factory, name, *logger);
-      },
-      "gxtx"_a, "detElement"_a, "splitRanges"_a,
-      "logLevel"_a = Acts::Logging::INFO);
-
-  py::class_<Acts::GeoModelDetectorElementITk,
-             std::shared_ptr<Acts::GeoModelDetectorElementITk>>(
-      gm, "GeoModelDetectorElementITk")
-      .def("surface", [](Acts::GeoModelDetectorElementITk& self) {
-        return self.surface().getSharedPtr();
-      });
-  gm.def("convertToItk", &GeoModelDetectorElementITk::convertFromGeomodel);
 }
 }  // namespace Acts::Python

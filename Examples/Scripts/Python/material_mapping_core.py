@@ -26,6 +26,13 @@ from acts.examples import (
     JsonFormat,
 )
 
+from acts.examples.dd4hep import (
+    DD4hepDetector,
+    DD4hepDetectorOptions,
+    DD4hepGeometryService,
+)
+
+from acts import geomodel as gm
 from acts.examples.odd import getOpenDataDetector, getOpenDataDetectorDirectory
 
 
@@ -157,29 +164,6 @@ if "__main__" == __name__:
     )
 
     p.add_argument(
-        "--geomodel-name-list",
-        type=str,
-        nargs="+",
-        default=[],
-        help="List of Name List for the Surface Factory",
-    )
-
-    p.add_argument(
-        "--geomodel-material-list",
-        type=str,
-        nargs="+",
-        default=[],
-        help="List of Material List for the Surface Factory",
-    )
-
-    p.add_argument(
-        "--geomodel-convert-subvols",
-        help="Convert the children of the top level full phys vol",
-        action="store_true",
-        default=False,
-    )
-
-    p.add_argument(
         "--geomodel-top-node",
         type=str,
         default="",
@@ -207,21 +191,22 @@ if "__main__" == __name__:
 
     if args.experimental:
         if len(args.geomodel_input) > 0:
-            from acts import geomodel as gm
-
             # Read the geometry model from the database
             gmTree = acts.geomodel.readFromDb(args.geomodel_input)
 
-            gmFactoryConfig = gm.GeoModelDetectorObjectFactory.Config()
-            gmFactoryConfig.materialList = args.geomodel_material_list
-            gmFactoryConfig.nameList = args.geomodel_name_list
-            gmFactoryConfig.convertSubVolumes = args.geomodel_convert_subvols
-            gmFactory = gm.GeoModelDetectorObjectFactory(gmFactoryConfig, logLevel)
+            gmFactoryConfig = gm.GeoModelDetectorSurfaceFactory.Config()
+            gmFactoryConfig.shapeConverters = [
+                gm.GeoBoxConverter(),
+                gm.GeoTrdConverter(),
+                gm.GeoIntersectionAnnulusConverter(),
+            ]
+
+            gmFactory = gm.GeoModelDetectorSurfaceFactory(gmFactoryConfig, logLevel)
             # The options
-            gmFactoryOptions = gm.GeoModelDetectorObjectFactory.Options()
+            gmFactoryOptions = gm.GeoModelDetectorSurfaceFactory.Options()
             gmFactoryOptions.queries = args.geomodel_queries
             # The Cache & construct call
-            gmFactoryCache = gm.GeoModelDetectorObjectFactory.Cache()
+            gmFactoryCache = gm.GeoModelDetectorSurfaceFactory.Cache()
             gmFactory.construct(gmFactoryCache, gContext, gmTree, gmFactoryOptions)
 
             # All surfaces from GeoModel
@@ -230,10 +215,7 @@ if "__main__" == __name__:
             # Construct the building hierarchy
             gmBlueprintConfig = gm.GeoModelBlueprintCreater.Config()
             gmBlueprintConfig.detectorSurfaces = gmSurfaces
-            gmBlueprintConfig.kdtBinning = [
-                acts.BinningValue.binZ,
-                acts.BinningValue.binR,
-            ]
+            gmBlueprintConfig.kdtBinning = [acts.Binning.z, acts.Binning.r]
 
             gmBlueprintOptions = gm.GeoModelBlueprintCreater.Options()
             gmBlueprintOptions.table = args.geomodel_table_name
@@ -269,12 +251,6 @@ if "__main__" == __name__:
 
             materialSurfaces = detector.extractMaterialSurfaces()
         else:
-            from acts.examples.dd4hep import (
-                DD4hepDetector,
-                DD4hepDetectorOptions,
-                DD4hepGeometryService,
-            )
-
             odd_xml = getOpenDataDetectorDirectory() / "xml" / "OpenDataDetector.xml"
 
             # Create the dd4hep geometry service and detector

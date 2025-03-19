@@ -40,3 +40,5 @@ Examples/Algorithms/Digitization/scripts/smearing-config.py \
    --digi-smear-types=0 \
    --digi-smear-parameters=12.5
 ```
+
+

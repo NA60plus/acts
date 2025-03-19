@@ -1,16 +1,15 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/AmbiguityResolution/ScoreBasedAmbiguityResolution.hpp"
 #include "Acts/Definitions/Units.hpp"
-#include "Acts/EventData/TrackContainerFrontendConcept.hpp"
 #include "Acts/Utilities/VectorHelpers.hpp"
 
 #include <unordered_map>
@@ -21,11 +20,13 @@ inline const Logger& ScoreBasedAmbiguityResolution::logger() const {
   return *m_logger;
 }
 
-template <TrackContainerFrontend track_container_t, typename source_link_hash_t,
+template <typename track_container_t, typename traj_t,
+          template <typename> class holder_t, typename source_link_hash_t,
           typename source_link_equality_t>
 std::vector<std::vector<ScoreBasedAmbiguityResolution::MeasurementInfo>>
 ScoreBasedAmbiguityResolution::computeInitialState(
-    const track_container_t& tracks, source_link_hash_t sourceLinkHash,
+    const TrackContainer<track_container_t, traj_t, holder_t>& tracks,
+    source_link_hash_t sourceLinkHash,
     source_link_equality_t sourceLinkEquality,
     std::vector<std::vector<TrackFeatures>>& trackFeaturesVectors) const {
   auto MeasurementIndexMap =
@@ -46,7 +47,7 @@ ScoreBasedAmbiguityResolution::computeInitialState(
 
     for (const auto& ts : track.trackStatesReversed()) {
       if (!ts.hasReferenceSurface()) {
-        ACTS_DEBUG("Track state has no reference surface");
+        ACTS_ERROR("Track state has no reference surface");
         continue;
       }
       auto iVolume = ts.referenceSurface().geometryId().volume();
@@ -57,22 +58,7 @@ ScoreBasedAmbiguityResolution::computeInitialState(
       }
       auto detectorId = volume_it->second;
 
-      if (ts.typeFlags().test(Acts::TrackStateFlag::HoleFlag)) {
-        ACTS_DEBUG("Track state type is HoleFlag");
-        trackFeaturesVector[detectorId].nHoles++;
-      } else if (ts.typeFlags().test(Acts::TrackStateFlag::OutlierFlag)) {
-        Acts::SourceLink sourceLink = ts.getUncalibratedSourceLink();
-        ACTS_DEBUG("Track state type is OutlierFlag");
-        trackFeaturesVector[detectorId].nOutliers++;
-
-        // assign a new measurement index if the source link was not seen yet
-        auto emplace = MeasurementIndexMap.try_emplace(
-            sourceLink, MeasurementIndexMap.size());
-
-        bool isOutliner = true;
-
-        measurements.push_back({emplace.first->second, detectorId, isOutliner});
-      } else if (ts.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
+      if (ts.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag)) {
         Acts::SourceLink sourceLink = ts.getUncalibratedSourceLink();
         ACTS_DEBUG("Track state type is MeasurementFlag");
 
@@ -88,6 +74,21 @@ ScoreBasedAmbiguityResolution::computeInitialState(
         bool isoutliner = false;
 
         measurements.push_back({emplace.first->second, detectorId, isoutliner});
+      } else if (ts.typeFlags().test(Acts::TrackStateFlag::OutlierFlag)) {
+        Acts::SourceLink sourceLink = ts.getUncalibratedSourceLink();
+        ACTS_DEBUG("Track state type is OutlierFlag");
+        trackFeaturesVector[detectorId].nOutliers++;
+
+        // assign a new measurement index if the source link was not seen yet
+        auto emplace = MeasurementIndexMap.try_emplace(
+            sourceLink, MeasurementIndexMap.size());
+
+        bool isOutliner = true;
+
+        measurements.push_back({emplace.first->second, detectorId, isOutliner});
+      } else if (ts.typeFlags().test(Acts::TrackStateFlag::HoleFlag)) {
+        ACTS_DEBUG("Track state type is HoleFlag");
+        trackFeaturesVector[detectorId].nHoles++;
       }
     }
     measurementsPerTrack.push_back(std::move(measurements));
@@ -97,11 +98,12 @@ ScoreBasedAmbiguityResolution::computeInitialState(
   return measurementsPerTrack;
 }
 
-template <TrackContainerFrontend track_container_t>
+template <typename track_container_t, typename traj_t,
+          template <typename> class holder_t, bool ReadOnly>
 std::vector<double> Acts::ScoreBasedAmbiguityResolution::simpleScore(
-    const track_container_t& tracks,
+    const TrackContainer<track_container_t, traj_t, holder_t>& tracks,
     const std::vector<std::vector<TrackFeatures>>& trackFeaturesVectors,
-    const OptionalCuts<typename track_container_t::ConstTrackProxy>&
+    const OptionalCuts<track_container_t, traj_t, holder_t, ReadOnly>&
         optionalCuts) const {
   std::vector<double> trackScore;
   trackScore.reserve(tracks.size());
@@ -182,6 +184,7 @@ std::vector<double> Acts::ScoreBasedAmbiguityResolution::simpleScore(
       ACTS_DEBUG("---> Number of outliers: " << trackFeatures.nOutliers);
 
       if ((trackFeatures.nHits < detector.minHits) ||
+          (trackFeatures.nHits > detector.maxHits) ||
           (trackFeatures.nHoles > detector.maxHoles) ||
           (trackFeatures.nOutliers > detector.maxOutliers)) {
         score = 0;
@@ -245,11 +248,12 @@ std::vector<double> Acts::ScoreBasedAmbiguityResolution::simpleScore(
   return trackScore;
 }
 
-template <TrackContainerFrontend track_container_t>
+template <typename track_container_t, typename traj_t,
+          template <typename> class holder_t, bool ReadOnly>
 std::vector<double> Acts::ScoreBasedAmbiguityResolution::ambiguityScore(
-    const track_container_t& tracks,
+    const TrackContainer<track_container_t, traj_t, holder_t>& tracks,
     const std::vector<std::vector<TrackFeatures>>& trackFeaturesVectors,
-    const OptionalCuts<typename track_container_t::ConstTrackProxy>&
+    const OptionalCuts<track_container_t, traj_t, holder_t, ReadOnly>&
         optionalCuts) const {
   std::vector<double> trackScore;
   trackScore.reserve(tracks.size());
@@ -332,6 +336,7 @@ std::vector<double> Acts::ScoreBasedAmbiguityResolution::ambiguityScore(
       ACTS_DEBUG("---> Number of outliers: " << trackFeatures.nOutliers);
 
       if ((trackFeatures.nHits < detector.minHits) ||
+          (trackFeatures.nHits > detector.maxHits) ||
           (trackFeatures.nHoles > detector.maxHoles) ||
           (trackFeatures.nOutliers > detector.maxOutliers)) {
         score = 0;
@@ -420,13 +425,13 @@ std::vector<double> Acts::ScoreBasedAmbiguityResolution::ambiguityScore(
 
   return trackScore;
 }
-
-template <TrackContainerFrontend track_container_t>
+template <typename track_container_t, typename traj_t,
+          template <typename> class holder_t, bool ReadOnly>
 std::vector<int> Acts::ScoreBasedAmbiguityResolution::solveAmbiguity(
-    const track_container_t& tracks,
+    const TrackContainer<track_container_t, traj_t, holder_t>& tracks,
     const std::vector<std::vector<MeasurementInfo>>& measurementsPerTrack,
     const std::vector<std::vector<TrackFeatures>>& trackFeaturesVectors,
-    const OptionalCuts<typename track_container_t::ConstTrackProxy>&
+    const OptionalCuts<track_container_t, traj_t, holder_t, ReadOnly>&
         optionalCuts) const {
   ACTS_INFO("Number of tracks before Ambiguty Resolution: " << tracks.size());
   // vector of trackFeaturesVectors. where each trackFeaturesVector contains the

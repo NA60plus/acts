@@ -1,15 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/Definitions/Algebra.hpp"
-#include "Acts/Geometry/BoundarySurfaceFace.hpp"
 #include "Acts/Geometry/Volume.hpp"
 #include "Acts/Geometry/VolumeBounds.hpp"
 #include "Acts/Utilities/BinningType.hpp"
@@ -79,18 +78,6 @@ class CylinderVolumeBounds : public VolumeBounds {
     eBevelMinZ = 5,
     eBevelMaxZ = 6,
     eSize
-  };
-
-  /// Enum describing the possible faces of a cylinder volume
-  /// @note These values are synchronized with the BoundarySurfaceFace enum.
-  ///       Once Gen1 is removed, this can be changed.
-  enum class Face : unsigned int {
-    PositiveDisc = BoundarySurfaceFace::positiveFaceXY,
-    NegativeDisc = BoundarySurfaceFace::negativeFaceXY,
-    OuterCylinder = BoundarySurfaceFace::tubeOuterCover,
-    InnerCylinder = BoundarySurfaceFace::tubeInnerCover,
-    NegativePhiPlane = BoundarySurfaceFace::tubeSectorNegativePhi,
-    PositivePhiPlane = BoundarySurfaceFace::tubeSectorPositivePhi
   };
 
   CylinderVolumeBounds() = delete;

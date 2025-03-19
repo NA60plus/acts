@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -148,7 +148,8 @@ struct TransformRange {
 template <typename Callable, typename iterator_t, bool force_const>
 struct TransformRangeIterator {
  private:
-  using internal_value_type = typename std::iter_value_t<iterator_t>;
+  using internal_value_type =
+      typename std::iterator_traits<iterator_t>::value_type;
 
   using raw_value_type = std::remove_reference_t<decltype(Callable::apply(
       std::declval<internal_value_type>()))>;
@@ -161,7 +162,8 @@ struct TransformRangeIterator {
       std::conditional_t<force_const, std::add_const_t<raw_value_type>,
                          raw_value_type>;
 
-  using difference_type = typename std::iter_difference_t<iterator_t>;
+  using difference_type =
+      typename std::iterator_traits<iterator_t>::difference_type;
   using pointer = std::remove_reference_t<value_type>*;
   using reference = value_type&;
   using iterator_category = std::forward_iterator_tag;
@@ -188,6 +190,12 @@ struct TransformRangeIterator {
   /// @param other The other iterator to compare to
   bool operator==(const TransformRangeIterator& other) const {
     return m_iterator == other.m_iterator;
+  }
+
+  /// Compare two iterators for inequality
+  /// @param other The other iterator to compare to
+  bool operator!=(const TransformRangeIterator& other) const {
+    return m_iterator != other.m_iterator;
   }
 
  private:

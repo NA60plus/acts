@@ -13,16 +13,8 @@ from acts.examples import (
     RandomNumbers,
 )
 
-import acts.examples.dd4hep
 import acts.examples.geant4
-import acts.examples.geant4.dd4hep
 from acts.examples.odd import getOpenDataDetector
-
-try:
-    import acts.examples.geant4.geomodel
-except ImportError:
-    # geomodel is optional for this script
-    pass
 
 u = acts.UnitConstants
 
@@ -34,7 +26,7 @@ def runMaterialRecording(
     outputDir,
     tracksPerEvent=10000,
     s=None,
-    etaRange=(-4, 4),
+    etaRange=(0, 10),
 ):
     global _material_recording_executed
     if _material_recording_executed:
@@ -76,7 +68,7 @@ def runMaterialRecording(
         detectorConstructionFactory=detectorConstructionFactory,
         randomNumbers=rnd,
         inputParticles=evGen.config.outputParticles,
-        outputMaterialTracks="material-tracks",
+        outputMaterialTracks="material_tracks",
     )
 
     s.addAlgorithm(g4Alg)
@@ -85,7 +77,7 @@ def runMaterialRecording(
         acts.examples.RootMaterialTrackWriter(
             prePostStep=True,
             recalculateTotals=True,
-            inputMaterialTracks="material-tracks",
+            inputMaterialTracks="material_tracks",
             filePath=os.path.join(outputDir, "geant4_material_tracks.root"),
             level=acts.logging.INFO,
         )
@@ -107,7 +99,7 @@ def main():
     )
 
     args = p.parse_args()
-
+    """
     detectorConstructionFactory = None
     if args.input == "":
         detector, trackingGeometry, decorators = getOpenDataDetector()
@@ -116,17 +108,11 @@ def main():
             acts.examples.geant4.dd4hep.DDG4DetectorConstructionFactory(detector)
         )
     elif args.input.endswith(".gdml"):
-        detectorConstructionFactory = (
-            acts.examples.geant4.GdmlDetectorConstructionFactory(args.input)
+    """
+    detectorConstructionFactory = (
+        acts.examples.geant4.GdmlDetectorConstructionFactory(args.input)
         )
-    elif args.input.endswith(".sqlite") or args.input.endswith(".db"):
-        geoModelTree = acts.geomodel.readFromDb(args.input)
-        detectorConstructionFactory = (
-            acts.examples.geant4.geomodel.GeoModelDetectorConstructionFactory(
-                geoModelTree
-            )
-        )
-
+    
     runMaterialRecording(
         detectorConstructionFactory=detectorConstructionFactory,
         tracksPerEvent=args.tracks,

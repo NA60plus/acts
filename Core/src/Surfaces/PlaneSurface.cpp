@@ -1,16 +1,15 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Surfaces/PlaneSurface.hpp"
 
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/Geometry/GeometryObject.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
 #include "Acts/Surfaces/CurvilinearSurface.hpp"
 #include "Acts/Surfaces/EllipseBounds.hpp"
 #include "Acts/Surfaces/InfiniteBounds.hpp"
@@ -36,6 +35,12 @@ Acts::PlaneSurface::PlaneSurface(const GeometryContext& gctx,
     : GeometryObject(),
       RegularSurface(gctx, other, transform),
       m_bounds(other.m_bounds) {}
+
+Acts::PlaneSurface::PlaneSurface(const Vector3& center, const Vector3& normal)
+    : RegularSurface(), m_bounds(nullptr) {
+  m_transform = std::make_unique<Transform3>(
+      CurvilinearSurface(center, normal).transform());
+}
 
 Acts::PlaneSurface::PlaneSurface(std::shared_ptr<const PlanarBounds> pbounds,
                                  const Acts::DetectorElementBase& detelement)
@@ -88,14 +93,16 @@ const Acts::SurfaceBounds& Acts::PlaneSurface::bounds() const {
 }
 
 Acts::Polyhedron Acts::PlaneSurface::polyhedronRepresentation(
-    const GeometryContext& gctx, unsigned int quarterSegments) const {
+    const GeometryContext& gctx, std::size_t lseg) const {
   // Prepare vertices and faces
   std::vector<Vector3> vertices;
+  std::vector<Polyhedron::FaceType> faces;
+  std::vector<Polyhedron::FaceType> triangularMesh;
   bool exactPolyhedron = true;
 
   // If you have bounds you can create a polyhedron representation
   if (m_bounds) {
-    auto vertices2D = m_bounds->vertices(quarterSegments);
+    auto vertices2D = m_bounds->vertices(lseg);
     vertices.reserve(vertices2D.size() + 1);
     for (const auto& v2D : vertices2D) {
       vertices.push_back(transform(gctx) * Vector3(v2D.x(), v2D.y(), 0.));
@@ -114,20 +121,22 @@ Acts::Polyhedron Acts::PlaneSurface::polyhedronRepresentation(
     // @todo same as for Discs: coversFull is not the right criterium
     // for triangulation
     if (!isEllipse || !innerExists || !coversFull) {
-      auto [faces, triangularMesh] =
-          detail::FacesHelper::convexFaceMesh(vertices);
-      return Polyhedron(vertices, faces, triangularMesh, exactPolyhedron);
+      auto facesMesh = detail::FacesHelper::convexFaceMesh(vertices);
+      faces = facesMesh.first;
+      triangularMesh = facesMesh.second;
     } else {
       // Two concentric rings, we use the pure concentric method momentarily,
       // but that creates too  many unneccesarry faces, when only two
       // are needed to describe the mesh, @todo investigate merging flag
-      auto [faces, triangularMesh] =
-          detail::FacesHelper::cylindricalFaceMesh(vertices);
-      return Polyhedron(vertices, faces, triangularMesh, exactPolyhedron);
+      auto facesMesh = detail::FacesHelper::cylindricalFaceMesh(vertices, true);
+      faces = facesMesh.first;
+      triangularMesh = facesMesh.second;
     }
+  } else {
+    throw std::domain_error(
+        "Polyhedron repr of boundless surface not possible.");
   }
-  throw std::domain_error(
-      "Polyhedron representation of boundless surface not possible.");
+  return Polyhedron(vertices, faces, triangularMesh, exactPolyhedron);
 }
 
 Acts::Vector3 Acts::PlaneSurface::normal(const GeometryContext& gctx,
@@ -158,7 +167,7 @@ double Acts::PlaneSurface::pathCorrection(const GeometryContext& gctx,
 
 Acts::SurfaceMultiIntersection Acts::PlaneSurface::intersect(
     const GeometryContext& gctx, const Vector3& position,
-    const Vector3& direction, const BoundaryTolerance& boundaryTolerance,
+    const Vector3& direction, const BoundaryCheck& bcheck,
     ActsScalar tolerance) const {
   // Get the contextual transform
   const auto& gctxTransform = transform(gctx);
@@ -167,13 +176,14 @@ Acts::SurfaceMultiIntersection Acts::PlaneSurface::intersect(
       PlanarHelper::intersect(gctxTransform, position, direction, tolerance);
   auto status = intersection.status();
   // Evaluate boundary check if requested (and reachable)
-  if (intersection.status() != Intersection3D::Status::unreachable) {
+  if (intersection.status() != Intersection3D::Status::unreachable &&
+      bcheck.isEnabled()) {
     // Built-in local to global for speed reasons
     const auto& tMatrix = gctxTransform.matrix();
     // Create the reference vector in local
     const Vector3 vecLocal(intersection.position() - tMatrix.block<3, 1>(0, 3));
     if (!insideBounds(tMatrix.block<3, 2>(0, 0).transpose() * vecLocal,
-                      boundaryTolerance)) {
+                      bcheck)) {
       status = Intersection3D::Status::missed;
     }
   }

@@ -8,6 +8,12 @@ import acts.examples
 from acts.examples.simulation import addParticleGun, addGeant4, EtaConfig
 from acts.examples.odd import getOpenDataDetector, getOpenDataDetectorDirectory
 
+from acts.examples.dd4hep import (
+    DD4hepDetector,
+    DD4hepDetectorOptions,
+    DD4hepGeometryService,
+)
+
 u = acts.UnitConstants
 
 
@@ -16,8 +22,6 @@ def runGeant4(
     trackingGeometry,
     field,
     outputDir,
-    materialMappings=["Silicon"],
-    volumeMappings=[],
     s: acts.examples.Sequencer = None,
 ):
     s = s or acts.examples.Sequencer(events=100, numThreads=1)
@@ -37,8 +41,6 @@ def runGeant4(
         outputDirCsv=outputDir / "csv",
         outputDirRoot=outputDir,
         rnd=rnd,
-        materialMappings=materialMappings,
-        volumeMappings=volumeMappings,
     )
     return s
 
@@ -57,12 +59,6 @@ if "__main__" == __name__:
     field = acts.ConstantBField(acts.Vector3(0, 0, 2 * u.T))
 
     if args.experimental:
-        from acts.examples.dd4hep import (
-            DD4hepDetector,
-            DD4hepDetectorOptions,
-            DD4hepGeometryService,
-        )
-
         print(">>> Running experimental geometry <<<")
         odd_xml = getOpenDataDetectorDirectory() / "xml" / "OpenDataDetector.xml"
 
@@ -78,7 +74,7 @@ if "__main__" == __name__:
         # Context and options
         geoContext = acts.GeometryContext()
         [detector, contextors, store] = dd4hepDetector.finalize(geoContext, cOptions)
-        runGeant4(detector, detector, field, Path.cwd()).run()
+        runGeant4(dd4hepDetector, detector, field, Path.cwd()).run()
     else:
-        detector, trackingGeometry, decorators = getOpenDataDetector()
-        runGeant4(detector, trackingGeometry, field, Path.cwd()).run()
+        dd4hepDetector, trackingGeometry, decorators = getOpenDataDetector()
+        runGeant4(dd4hepDetector, trackingGeometry, field, Path.cwd()).run()

@@ -1,22 +1,32 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "Acts/Definitions/Direction.hpp"
+#include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/TrackContainer.hpp"
+#include "Acts/EventData/TrackStatePropMask.hpp"
+#include "Acts/EventData/VectorMultiTrajectory.hpp"
+#include "Acts/EventData/VectorTrackContainer.hpp"
+#include "Acts/Propagator/EigenStepper.hpp"
 #include "Acts/Propagator/Navigator.hpp"
 #include "Acts/Propagator/Propagator.hpp"
-#include "Acts/Propagator/SympyStepper.hpp"
 #include "Acts/TrackFinding/CombinatorialKalmanFilter.hpp"
+#include "Acts/TrackFitting/GainMatrixSmoother.hpp"
+#include "Acts/TrackFitting/GainMatrixUpdater.hpp"
 #include "Acts/Utilities/Logger.hpp"
 #include "ActsExamples/EventData/Track.hpp"
 #include "ActsExamples/TrackFinding/TrackFindingAlgorithm.hpp"
 
+#include <algorithm>
+#include <map>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace Acts {
 class MagneticFieldProvider;
@@ -25,11 +35,18 @@ class TrackingGeometry;
 
 namespace {
 
-using Stepper = Acts::SympyStepper;
+using Updater = Acts::GainMatrixUpdater;
+using Smoother = Acts::GainMatrixSmoother;
+
+using Stepper = Acts::EigenStepper<>;
 using Navigator = Acts::Navigator;
 using Propagator = Acts::Propagator<Stepper, Navigator>;
 using CKF =
-    Acts::CombinatorialKalmanFilter<Propagator, ActsExamples::TrackContainer>;
+    Acts::CombinatorialKalmanFilter<Propagator, Acts::VectorMultiTrajectory>;
+
+using TrackContainer =
+    Acts::TrackContainer<Acts::VectorTrackContainer,
+                         Acts::VectorMultiTrajectory, std::shared_ptr>;
 
 struct TrackFinderFunctionImpl
     : public ActsExamples::TrackFindingAlgorithm::TrackFinderFunction {
@@ -40,11 +57,9 @@ struct TrackFinderFunctionImpl
   ActsExamples::TrackFindingAlgorithm::TrackFinderResult operator()(
       const ActsExamples::TrackParameters& initialParameters,
       const ActsExamples::TrackFindingAlgorithm::TrackFinderOptions& options,
-      ActsExamples::TrackContainer& tracks,
-      ActsExamples::TrackProxy rootBranch) const override {
-    return trackFinder.findTracks(initialParameters, options, tracks,
-                                  rootBranch);
-  }
+      TrackContainer& tracks) const override {
+    return trackFinder.findTracks(initialParameters, options, tracks);
+  };
 };
 
 }  // namespace

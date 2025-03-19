@@ -84,10 +84,6 @@ ActsExamples::ProcessCode ActsExamples::MergeContainersAlgorithm::execute(
               std::back_inserter(outputTrackParameters));
   }
 
-  using TrackProxyType = Acts::TrackContainer<Acts::ConstVectorTrackContainer,
-                                              Acts::ConstVectorMultiTrajectory,
-                                              std::shared_ptr>::ConstTrackProxy;
-
   trk_size = 0;
 
   for (const auto& itrkpar : m_inputTracks) {
@@ -100,8 +96,7 @@ ActsExamples::ProcessCode ActsExamples::MergeContainersAlgorithm::execute(
   //mergedTracks.reserve(trk_size);
 
   uint32_t tipIndex = 0;
-  for (const auto& itrkpar : m_inputTracks) {
-
+  for (const auto& itrkpar : m_inputTracks) {            
     uint32_t tipIndexTmp = 0;
     const auto& handle = (*itrkpar)(ctx);
     for (auto itrack = handle.begin(); itrack != handle.end(); ++itrack) {

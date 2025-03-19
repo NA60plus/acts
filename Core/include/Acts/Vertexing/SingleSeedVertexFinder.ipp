@@ -1,12 +1,11 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <algorithm>
 #include <cmath>
 #include <system_error>
 
@@ -310,14 +309,14 @@ Acts::SingleSeedVertexFinder<spacepoint_t>::findTriplets(
                       triplets.push_back(tr);
                     }
                   }  // loop over far spacepoints
-                }  // loop over middle spacepoints
-              }  // loop over near spacepoints
-            }  // loop over far phi slices
-          }  // loop over middle phi slices
-        }  // loop over near phi slices
-      }  // loop over far Z slices
-    }  // loop over near Z slices
-  }  // loop over middle Z slices
+                }    // loop over middle spacepoints
+              }      // loop over near spacepoints
+            }        // loop over far phi slices
+          }          // loop over middle phi slices
+        }            // loop over near phi slices
+      }              // loop over far Z slices
+    }                // loop over near Z slices
+  }                  // loop over middle Z slices
 
   return triplets;
 }
@@ -464,8 +463,10 @@ Acts::SingleSeedVertexFinder<spacepoint_t>::findClosestPointFromPlanes(
         triplet.second = distance;
       }
 
-      std::ranges::sort(tripletsWithPlanes, {},
-                        [](const auto& t) { return t.second; });
+      std::sort(tripletsWithPlanes.begin(), tripletsWithPlanes.end(),
+                [](const auto& lhs, const auto& rhs) {
+                  return lhs.second < rhs.second;
+                });
 
       std::uint32_t threshold = static_cast<std::uint32_t>(
           tripletsWithPlanes.size() * (1. - m_cfg.removeFraction));
@@ -570,8 +571,10 @@ Acts::SingleSeedVertexFinder<spacepoint_t>::findClosestPointFromRays(
         triplet.second = distance;
       }
 
-      std::ranges::sort(tripletsWithRays, {},
-                        [](const auto& t) { return t.second; });
+      std::sort(tripletsWithRays.begin(), tripletsWithRays.end(),
+                [](const auto& lhs, const auto& rhs) {
+                  return lhs.second < rhs.second;
+                });
 
       std::uint32_t threshold = static_cast<std::uint32_t>(
           tripletsWithRays.size() * (1. - m_cfg.removeFraction));

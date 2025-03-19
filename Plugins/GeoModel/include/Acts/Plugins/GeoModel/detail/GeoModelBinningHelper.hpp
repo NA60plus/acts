@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -22,7 +22,9 @@ namespace Acts::detail::GeoModelBinningHelper {
 /// @brief Helper to transform binning string to BinningValue enum
 ///
 /// @param binning the binning string
-inline BinningValue toBinningValue(const std::string& binning) {
+/// @param texecpt throw an exception if needed
+inline BinningValue toBinningValue(const std::string& binning,
+                                   bool texcept = true) {
   if (binning == "x") {
     return BinningValue::binX;
   } else if (binning == "y") {
@@ -33,9 +35,11 @@ inline BinningValue toBinningValue(const std::string& binning) {
     return BinningValue::binR;
   } else if (binning == "phi") {
     return BinningValue::binPhi;
+  } else if (texcept) {
+    throw std::invalid_argument(
+        "GeoModelBinningHelper: Unknown binning value '" + binning + "'");
   }
-  throw std::invalid_argument("GeoModelBinningHelper: Unknown binning value '" +
-                              binning + "'");
+  return BinningValue::numBinningValues();
 }
 
 /// @brief Convert a binning string into a ProtoiBinning description

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -27,7 +27,9 @@
 #include <tuple>
 #include <vector>
 
-namespace Acts::Svg {
+namespace Acts {
+
+namespace Svg {
 
 using ProtoSurface = actsvg::proto::surface<std::vector<Vector3>>;
 using ProtoGrid = actsvg::proto::grid;
@@ -90,8 +92,7 @@ ProtoIndexedSurfaceGrid convertImpl(const GeometryContext& gctx,
     if (estimateR) {
       auto sExtent = s->polyhedronRepresentation(gctx, 4u).extent();
       if constexpr (index_grid::grid_type::DIM == 2u) {
-        pSurface._radii[0u] =
-            static_cast<float>(sExtent.medium(BinningValue::binR));
+        pSurface._radii[0u] = sExtent.medium(BinningValue::binR);
       }
       constrain.extend(sExtent, {BinningValue::binR});
     }
@@ -164,8 +165,7 @@ ProtoIndexedSurfaceGrid convertImpl(const GeometryContext& gctx,
                    std::to_string(binCenter1) + ")";
         pGrid._bin_ids.push_back(binInfo);
         if (estimateR) {
-          pGrid._reference_r =
-              static_cast<float>(constrain.medium(BinningValue::binR));
+          pGrid._reference_r = constrain.medium(BinningValue::binR);
         }
       }
     }
@@ -302,7 +302,7 @@ static inline actsvg::svg::object xy(const ProtoIndexedSurfaceGrid& pIndexGrid,
     for (const auto [is, sis] : enumerate(pIndices[ig])) {
       const auto& ps = pSurfaces[sis];
       std::string oInfo = std::string("- object: ") + std::to_string(sis);
-      if (ps._aux_info.contains("center")) {
+      if (ps._aux_info.find("center") != ps._aux_info.end()) {
         for (const auto& ci : ps._aux_info.at("center")) {
           oInfo += ci;
         }
@@ -338,4 +338,5 @@ static inline actsvg::svg::object zphi(
 }
 
 }  // namespace View
-}  // namespace Acts::Svg
+}  // namespace Svg
+}  // namespace Acts

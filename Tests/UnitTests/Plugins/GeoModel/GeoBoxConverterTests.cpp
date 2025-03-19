@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/unit_test.hpp>
 
@@ -22,7 +22,6 @@
 #include <GeoModelKernel/GeoMaterial.h>
 #include <GeoModelKernel/GeoTrap.h>
 #include <GeoModelKernel/GeoTrd.h>
-#include <GeoModelKernel/GeoVPhysVol.h>
 
 Acts::GeometryContext tContext;
 Acts::RotationMatrix3 idRotation = Acts::RotationMatrix3::Identity();
@@ -32,18 +31,15 @@ BOOST_AUTO_TEST_SUITE(GeoModelPlugin)
 
 // GeoBox conversion test case
 BOOST_AUTO_TEST_CASE(GeoBoxToSensitiveConversion) {
-  auto material = make_intrusive<GeoMaterial>("Material", 1.0);
+  auto material = new GeoMaterial("Material", 1.0);
   // Let's create a GeoFullPhysVol object
 
   // (BOX object) - XY
   auto boxXY = new GeoBox(100, 200, 2);
   auto logXY = new GeoLogVol("LogVolumeXY", boxXY, material);
-  auto fphysXY = make_intrusive<GeoFullPhysVol>(logXY);
+  auto fphysXY = new GeoFullPhysVol(logXY);
 
-  PVConstLink physXY{make_intrusive<GeoFullPhysVol>(logXY)};
-
-  auto converted = Acts::GeoBoxConverter{}.toSensitiveSurface(
-      physXY, Acts::Transform3::Identity());
+  auto converted = Acts::GeoBoxConverter{}.toSensitiveSurface(*fphysXY);
 
   BOOST_CHECK(converted.ok());
 
@@ -65,10 +61,9 @@ BOOST_AUTO_TEST_CASE(GeoBoxToSensitiveConversion) {
   // (BOX object) - YZ
   auto boxYZ = new GeoBox(2, 200, 300);
   auto logYZ = new GeoLogVol("LogVolumeYZ", boxYZ, material);
-  auto fphysYZ = make_intrusive<GeoFullPhysVol>(logYZ);
+  auto fphysYZ = new GeoFullPhysVol(logYZ);
 
-  converted = Acts::GeoBoxConverter{}.toSensitiveSurface(
-      fphysYZ, Acts::Transform3::Identity());
+  converted = Acts::GeoBoxConverter{}.toSensitiveSurface(*fphysYZ);
 
   BOOST_CHECK(converted.ok());
 
@@ -92,10 +87,9 @@ BOOST_AUTO_TEST_CASE(GeoBoxToSensitiveConversion) {
   // (BOX object) - XZ
   auto boxXZ = new GeoBox(400, 2, 300);
   auto logXZ = new GeoLogVol("LogVolumeXZ", boxXZ, material);
-  auto fphysXZ = make_intrusive<GeoFullPhysVol>(logXZ);
+  auto fphysXZ = new GeoFullPhysVol(logXZ);
 
-  converted = Acts::GeoBoxConverter{}.toSensitiveSurface(
-      fphysXZ, Acts::Transform3::Identity());
+  converted = Acts::GeoBoxConverter{}.toSensitiveSurface(*fphysXZ);
 
   BOOST_CHECK(converted.ok());
 

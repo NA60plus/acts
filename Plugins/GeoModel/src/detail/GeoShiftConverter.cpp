@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Plugins/GeoModel/detail/GeoShiftConverter.hpp"
 
@@ -16,16 +16,11 @@
 #include "Acts/Surfaces/StrawSurface.hpp"
 #include "Acts/Surfaces/TrapezoidBounds.hpp"
 
-#include <GeoModelKernel/GeoShapeShift.h>
-#include <GeoModelKernel/GeoTube.h>
-
 namespace Acts::detail {
-
-namespace {
 
 template <typename ContainedShape, typename Converter, typename Surface,
           typename Bounds>
-Result<GeoModelSensitiveSurface> impl(PVConstLink geoPV,
+Result<GeoModelSensitiveSurface> impl(const GeoFullPhysVol& geoFPV,
                                       const GeoShapeShift& geoShift,
                                       const Transform3& absTransform,
                                       bool sensitive) {
@@ -39,7 +34,7 @@ Result<GeoModelSensitiveSurface> impl(PVConstLink geoPV,
   const Transform3& shift = geoShift.getX();
 
   const auto& conversionRes =
-      Converter{}(geoPV, *trd, absTransform * shift, sensitive);
+      Converter{}(geoFPV, *trd, absTransform * shift, sensitive);
   if (!conversionRes.ok()) {
     return conversionRes.error();
   }
@@ -63,20 +58,18 @@ Result<GeoModelSensitiveSurface> impl(PVConstLink geoPV,
   return std::make_tuple(newEl, newSurface);
 }
 
-}  // namespace
-
 Result<GeoModelSensitiveSurface> GeoShiftConverter::operator()(
-    const PVConstLink& geoPV, const GeoShapeShift& geoShift,
+    const GeoFullPhysVol& geoFPV, const GeoShapeShift& geoShift,
     const Transform3& absTransform, bool sensitive) const {
   auto r = impl<GeoTrd, detail::GeoTrdConverter, PlaneSurface, TrapezoidBounds>(
-      geoPV, geoShift, absTransform, sensitive);
+      geoFPV, geoShift, absTransform, sensitive);
 
   if (r.ok()) {
     return r;
   }
 
   r = impl<GeoBox, detail::GeoBoxConverter, PlaneSurface, RectangleBounds>(
-      geoPV, geoShift, absTransform, sensitive);
+      geoFPV, geoShift, absTransform, sensitive);
 
   if (r.ok()) {
     return r;
@@ -84,7 +77,7 @@ Result<GeoModelSensitiveSurface> GeoShiftConverter::operator()(
 
   // For now this does straw by default
   r = impl<GeoTube, detail::GeoTubeConverter, StrawSurface, LineBounds>(
-      geoPV, geoShift, absTransform, sensitive);
+      geoFPV, geoShift, absTransform, sensitive);
 
   if (r.ok()) {
     return r;

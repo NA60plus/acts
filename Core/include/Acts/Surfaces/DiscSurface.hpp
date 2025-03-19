@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -13,13 +13,14 @@
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Geometry/Polyhedron.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/DiscBounds.hpp"
 #include "Acts/Surfaces/InfiniteBounds.hpp"
 #include "Acts/Surfaces/RegularSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Surfaces/SurfaceConcept.hpp"
 #include "Acts/Utilities/BinningType.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/Result.hpp"
 
 #include <cmath>
@@ -268,7 +269,7 @@ class DiscSurface : public RegularSurface {
   /// @param position The global position as a starting point
   /// @param direction The global direction at the starting point
   ///        @note expected to be normalized (no checking)
-  /// @param boundaryTolerance The boundary check prescription
+  /// @param bcheck The boundary check prescription
   /// @param tolerance the tolerance used for the intersection
   ///
   /// <b>Mathematical motivation:</b>
@@ -291,8 +292,7 @@ class DiscSurface : public RegularSurface {
   SurfaceMultiIntersection intersect(
       const GeometryContext& gctx, const Vector3& position,
       const Vector3& direction,
-      const BoundaryTolerance& boundaryTolerance =
-          BoundaryTolerance::Infinite(),
+      const BoundaryCheck& bcheck = BoundaryCheck(false),
       ActsScalar tolerance = s_onSurfaceTolerance) const final;
 
   /// Implement the binningValue
@@ -312,12 +312,13 @@ class DiscSurface : public RegularSurface {
   /// Return a Polyhedron for the surfaces
   ///
   /// @param gctx The current geometry context object, e.g. alignment
-  /// @param quarterSegments Number of segments used to describe the
-  /// quarter of a full circle
+  /// @param lseg Number of segments along curved lines, it represents
+  /// the full 2*M_PI coverange, if lseg is set to 1 only the extrema
+  /// are given
   ///
   /// @return A list of vertices and a face/facett description of it
-  Polyhedron polyhedronRepresentation(
-      const GeometryContext& gctx, unsigned int quarterSegments) const override;
+  Polyhedron polyhedronRepresentation(const GeometryContext& gctx,
+                                      std::size_t lseg) const override;
 
   /// Calculate the derivative of bound track parameters local position w.r.t.
   /// position in local 3D Cartesian coordinates
@@ -334,22 +335,19 @@ class DiscSurface : public RegularSurface {
   /// @image html Disc_Merging.svg
   /// @note The surfaces need to be *compatible*, i.e. have disc bounds
   ///       that align
+  /// @param gctx The current geometry context object, e.g. alignment
   /// @param other The other disc surface to merge with
   /// @param direction The binning direction: either @c binR or @c binPhi
-  /// @param externalRotation If true, any phi rotation is done in the transform
   /// @param logger The logger to use
-  /// @return The merged disc surface and a boolean indicating if surfaces are reversed
-  /// @note The returned boolean is `false` if `this` is *left* or
-  ///       *counter-clockwise* of @p other, and `true` if not.
-  std::pair<std::shared_ptr<DiscSurface>, bool> mergedWith(
-      const DiscSurface& other, BinningValue direction, bool externalRotation,
-      const Logger& logger = getDummyLogger()) const;
+  /// @return The merged disc surface
+  std::shared_ptr<DiscSurface> mergedWith(
+      const GeometryContext& gctx, const DiscSurface& other,
+      BinningValue direction, const Logger& logger = getDummyLogger()) const;
 
  protected:
   std::shared_ptr<const DiscBounds> m_bounds;  ///< bounds (shared)
 };
 
-static_assert(RegularSurfaceConcept<DiscSurface>,
-              "DiscSurface does not fulfill RegularSurfaceConcept");
+ACTS_STATIC_CHECK_CONCEPT(RegularSurfaceConcept, DiscSurface);
 
 }  // namespace Acts

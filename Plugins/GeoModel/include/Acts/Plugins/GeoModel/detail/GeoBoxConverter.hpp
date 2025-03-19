@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -17,8 +17,9 @@
 
 #include <GeoModelKernel/GeoBox.h>
 
-namespace Acts::detail {
+namespace Acts {
 
+namespace detail {
 struct GeoBoxConverter {
   /// @brief Convert a GeoBox to a detector element and surface
   ///
@@ -28,10 +29,11 @@ struct GeoBoxConverter {
   /// @param bool sensitive
   ///
   /// @return The detector element and surface
-  Result<GeoModelSensitiveSurface> operator()(const PVConstLink& geoPV,
+  Result<GeoModelSensitiveSurface> operator()(const GeoFullPhysVol& geoFPV,
                                               const GeoBox& geoBox,
                                               const Transform3& absTransform,
                                               bool sensitive) const;
 };
+}  // namespace detail
 
-}  // namespace Acts::detail
+}  // namespace Acts

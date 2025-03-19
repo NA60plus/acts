@@ -186,7 +186,6 @@ def addParticleGun(
 
     return s
 
-
 def addParticleReader(
     s: acts.examples.Sequencer,
     inputDir: Optional[Union[Path, str]] = None,
@@ -194,7 +193,8 @@ def addParticleReader(
     outputDirRoot: Optional[Union[Path, str]] = None,
     printParticles: bool = False,
     logLevel: Optional[acts.logging.Level] = None,
-    det_suffix = ""
+    det_suffix = "",
+    outputParticles: Optional[str] = "particles_input",
 ) -> None:
     """This function read
     Parameters
@@ -213,11 +213,12 @@ def addParticleReader(
 
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
-    evReader = CsvParticleReader(
+    evReader = acts.examples.CsvParticleReader(
             acts.logging.WARNING,
             inputDir=str(inputDir),
             inputStem="particles",
-            outputParticles="particles_input"+det_suffix,
+            outputParticles=outputParticles,
+            #outputParticles="particles_input"+det_suffix,
             outputVertices="vertices_input"+det_suffix,
         )
     
@@ -267,6 +268,9 @@ def addSimHitsReader(
     s: acts.examples.Sequencer,
     inputDir: Optional[Union[Path, str]] = None,
     outputSimHits: Optional[Union[Path, str]] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    logLevel: Optional[acts.logging.Level] = None,
+
 ) -> None:
     """This function read
     Parameters
@@ -282,6 +286,7 @@ def addSimHitsReader(
     printParticles : bool, False
         print generated particles
     """
+    customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
 
     hitReader = acts.examples.CsvSimHitReader(
@@ -293,6 +298,18 @@ def addSimHitsReader(
     
     s.addReader(hitReader)
 
+    if outputDirRoot is not None:
+        outputDirRoot = Path(outputDirRoot)
+        if not outputDirRoot.exists():
+            outputDirRoot.mkdir()
+
+        s.addWriter(
+            acts.examples.RootSimHitWriter(
+                level=customLogLevel(),
+                inputSimHits=outputSimHits,
+                filePath=str(outputDirRoot / "hits.root"),
+            )
+        )
     #s.addWhiteboardAlias("particles"+det_suffix, evReader.config.outputParticles)
 
 
@@ -566,23 +583,23 @@ def addFatras(
 
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
-    particlesSelected = inputParticles
     # Selector
     if preSelectParticles is not None:
-        particlesSelected = "particles_selected"+det_suffix
+        particles_selected = "particles_selected"+det_suffix
         addParticleSelection(
             s,
             preSelectParticles,
             inputParticles=inputParticles,
-            outputParticles=particlesSelected,
+            outputParticles=particles_selected,
         )
-        s.addWhiteboardAlias("particles_selected", particlesSelected)
+    else:
+        particles_selected = inputParticles
 
     # Simulation
     alg = acts.examples.FatrasSimulation(
         **acts.examples.defaultKWArgs(
             level=customLogLevel(),
-            inputParticles=particlesSelected,
+            inputParticles=particles_selected,
             outputParticlesInitial=outputParticlesInitial,
             outputParticlesFinal=outputParticlesFinal,
             outputSimHits=outputSimHits,
@@ -619,7 +636,6 @@ def addFatras(
             inputParticles=alg.config.outputParticlesFinal,
             outputParticles=particlesFinal,
         )
-        s.addWhiteboardAlias("particles_selected", particlesFinal)
     else:
         particlesInitial = alg.config.outputParticlesInitial
         particlesFinal = alg.config.outputParticlesFinal
@@ -726,15 +742,6 @@ def getG4DetectorConstructionFactory(
     except Exception as e:
         print(e)
 
-    try:
-        from acts import geomodel as gm
-        from acts.examples.geant4.geomodel import GeoModelDetectorConstructionFactory
-
-        if type(detector) is gm.GeoModelTree:
-            return GeoModelDetectorConstructionFactory(detector, regionList)
-    except Exception as e:
-        print(e)
-
     raise AttributeError(f"cannot find a suitable detector construction for {detector}")
 
 
@@ -802,16 +809,15 @@ def addGeant4(
 
     # Selector
     if preSelectParticles is not None:
-        particlesSelected = "geant4_particles_preselected"
+        particles_selected = "particles_selected"
         addParticleSelection(
             s,
             preSelectParticles,
             inputParticles=inputParticles,
-            outputParticles=particlesSelected,
+            outputParticles=particles_selected,
         )
-        s.addWhiteboardAlias("particles_selected", particlesSelected)
     else:
-        particlesSelected = inputParticles
+        particles_selected = inputParticles
 
     if g4DetectorConstructionFactory is None:
         if detector is None:
@@ -826,7 +832,7 @@ def addGeant4(
     smmConfig.volumeMappings = volumeMappings
     smmConfig.materialMappings = materialMappings
     sensitiveMapper = SensitiveSurfaceMapper.create(
-        smmConfig, customLogLevel(), trackingGeometry
+        smmConfig, acts.logging.INFO, trackingGeometry
     )
 
     # Simulation
@@ -835,13 +841,15 @@ def addGeant4(
         geant4Handle=__geant4Handle,
         detectorConstructionFactory=g4DetectorConstructionFactory,
         randomNumbers=rnd,
-        inputParticles=particlesSelected,
+        inputParticles=particles_selected,
         outputParticlesInitial=outputParticlesInitial,
         outputParticlesFinal=outputParticlesFinal,
         outputSimHits=outputSimHits,
         sensitiveSurfaceMapper=sensitiveMapper,
         magneticField=field,
         physicsList=physicsList,
+        volumeMappings=volumeMappings,
+        materialMappings=materialMappings,
         killVolume=killVolume,
         killAfterTime=killAfterTime,
         killSecondaries=killSecondaries,
@@ -856,7 +864,7 @@ def addGeant4(
 
     # Selector
     if postSelectParticles is not None:
-        particlesInitial = "geant4_particles_initial_postselected"
+        particlesInitial = "geant4_particles_initial_selected"
         addParticleSelection(
             s,
             postSelectParticles,
@@ -864,14 +872,13 @@ def addGeant4(
             outputParticles=particlesInitial,
         )
 
-        particlesFinal = "geant4_particles_final_postselected"
+        particlesFinal = "geant4_particles_final_selected"
         addParticleSelection(
             s,
             postSelectParticles,
             inputParticles=alg.config.outputParticlesFinal,
             outputParticles=particlesFinal,
         )
-        s.addWhiteboardAlias("particles_selected", particlesFinal)
     else:
         particlesInitial = alg.config.outputParticlesInitial
         particlesFinal = alg.config.outputParticlesFinal
@@ -954,6 +961,12 @@ def addDigitization(
         outputClusters="clusters"+suffix,
         outputMeasurementParticlesMap="measurement_particles_map"+suffix,
         outputMeasurementSimHitsMap="measurement_simhits_map"+suffix,
+        outputClustersVT="clustersVT"+suffix,
+        outputMeasurementParticlesMapVT="measurement_particles_mapVT"+suffix,
+        outputMeasurementSimHitsMapVT="measurement_simhits_mapVT"+suffix,
+        outputClustersMS="clustersMS"+suffix,
+        outputMeasurementParticlesMapMS="measurement_particles_mapMS"+suffix,
+        outputMeasurementSimHitsMapMS="measurement_simhits_mapMS"+suffix,
         doMerge=doMerge,
     )
 

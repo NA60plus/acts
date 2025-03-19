@@ -45,6 +45,8 @@ def test_root_particle_reader(tmp_path, conf_const, ptcl_gun):
 
     s.run()
 
+    del s  # to properly close the root file
+
     # reset sequencer for reading
 
     s2 = Sequencer(numThreads=1, logLevel=acts.logging.WARNING)
@@ -296,39 +298,40 @@ def test_edm4hep_simhit_particle_reader(tmp_path):
 
     assert os.path.exists(tmp_file)
 
+    detector, trackingGeometry, decorators = getOpenDataDetector()
+
     s = Sequencer(numThreads=1)
 
-    with getOpenDataDetector() as (detector, trackingGeometry, decorators):
-        s.addReader(
-            EDM4hepReader(
-                level=acts.logging.INFO,
-                inputPath=tmp_file,
-                inputSimHits=[
-                    "PixelBarrelReadout",
-                    "PixelEndcapReadout",
-                    "ShortStripBarrelReadout",
-                    "ShortStripEndcapReadout",
-                    "LongStripBarrelReadout",
-                    "LongStripEndcapReadout",
-                ],
-                outputParticlesGenerator="particles_input",
-                outputParticlesInitial="particles_initial",
-                outputParticlesFinal="particles_final",
-                outputSimHits="simhits",
-                dd4hepDetector=detector,
-                trackingGeometry=trackingGeometry,
-            )
+    s.addReader(
+        EDM4hepReader(
+            level=acts.logging.INFO,
+            inputPath=tmp_file,
+            inputSimHits=[
+                "PixelBarrelReadout",
+                "PixelEndcapReadout",
+                "ShortStripBarrelReadout",
+                "ShortStripEndcapReadout",
+                "LongStripBarrelReadout",
+                "LongStripEndcapReadout",
+            ],
+            outputParticlesGenerator="particles_input",
+            outputParticlesInitial="particles_initial",
+            outputParticlesFinal="particles_final",
+            outputSimHits="simhits",
+            dd4hepDetector=detector,
+            trackingGeometry=trackingGeometry,
         )
+    )
 
-        alg = AssertCollectionExistsAlg("simhits", "check_alg", acts.logging.WARNING)
-        s.addAlgorithm(alg)
+    alg = AssertCollectionExistsAlg("simhits", "check_alg", acts.logging.WARNING)
+    s.addAlgorithm(alg)
 
-        alg = AssertCollectionExistsAlg(
-            "particles_input", "check_alg", acts.logging.WARNING
-        )
-        s.addAlgorithm(alg)
+    alg = AssertCollectionExistsAlg(
+        "particles_input", "check_alg", acts.logging.WARNING
+    )
+    s.addAlgorithm(alg)
 
-        s.run()
+    s.run()
 
     assert alg.events_seen == 10
 
@@ -417,6 +420,8 @@ def test_edm4hep_tracks_reader(tmp_path):
     )
 
     s.run()
+
+    del s
 
     s = Sequencer(numThreads=1)
     s.addReader(

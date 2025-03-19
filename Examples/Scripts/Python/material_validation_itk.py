@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 
 from acts.examples import Sequencer, RootMaterialTrackWriter
-from acts.examples.simulation import addParticleGun, EtaConfig, ParticleConfig
 
 import acts
 
@@ -14,13 +13,11 @@ def runMaterialValidation(
     decorators,
     field,
     outputDir,
-    outputName="propagation_material",
+    outputName="propagation-material",
     dumpPropagationSteps=False,
     s=None,
 ):
     s = s or Sequencer(events=1000, numThreads=-1)
-
-    rnd = acts.examples.RandomNumbers(seed=42)
 
     for decorator in decorators:
         s.addContextDecorator(decorator)
@@ -37,36 +34,15 @@ def runMaterialValidation(
 
     prop = acts.examples.ConcretePropagator(acts.Propagator(stepper, nav))
 
-    addParticleGun(
-        s,
-        ParticleConfig(num=ntracks, pdg=acts.PdgParticle.eMuon, randomizeCharge=True),
-        EtaConfig(-4.0, 4.0),
-        rnd=rnd,
-    )
-
-    # Run particle smearing
-    trackParametersGenerator = acts.examples.ParticleSmearing(
-        level=acts.logging.INFO,
-        inputParticles="particles_input",
-        outputTrackParameters="start_parameters",
-        randomNumbers=rnd,
-        sigmaD0=0.0,
-        sigmaZ0=0.0,
-        sigmaPhi=0.0,
-        sigmaTheta=0.0,
-        sigmaPRel=0.0,
-        addCovariances=False,
-    )
-    s.addAlgorithm(trackParametersGenerator)
-
     alg = acts.examples.PropagationAlgorithm(
         propagatorImpl=prop,
         level=acts.logging.INFO,
+        randomNumberSvc=acts.examples.RandomNumbers(),
+        ntests=1000,
         sterileLogger=False,
         recordMaterialInteractions=True,
-        inputTrackParameters="start_parameters",
-        outputPropagationSteps="propagation_steps",
-        outputMaterialTracks="material-tracks",
+        d0Sigma=0,
+        z0Sigma=0,
     )
 
     s.addAlgorithm(alg)
@@ -74,7 +50,7 @@ def runMaterialValidation(
     s.addWriter(
         RootMaterialTrackWriter(
             level=acts.logging.INFO,
-            inputMaterialTracks=alg.config.outputMaterialCollection,
+            inputMaterialTracks=alg.config.propagationMaterialCollection,
             filePath=os.path.join(outputDir, (outputName + ".root")),
             storeSurface=True,
             storeVolume=True,
@@ -85,7 +61,7 @@ def runMaterialValidation(
         s.addWriter(
             acts.examples.RootPropagationStepsWriter(
                 level=acts.logging.INFO,
-                collection=alg.config.outputSummaryCollection,
+                collection=alg.config.propagationStepCollection,
                 filePath=outputDir + "/propagation_steps.root",
             )
         )

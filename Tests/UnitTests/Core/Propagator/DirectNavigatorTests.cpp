@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
@@ -16,7 +16,8 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/MagneticField/ConstantBField.hpp"
 #include "Acts/MagneticField/MagneticFieldContext.hpp"
-#include "Acts/Propagator/ActorList.hpp"
+#include "Acts/Propagator/AbortList.hpp"
+#include "Acts/Propagator/ActionList.hpp"
 #include "Acts/Propagator/DirectNavigator.hpp"
 #include "Acts/Propagator/EigenStepper.hpp"
 #include "Acts/Propagator/MaterialInteractor.hpp"
@@ -106,18 +107,18 @@ void runTest(const rpropagator_t& rprop, const dpropagator_t& dprop, double pT,
   using EndOfWorld = EndOfWorldReached;
 
   // Action list and abort list
-  using ReferenceActorList =
-      ActorList<MaterialInteractor, SurfaceCollector<>, EndOfWorld>;
+  using RefereceActionList = ActionList<MaterialInteractor, SurfaceCollector<>>;
+  using ReferenceAbortList = AbortList<EndOfWorld>;
 
   // Options definition
-  using Options = typename rpropagator_t::template Options<ReferenceActorList>;
+  using Options = PropagatorOptions<RefereceActionList, ReferenceAbortList>;
   Options pOptions(tgContext, mfContext);
   if (oversteppingTest) {
-    pOptions.stepping.maxStepSize = oversteppingMaxStepSize;
+    pOptions.maxStepSize = oversteppingMaxStepSize;
   }
 
   // Surface collector configuration
-  auto& sCollector = pOptions.actorList.template get<SurfaceCollector<>>();
+  auto& sCollector = pOptions.actionList.template get<SurfaceCollector<>>();
   sCollector.selector.selectSensitive = true;
   sCollector.selector.selectMaterial = true;
 
@@ -139,16 +140,18 @@ void runTest(const rpropagator_t& rprop, const dpropagator_t& dprop, double pT,
     }
 
     // Action list for direct navigator with its initializer
-    using DirectActorList = ActorList<MaterialInteractor, SurfaceCollector<>>;
+    using DirectActionList = ActionList<DirectNavigator::Initializer,
+                                        MaterialInteractor, SurfaceCollector<>>;
 
     // Direct options definition
-    using DirectOptions =
-        typename dpropagator_t::template Options<DirectActorList>;
+    using DirectOptions = PropagatorOptions<DirectActionList, AbortList<>>;
     DirectOptions dOptions(tgContext, mfContext);
     // Set the surface sequence
-    dOptions.navigation.surfaces = surfaceSequence;
+    auto& dInitializer =
+        dOptions.actionList.get<DirectNavigator::Initializer>();
+    dInitializer.navSurfaces = surfaceSequence;
     // Surface collector configuration
-    auto& dCollector = dOptions.actorList.template get<SurfaceCollector<>>();
+    auto& dCollector = dOptions.actionList.template get<SurfaceCollector<>>();
     dCollector.selector.selectSensitive = true;
     dCollector.selector.selectMaterial = true;
 

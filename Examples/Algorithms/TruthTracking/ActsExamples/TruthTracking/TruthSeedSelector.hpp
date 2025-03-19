@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -48,6 +48,8 @@ class TruthSeedSelector final : public IAlgorithm {
     std::string inputMeasurementParticlesMap;
     /// The output proto tracks collection.
     std::string outputParticles;
+    /// Input collection of simulated hits.
+    std::string inputSimHits = "simhits";
     /// Maximum distance from the origin in the transverse plane
     double rhoMin = 0.;
     double rhoMax = std::numeric_limits<double>::max();
@@ -67,10 +69,15 @@ class TruthSeedSelector final : public IAlgorithm {
     bool keepNeutral = false;
     bool keepPrimary = true;
     bool keepSecondary = true;
+    bool isMuon = false;
     /// Requirement on number of recorded hits
     //@TODO: implement detector-specific requirements
     std::size_t nHitsMin = 0;
     std::size_t nHitsMax = std::numeric_limits<std::size_t>::max();
+    std::size_t nHitsMinMS = 0;
+    std::size_t nHitsMaxMS = std::numeric_limits<std::size_t>::max();
+    std::size_t nHitsMinVT = 0;
+    std::size_t nHitsMaxVT = std::numeric_limits<std::size_t>::max();
   };
 
   TruthSeedSelector(const Config& config, Acts::Logging::Level level);
@@ -86,6 +93,8 @@ class TruthSeedSelector final : public IAlgorithm {
   ReadDataHandle<SimParticleContainer> m_inputParticles{this, "InputParticles"};
   ReadDataHandle<HitParticlesMap> m_inputMeasurementParticlesMap{
       this, "InputMeasurementParticlesMap"};
+  ReadDataHandle<SimHitContainer> m_simContainerReadHandle{this,
+                                                           "SimHitContainer"};
 
   WriteDataHandle<SimParticleContainer> m_outputParticles{this,
                                                           "OutputParticles"};

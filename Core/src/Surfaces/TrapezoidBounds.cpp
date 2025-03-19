@@ -1,17 +1,15 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Surfaces/TrapezoidBounds.hpp"
 
 #include "Acts/Definitions/TrackParametrization.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
 #include "Acts/Surfaces/ConvexPolygonBounds.hpp"
-#include "Acts/Surfaces/detail/BoundaryCheckHelper.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -50,13 +48,8 @@ Acts::SurfaceBounds::BoundsType Acts::TrapezoidBounds::type() const {
   return SurfaceBounds::eTrapezoid;
 }
 
-bool Acts::TrapezoidBounds::inside(
-    const Acts::Vector2& lposition,
-    const Acts::BoundaryTolerance& boundaryTolerance) const {
-  if (boundaryTolerance.isInfinite()) {
-    return true;
-  }
-
+bool Acts::TrapezoidBounds::inside(const Acts::Vector2& lposition,
+                                   const Acts::BoundaryCheck& bcheck) const {
   const double hlXnY = get(TrapezoidBounds::eHalfLengthXnegY);
   const double hlXpY = get(TrapezoidBounds::eHalfLengthXposY);
   const double hlY = get(TrapezoidBounds::eHalfLengthY);
@@ -66,10 +59,9 @@ bool Acts::TrapezoidBounds::inside(
   const double x = extPosition[0];
   const double y = extPosition[1];
 
-  if (auto absoluteBound = boundaryTolerance.asAbsoluteBoundOpt(true);
-      absoluteBound.has_value()) {
-    double tolX = absoluteBound->tolerance0;
-    double tolY = absoluteBound->tolerance1;
+  if (bcheck.type() == BoundaryCheck::Type::eAbsolute) {
+    const double tolX = bcheck.tolerance()[eBoundLoc0];
+    const double tolY = bcheck.tolerance()[eBoundLoc1];
 
     if (std::abs(y) - hlY > tolY) {
       // outside y range
@@ -89,14 +81,13 @@ bool Acts::TrapezoidBounds::inside(
 
   // at this stage, the point can only be in the triangles
   // run slow-ish polygon check
-  Vector2 vertices[] = {
+  std::vector<Acts::Vector2> vertices = {
       {-hlXnY, -hlY}, {hlXnY, -hlY}, {hlXpY, hlY}, {-hlXpY, hlY}};
-  return detail::insidePolygon(vertices, boundaryTolerance, extPosition,
-                               std::nullopt);
+  return bcheck.isInside(extPosition, vertices);
 }
 
 std::vector<Acts::Vector2> Acts::TrapezoidBounds::vertices(
-    unsigned int /*ignoredSegments*/) const {
+    unsigned int /*lseg*/) const {
   const double hlXnY = get(TrapezoidBounds::eHalfLengthXnegY);
   const double hlXpY = get(TrapezoidBounds::eHalfLengthXposY);
   const double hlY = get(TrapezoidBounds::eHalfLengthY);

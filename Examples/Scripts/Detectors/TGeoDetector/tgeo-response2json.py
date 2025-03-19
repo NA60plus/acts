@@ -224,7 +224,7 @@ def empty_config():
     return json.loads(
         """
 {
-  "geo-tgeo-unit-scalor": 1.0,
+  "geo-tgeo-unit-scalor": 10.0,
   "geo-tgeo-build-beampipe": false,
   "geo-tgeo-beampipe-parameters": [
     0.0,
@@ -304,6 +304,16 @@ def empty_config():
         "central": 0.0,
         "positive": 0.0
       },
+      "geo-tgeo-binning0": {
+        "central": [[0,"equidistant"]],
+        "negative": [[0,"equidistant"]],
+              "positive": [[0,"equidistant"]]
+        },
+      "geo-tgeo-binning1": {
+        "central": [[0,"equidistant"]],
+        "negative": [[0,"equidistant"]],
+            "positive": [[0,"equidistant"]]    	
+              },  
       "geo-tgeo-cyl-disc-split": false,
       "Splitters": {
         "CylinderDisk": {

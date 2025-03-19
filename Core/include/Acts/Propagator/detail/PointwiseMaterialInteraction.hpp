@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -17,7 +17,6 @@
 #include "Acts/Material/ISurfaceMaterial.hpp"
 #include "Acts/Material/MaterialSlab.hpp"
 #include "Acts/Surfaces/Surface.hpp"
-#include "Acts/Utilities/MathHelpers.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -51,7 +50,7 @@ struct PointwiseMaterialInteraction {
   const Direction navDir;
 
   /// The effective, passed material properties including the path correction.
-  MaterialSlab slab = MaterialSlab(0.);
+  MaterialSlab slab;
   /// The path correction factor due to non-zero incidence on the surface.
   double pathCorrection = 0.;
   /// Expected phi variance due to the interactions.
@@ -90,7 +89,6 @@ struct PointwiseMaterialInteraction {
         navDir(state.options.direction) {}
 
   /// @brief This function evaluates the material properties to interact with
-  /// This updates the slab and then returns, if the resulting slab is valid
   ///
   /// @tparam propagator_state_t Type of the propagator state
   /// @tparam navigator_t Type of the navigator
@@ -121,8 +119,8 @@ struct PointwiseMaterialInteraction {
     pathCorrection = surface->pathCorrection(state.geoContext, pos, dir);
     slab.scaleThickness(pathCorrection);
 
-    // Check if the evaluated material is valid
-    return slab.isValid();
+    // Get the surface material & properties from them
+    return slab;
   }
 
   /// @brief This function evaluate the material effects
@@ -144,10 +142,9 @@ struct PointwiseMaterialInteraction {
   template <typename propagator_state_t, typename stepper_t>
   void updateState(propagator_state_t& state, const stepper_t& stepper,
                    NoiseUpdateMode updateMode = addNoise) {
-    const auto& particleHypothesis = stepper.particleHypothesis(state.stepping);
     // in forward(backward) propagation, energy decreases(increases) and
     // variances increase(decrease)
-    const auto nextE = fastHypot(mass, momentum) - Eloss * navDir;
+    const auto nextE = std::hypot(mass, momentum) - Eloss * navDir;
     // put particle at rest if energy loss is too large
     nextP = (mass < nextE) ? std::sqrt(nextE * nextE - mass * mass) : 0;
     // minimum momentum below which we will not push particles via material
@@ -155,10 +152,9 @@ struct PointwiseMaterialInteraction {
     // TODO 10 MeV might be quite low and we should make this configurable
     static constexpr double minP = 10 * Acts::UnitConstants::MeV;
     nextP = std::max(minP, nextP);
-    const double nextQOverP =
-        std::copysign(particleHypothesis.qOverP(nextP, absQ), qOverP);
     // update track parameters and covariance
-    stepper.update(state.stepping, pos, dir, nextQOverP, time);
+    stepper.update(state.stepping, pos, dir,
+                   std::copysign(absQ / nextP, qOverP), time);
     state.stepping.cov(eBoundPhi, eBoundPhi) = updateVariance(
         state.stepping.cov(eBoundPhi, eBoundPhi), variancePhi, updateMode);
     state.stepping.cov(eBoundTheta, eBoundTheta) =

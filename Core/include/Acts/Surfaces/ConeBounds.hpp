@@ -1,16 +1,16 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/Tolerance.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/SurfaceBounds.hpp"
 #include "Acts/Utilities/detail/periodic.hpp"
 
@@ -87,11 +87,10 @@ class ConeBounds : public SurfaceBounds {
   /// inside method for local position
   ///
   /// @param lposition is the local position to be checked
-  /// @param boundaryTolerance is the boundary check directive
+  /// @param bcheck is the boundary check directive
   /// @return is a boolean indicating if the position is inside
   bool inside(const Vector2& lposition,
-              const BoundaryTolerance& boundaryTolerance =
-                  BoundaryTolerance::None()) const final;
+              const BoundaryCheck& bcheck = BoundaryCheck(true)) const final;
 
   /// Output Method for std::ostream
   ///

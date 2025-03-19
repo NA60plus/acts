@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021-2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -22,9 +22,7 @@
 #include "Acts/Propagator/ConstrainedStep.hpp"
 #include "Acts/Propagator/EigenStepper.hpp"
 #include "Acts/Propagator/EigenStepperError.hpp"
-#include "Acts/Propagator/MultiStepperError.hpp"
 #include "Acts/Propagator/Propagator.hpp"
-#include "Acts/Propagator/StepperOptions.hpp"
 #include "Acts/Propagator/detail/LoopStepperUtils.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Intersection.hpp"
@@ -41,109 +39,186 @@
 
 #include <boost/container/small_vector.hpp>
 
+#include "MultiStepperError.hpp"
+
 namespace Acts {
 
 using namespace Acts::UnitLiterals;
 
-namespace detail {
-
-struct MaxMomentumComponent {
+/// @brief Reducer struct for the Loop MultiEigenStepper which reduces the
+/// multicomponent state to simply by summing the weighted values
+struct WeightedComponentReducerLoop {
   template <typename component_range_t>
-  auto operator()(const component_range_t& cmps) const {
-    return std::max_element(cmps.begin(), cmps.end(),
-                            [&](const auto& a, const auto& b) {
-                              return std::abs(a.state.pars[eFreeQOverP]) >
-                                     std::abs(b.state.pars[eFreeQOverP]);
-                            });
+  static Vector3 toVector3(const component_range_t& comps,
+                           const FreeIndices i) {
+    return std::accumulate(
+        comps.begin(), comps.end(), Vector3{Vector3::Zero()},
+        [i](const auto& sum, const auto& cmp) -> Vector3 {
+          return sum + cmp.weight * cmp.state.pars.template segment<3>(i);
+        });
   }
-};
 
-struct MaxWeightComponent {
-  template <typename component_range_t>
-  auto operator()(const component_range_t& cmps) {
-    return std::max_element(
-        cmps.begin(), cmps.end(),
-        [&](const auto& a, const auto& b) { return a.weight < b.weight; });
-  }
-};
-
-template <typename component_chooser_t>
-struct SingleComponentReducer {
   template <typename stepper_state_t>
   static Vector3 position(const stepper_state_t& s) {
-    return component_chooser_t{}(s.components)
-        ->state.pars.template segment<3>(eFreePos0);
+    return toVector3(s.components, eFreePos0);
   }
 
   template <typename stepper_state_t>
   static Vector3 direction(const stepper_state_t& s) {
-    return component_chooser_t{}(s.components)
-        ->state.pars.template segment<3>(eFreeDir0);
+    return toVector3(s.components, eFreeDir0).normalized();
   }
 
+  // TODO: Maybe we can cache this value and only update it when the parameters
+  // change
   template <typename stepper_state_t>
   static ActsScalar qOverP(const stepper_state_t& s) {
-    const auto cmp = component_chooser_t{}(s.components);
-    return cmp->state.pars[eFreeQOverP];
+    return std::accumulate(
+        s.components.begin(), s.components.end(), ActsScalar{0.},
+        [](const auto& sum, const auto& cmp) -> ActsScalar {
+          return sum + cmp.weight * cmp.state.pars[eFreeQOverP];
+        });
   }
 
   template <typename stepper_state_t>
   static ActsScalar absoluteMomentum(const stepper_state_t& s) {
-    const auto cmp = component_chooser_t{}(s.components);
-    return s.particleHypothesis.extractMomentum(cmp->state.pars[eFreeQOverP]);
+    return std::accumulate(
+        s.components.begin(), s.components.end(), ActsScalar{0.},
+        [&s](const auto& sum, const auto& cmp) -> ActsScalar {
+          return sum + cmp.weight * s.particleHypothesis.extractMomentum(
+                                        cmp.state.pars[eFreeQOverP]);
+        });
   }
 
   template <typename stepper_state_t>
   static Vector3 momentum(const stepper_state_t& s) {
-    const auto cmp = component_chooser_t{}(s.components);
-    return s.particleHypothesis.extractMomentum(cmp->state.pars[eFreeQOverP]) *
-           cmp->state.pars.template segment<3>(eFreeDir0);
+    return std::accumulate(
+        s.components.begin(), s.components.end(), Vector3::Zero().eval(),
+        [&s](const auto& sum, const auto& cmp) -> Vector3 {
+          return sum + cmp.weight *
+                           s.particleHypothesis.extractMomentum(
+                               cmp.state.pars[eFreeQOverP]) *
+                           cmp.state.pars.template segment<3>(eFreeDir0);
+        });
   }
 
   template <typename stepper_state_t>
   static ActsScalar charge(const stepper_state_t& s) {
-    const auto cmp = component_chooser_t{}(s.components);
-    return s.particleHypothesis.extractCharge(cmp->state.pars[eFreeQOverP]);
+    return std::accumulate(
+        s.components.begin(), s.components.end(), ActsScalar{0.},
+        [&s](const auto& sum, const auto& cmp) -> ActsScalar {
+          return sum + cmp.weight * s.particleHypothesis.extractCharge(
+                                        cmp.state.pars[eFreeQOverP]);
+        });
   }
 
   template <typename stepper_state_t>
   static ActsScalar time(const stepper_state_t& s) {
-    return component_chooser_t{}(s.components)->state.pars[eFreeTime];
+    return std::accumulate(
+        s.components.begin(), s.components.end(), ActsScalar{0.},
+        [](const auto& sum, const auto& cmp) -> ActsScalar {
+          return sum + cmp.weight * cmp.state.pars[eFreeTime];
+        });
   }
 
   template <typename stepper_state_t>
   static FreeVector pars(const stepper_state_t& s) {
-    return component_chooser_t{}(s.components)->state.pars;
+    return std::accumulate(s.components.begin(), s.components.end(),
+                           FreeVector{FreeVector::Zero()},
+                           [](const auto& sum, const auto& cmp) -> FreeVector {
+                             return sum + cmp.weight * cmp.state.pars;
+                           });
   }
 
   template <typename stepper_state_t>
   static FreeVector cov(const stepper_state_t& s) {
-    return component_chooser_t{}(s.components)->state.cov;
+    return std::accumulate(s.components.begin(), s.components.end(),
+                           FreeMatrix{FreeMatrix::Zero()},
+                           [](const auto& sum, const auto& cmp) -> FreeMatrix {
+                             return sum + cmp.weight * cmp.state.cov;
+                           });
   }
 };
 
-}  // namespace detail
+struct MaxMomentumReducerLoop {
+  template <typename component_range_t>
+  static const auto& maxAbsoluteMomentumIt(const component_range_t& cmps) {
+    return *std::max_element(cmps.begin(), cmps.end(),
+                             [&](const auto& a, const auto& b) {
+                               return std::abs(a.state.pars[eFreeQOverP]) >
+                                      std::abs(b.state.pars[eFreeQOverP]);
+                             });
+  }
 
-using MaxMomentumReducerLoop =
-    detail::SingleComponentReducer<detail::MaxMomentumComponent>;
-using MaxWeightReducerLoop =
-    detail::SingleComponentReducer<detail::MaxWeightComponent>;
+  template <typename stepper_state_t>
+  static Vector3 position(const stepper_state_t& s) {
+    return maxAbsoluteMomentumIt(s.components)
+        .state.pars.template segment<3>(eFreePos0);
+  }
+
+  template <typename stepper_state_t>
+  static Vector3 direction(const stepper_state_t& s) {
+    return maxAbsoluteMomentumIt(s.components)
+        .state.pars.template segment<3>(eFreeDir0);
+  }
+
+  template <typename stepper_state_t>
+  static ActsScalar qOverP(const stepper_state_t& s) {
+    const auto& cmp = maxAbsoluteMomentumIt(s.components);
+    return cmp.state.pars[eFreeQOverP];
+  }
+
+  template <typename stepper_state_t>
+  static ActsScalar absoluteMomentum(const stepper_state_t& s) {
+    const auto& cmp = maxAbsoluteMomentumIt(s.components);
+    return std::abs(cmp.state.absCharge / cmp.state.pars[eFreeQOverP]);
+  }
+
+  template <typename stepper_state_t>
+  static Vector3 momentum(const stepper_state_t& s) {
+    const auto& cmp = maxAbsoluteMomentumIt(s.components);
+    return std::abs(cmp.state.absCharge / cmp.state.pars[eFreeQOverP]) *
+           cmp.state.pars.template segment<3>(eFreeDir0);
+  }
+
+  template <typename stepper_state_t>
+  static ActsScalar charge(const stepper_state_t& s) {
+    return maxAbsoluteMomentumIt(s.components).state.absCharge;
+  }
+
+  template <typename stepper_state_t>
+  static ActsScalar time(const stepper_state_t& s) {
+    return maxAbsoluteMomentumIt(s.components).state.pars[eFreeTime];
+  }
+
+  template <typename stepper_state_t>
+  static FreeVector pars(const stepper_state_t& s) {
+    return maxAbsoluteMomentumIt(s.components).state.pars;
+  }
+
+  template <typename stepper_state_t>
+  static FreeVector cov(const stepper_state_t& s) {
+    return maxAbsoluteMomentumIt(s.components).state.cov;
+  }
+};
 
 /// @brief Stepper based on the EigenStepper, but handles Multi-Component Tracks
 /// (e.g., for the GSF). Internally, this only manages a vector of
 /// EigenStepper::States. This simplifies implementation, but has several
 /// drawbacks:
-/// * There are certain redundancies between the global State and the
-/// component states
+/// * There are certain redundancies between the global State and the component
+/// states
 /// * The components do not share a single magnetic-field-cache
-/// @tparam extension_t See EigenStepper for details
+/// @tparam extensionlist_t See EigenStepper for details
 /// @tparam component_reducer_t How to map the multi-component state to a single
 /// component
+/// @tparam auctioneer_t See EigenStepper for details
 /// @tparam small_vector_size A size-hint how much memory should be allocated
 /// by the small vector
-template <typename extension_t = EigenStepperDefaultExtension,
-          typename component_reducer_t = MaxWeightReducerLoop>
-class MultiEigenStepperLoop : public EigenStepper<extension_t> {
+template <typename extensionlist_t = StepperExtensionList<DefaultExtension>,
+          typename component_reducer_t = WeightedComponentReducerLoop,
+          typename auctioneer_t = detail::VoidAuctioneer>
+class MultiEigenStepperLoop
+    : public EigenStepper<extensionlist_t, auctioneer_t> {
   /// Limits the number of steps after at least one component reached the
   /// surface
   std::size_t m_stepLimitAfterFirstComponentOnSurface = 50;
@@ -158,7 +233,7 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
 
  public:
   /// @brief Typedef to the Single-Component Eigen Stepper
-  using SingleStepper = EigenStepper<extension_t>;
+  using SingleStepper = EigenStepper<extensionlist_t, auctioneer_t>;
 
   /// @brief Typedef to the State of the single component Stepper
   using SingleState = typename SingleStepper::State;
@@ -181,15 +256,12 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
   /// @brief How many components can this stepper manage?
   static constexpr int maxComponents = std::numeric_limits<int>::max();
 
-  struct Config {
-    std::shared_ptr<const MagneticFieldProvider> bField;
-  };
-
-  struct Options : public StepperPlainOptions {
-    void setPlainOptions(const StepperPlainOptions& options) {
-      static_cast<StepperPlainOptions&>(*this) = options;
-    }
-  };
+  /// Constructor from a magnetic field and a optionally provided Logger
+  MultiEigenStepperLoop(std::shared_ptr<const MagneticFieldProvider> bField,
+                        std::unique_ptr<const Logger> logger =
+                            getDefaultLogger("GSF", Logging::INFO))
+      : EigenStepper<extensionlist_t, auctioneer_t>(std::move(bField)),
+        m_logger(std::move(logger)) {}
 
   struct State {
     /// The struct that stores the individual components
@@ -260,19 +332,6 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
     }
   };
 
-  /// Constructor from a magnetic field and a optionally provided Logger
-  MultiEigenStepperLoop(std::shared_ptr<const MagneticFieldProvider> bField,
-                        std::unique_ptr<const Logger> logger =
-                            getDefaultLogger("GSF", Logging::INFO))
-      : EigenStepper<extension_t>(std::move(bField)),
-        m_logger(std::move(logger)) {}
-
-  /// Constructor from a configuration and optionally provided Logger
-  MultiEigenStepperLoop(const Config& config,
-                        std::unique_ptr<const Logger> logger =
-                            getDefaultLogger("GSF", Logging::INFO))
-      : EigenStepper<extension_t>(config), m_logger(std::move(logger)) {}
-
   /// Construct and initialize a state
   State makeState(std::reference_wrapper<const GeometryContext> gctx,
                   std::reference_wrapper<const MagneticFieldContext> mctx,
@@ -319,23 +378,26 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
   /// proxy internally holding a reference
   auto componentIterable(State& state) const {
     struct Iterator {
-      using difference_type [[maybe_unused]] = std::ptrdiff_t;
-      using value_type [[maybe_unused]] = ComponentProxy;
-      using reference [[maybe_unused]] = ComponentProxy;
-      using pointer [[maybe_unused]] = void;
-      using iterator_category [[maybe_unused]] = std::forward_iterator_tag;
+      using difference_type = std::ptrdiff_t;
+      using value_type = ComponentProxy;
+      using reference = ComponentProxy;
+      using pointer = void;
+      using iterator_category = std::forward_iterator_tag;
 
       typename decltype(state.components)::iterator it;
       const State& s;
 
       // clang-format off
       auto& operator++() { ++it; return *this; }
+      auto operator!=(const Iterator& other) const { return it != other.it; }
       auto operator==(const Iterator& other) const { return it == other.it; }
       auto operator*() const { return ComponentProxy(*it, s); }
       // clang-format on
     };
 
     struct Iterable {
+      using iterator = Iterator;
+
       State& s;
 
       // clang-format off
@@ -353,23 +415,25 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
   /// proxy internally holding a reference
   auto constComponentIterable(const State& state) const {
     struct ConstIterator {
-      using difference_type [[maybe_unused]] = std::ptrdiff_t;
-      using value_type [[maybe_unused]] = ConstComponentProxy;
-      using reference [[maybe_unused]] = ConstComponentProxy;
-      using pointer [[maybe_unused]] = void;
-      using iterator_category [[maybe_unused]] = std::forward_iterator_tag;
+      using difference_type = std::ptrdiff_t;
+      using value_type = ConstComponentProxy;
+      using reference = ConstComponentProxy;
+      using pointer = void;
+      using iterator_category = std::forward_iterator_tag;
 
       typename decltype(state.components)::const_iterator it;
       const State& s;
 
       // clang-format off
       auto& operator++() { ++it; return *this; }
+      auto operator!=(const ConstIterator& other) const { return it != other.it; }
       auto operator==(const ConstIterator& other) const { return it == other.it; }
       auto operator*() const { return ConstComponentProxy{*it}; }
       // clang-format on
     };
 
     struct Iterable {
+      using iterator = ConstIterator;
       const State& s;
 
       // clang-format off
@@ -513,12 +577,12 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
   /// @param [in] surface The surface provided
   /// @param [in] index The surface intersection index
   /// @param [in] navDir The navigation direction
-  /// @param [in] boundaryTolerance The boundary check for this status update
+  /// @param [in] bcheck The boundary check for this status update
   /// @param [in] surfaceTolerance Surface tolerance used for intersection
   /// @param [in] logger A @c Logger instance
   Intersection3D::Status updateSurfaceStatus(
       State& state, const Surface& surface, std::uint8_t index,
-      Direction navDir, const BoundaryTolerance& boundaryTolerance,
+      Direction navDir, const BoundaryCheck& bcheck,
       ActsScalar surfaceTolerance = s_onSurfaceTolerance,
       const Logger& logger = getDummyLogger()) const {
     using Status = Intersection3D::Status;
@@ -527,7 +591,7 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
 
     for (auto& component : state.components) {
       component.status = detail::updateSingleSurfaceStatus<SingleStepper>(
-          *this, component.state, surface, index, navDir, boundaryTolerance,
+          *this, component.state, surface, index, navDir, bcheck,
           surfaceTolerance, logger);
       ++counts[static_cast<std::size_t>(component.status)];
     }
@@ -604,7 +668,7 @@ class MultiEigenStepperLoop : public EigenStepper<extension_t> {
       auto intersection = surface.intersect(
           component.state.geoContext, SingleStepper::position(component.state),
           direction * SingleStepper::direction(component.state),
-          BoundaryTolerance::None())[oIntersection.index()];
+          BoundaryCheck(true))[oIntersection.index()];
 
       SingleStepper::updateStepSize(component.state, intersection, direction,
                                     release);

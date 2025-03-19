@@ -1,15 +1,15 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <concepts>
+#include <boost/container/flat_set.hpp>
 
-template <typename external_spacepoint_t>
-Acts::CylindricalSpacePointGrid<external_spacepoint_t>
+template <typename SpacePoint>
+Acts::CylindricalSpacePointGrid<SpacePoint>
 Acts::CylindricalSpacePointGridCreator::createGrid(
     const Acts::CylindricalSpacePointGridConfig& config,
     const Acts::CylindricalSpacePointGridOptions& options) {
@@ -104,7 +104,7 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
       config.phiMin, config.phiMax, phiBins);
 
   // vector that will store the edges of the bins of z
-  std::vector<AxisScalar> zValues{};
+  std::vector<AxisScalar> zValues;
 
   // If zBinEdges is not defined, calculate the edges as zMin + bin * zBinSize
   if (config.zBinEdges.empty()) {
@@ -131,29 +131,29 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
     }
   }
 
-  std::vector<AxisScalar> rValues{};
-  rValues.reserve(std::max(2ul, config.rBinEdges.size()));
-  if (config.rBinEdges.empty()) {
-    rValues = {config.rMin, config.rMax};
-  } else {
-    rValues.insert(rValues.end(), config.rBinEdges.begin(),
-                   config.rBinEdges.end());
-  }
-
-  Axis<AxisType::Variable, AxisBoundaryType::Open> zAxis(std::move(zValues));
-  Axis<AxisType::Variable, AxisBoundaryType::Open> rAxis(std::move(rValues));
-  return Acts::CylindricalSpacePointGrid<external_spacepoint_t>(
-      std::make_tuple(std::move(phiAxis), std::move(zAxis), std::move(rAxis)));
+  Axis<AxisType::Variable, AxisBoundaryType::Bound> zAxis(std::move(zValues));
+  return Acts::CylindricalSpacePointGrid<SpacePoint>(
+      std::make_tuple(std::move(phiAxis), std::move(zAxis)));
 }
 
 template <typename external_spacepoint_t,
-          typename external_spacepoint_iterator_t>
+          typename external_spacepoint_iterator_t, typename callable_t>
 void Acts::CylindricalSpacePointGridCreator::fillGrid(
     const Acts::SeedFinderConfig<external_spacepoint_t>& config,
     const Acts::SeedFinderOptions& options,
     Acts::CylindricalSpacePointGrid<external_spacepoint_t>& grid,
     external_spacepoint_iterator_t spBegin,
-    external_spacepoint_iterator_t spEnd) {
+    external_spacepoint_iterator_t spEnd, callable_t&& toGlobal,
+    Acts::Extent& rRangeSPExtent) {
+  using iterated_value_t =
+      typename std::iterator_traits<external_spacepoint_iterator_t>::value_type;
+  using iterated_t = typename std::remove_const<
+      typename std::remove_pointer<iterated_value_t>::type>::type;
+  static_assert(std::is_pointer<iterated_value_t>::value,
+                "Iterator must contain pointers to space points");
+  static_assert(std::is_same<iterated_t, external_spacepoint_t>::value,
+                "Iterator does not contain type this class was templated with");
+
   if (!config.isInInternalUnits) {
     throw std::runtime_error(
         "SeedFinderConfig not in ACTS internal units in BinnedSPGroup");
@@ -166,66 +166,78 @@ void Acts::CylindricalSpacePointGridCreator::fillGrid(
         "SeedFinderOptions not in ACTS internal units in BinnedSPGroup");
   }
 
-  // Space points are assumed to be ALREADY CORRECTED for beamspot position
-  // phi, z and r space point selection comes naturally from the
-  // grid axis definition. Calling `isInside` will let us know if we are
-  // inside the grid range.
-  // If a space point is outside the validity range of these quantities
-  // it goes in an over- or under-flow bin. We want to avoid to consider those
-  // and skip some computations.
-  // Additional cuts can be applied by customizing the space point selector
-  // in the config object.
+  // get region of interest (or full detector if configured accordingly)
+  float phiMin = config.phiMin;
+  float phiMax = config.phiMax;
+  float zMin = config.zMin;
+  float zMax = config.zMax;
+
+  // sort by radius
+  // add magnitude of beamPos to rMax to avoid excluding measurements
+  // create number of bins equal to number of millimeters rMax
+  // (worst case minR: configured minR + 1mm)
+  // binSizeR allows to increase or reduce numRBins if needed
+  std::size_t numRBins = static_cast<std::size_t>(
+      (config.rMax + options.beamPos.norm()) / config.binSizeR);
 
   // keep track of changed bins while sorting
-  std::vector<bool> usedBinIndex(grid.size(), false);
-  std::vector<std::size_t> rBinsIndex;
-  rBinsIndex.reserve(grid.size());
+  boost::container::flat_set<std::size_t> rBinsIndex;
 
   std::size_t counter = 0ul;
   for (external_spacepoint_iterator_t it = spBegin; it != spEnd;
        it++, ++counter) {
-    const external_spacepoint_t& sp = *it;
+    if (*it == nullptr) {
+      continue;
+    }
+    const external_spacepoint_t& sp = **it;
+    const auto& [spPosition, variance, spTime] =
+        toGlobal(sp, config.zAlign, config.rAlign, config.sigmaError);
 
-    // remove SPs according to experiment specific cuts
-    if (!config.spacePointSelector(sp)) {
+    float spX = spPosition[0];
+    float spY = spPosition[1];
+    float spZ = spPosition[2];
+
+    // store x,y,z values in extent
+    rRangeSPExtent.extend({spX, spY, spZ});
+
+    // remove SPs outside z and phi region
+    if (spZ > zMax || spZ < zMin) {
+      continue;
+    }
+    float spPhi = std::atan2(spY, spX);
+    if (spPhi > phiMax || spPhi < phiMin) {
+      continue;
+    }
+
+    auto isp = std::make_unique<InternalSpacePoint<external_spacepoint_t>>(
+        counter, sp, spPosition, options.beamPos, variance, spTime);
+    // calculate r-Bin index and protect against overflow (underflow not
+    // possible)
+    std::size_t rIndex =
+        static_cast<std::size_t>(isp->radius() / config.binSizeR);
+    // if index out of bounds, the SP is outside the region of interest
+    if (rIndex >= numRBins) {
       continue;
     }
 
     // fill rbins into grid
-    Acts::Vector3 position(sp.phi(), sp.z(), sp.radius());
-    if (!grid.isInside(position)) {
-      continue;
-    }
-
-    std::size_t globIndex = grid.globalBinFromPosition(position);
-    auto& rbin = grid.at(globIndex);
-    rbin.push_back(&sp);
+    Acts::Vector2 spLocation(isp->phi(), isp->z());
+    std::vector<std::unique_ptr<InternalSpacePoint<external_spacepoint_t>>>&
+        rbin = grid.atPosition(spLocation);
+    rbin.push_back(std::move(isp));
 
     // keep track of the bins we modify so that we can later sort the SPs in
     // those bins only
-    if (rbin.size() > 1 && !usedBinIndex[globIndex]) {
-      usedBinIndex[globIndex] = true;
-      rBinsIndex.push_back(globIndex);
+    if (rbin.size() > 1) {
+      rBinsIndex.insert(grid.globalBinFromPosition(spLocation));
     }
   }
 
   /// sort SPs in R for each filled bin
-  for (std::size_t binIndex : rBinsIndex) {
+  for (auto& binIndex : rBinsIndex) {
     auto& rbin = grid.atPosition(binIndex);
-    std::ranges::sort(rbin, {}, [](const auto& rb) { return rb->radius(); });
+    std::sort(rbin.begin(), rbin.end(), [](const auto& a, const auto& b) {
+      return a->radius() < b->radius();
+    });
   }
-}
-
-template <typename external_spacepoint_t, typename external_collection_t>
-  requires std::ranges::range<external_collection_t> &&
-           std::same_as<typename external_collection_t::value_type,
-                        external_spacepoint_t>
-void Acts::CylindricalSpacePointGridCreator::fillGrid(
-    const Acts::SeedFinderConfig<external_spacepoint_t>& config,
-    const Acts::SeedFinderOptions& options,
-    Acts::CylindricalSpacePointGrid<external_spacepoint_t>& grid,
-    const external_collection_t& collection) {
-  Acts::CylindricalSpacePointGridCreator::fillGrid<external_spacepoint_t>(
-      config, options, grid, std::ranges::begin(collection),
-      std::ranges::end(collection));
 }

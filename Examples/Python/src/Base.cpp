@@ -1,21 +1,17 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/PdgParticle.hpp"
 #include "Acts/Definitions/Units.hpp"
-#include "Acts/Geometry/GeometryContext.hpp"
-#include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Plugins/Python/Utilities.hpp"
-#include "Acts/Utilities/Any.hpp"
 #include "Acts/Utilities/AxisFwd.hpp"
 #include "Acts/Utilities/BinningData.hpp"
-#include "Acts/Utilities/CalibrationContext.hpp"
 #include "Acts/Utilities/Logger.hpp"
 
 #include <array>
@@ -26,29 +22,12 @@
 
 #include <pybind11/eval.h>
 #include <pybind11/pybind11.h>
-#include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
 using namespace pybind11::literals;
 
 namespace Acts::Python {
-
-void addContext(Context& ctx) {
-  auto& m = ctx.get("main");
-
-  py::class_<Acts::GeometryContext>(m, "GeometryContext").def(py::init<>());
-  py::class_<Acts::MagneticFieldContext>(m, "MagneticFieldContext")
-      .def(py::init<>());
-  py::class_<Acts::CalibrationContext>(m, "CalibrationContext")
-      .def(py::init<>());
-}
-
-void addAny(Context& ctx) {
-  auto& m = ctx.get("main");
-
-  py::class_<Acts::AnyBase<512>>(m, "AnyBase512").def(py::init<>());
-}
 
 void addUnits(Context& ctx) {
   auto& m = ctx.get("main");
@@ -177,7 +156,7 @@ void addLogging(Acts::Python::Context& ctx) {
   logging.def(
       "getLogger",
       [](const std::string& name) {
-        if (!pythonLoggers.contains(name)) {
+        if (pythonLoggers.find(name) == pythonLoggers.end()) {
           pythonLoggers[name] =
               std::make_shared<PythonLogger>(name, Acts::Logging::INFO);
         }
@@ -219,7 +198,7 @@ void addLogging(Acts::Python::Context& ctx) {
     } catch (const std::exception& e) {
       std::string what = e.what();
       if (what.find("ACTS_LOG_FAILURE_THRESHOLD") != std::string::npos) {
-        py::set_error(exc, e.what());
+        exc(e.what());
       } else {
         std::rethrow_exception(p);
       }
@@ -269,12 +248,7 @@ void addAlgebra(Acts::Python::Context& ctx) {
         return v;
       }))
       .def("__getitem__",
-           [](const Acts::Vector2& self, Eigen::Index i) { return self[i]; })
-      .def("__str__", [](const Acts::Vector3& self) {
-        std::stringstream ss;
-        ss << self.transpose();
-        return ss.str();
-      });
+           [](const Acts::Vector2& self, Eigen::Index i) { return self[i]; });
 
   py::class_<Acts::Vector3>(m, "Vector3")
       .def(py::init<double, double, double>())
@@ -283,17 +257,8 @@ void addAlgebra(Acts::Python::Context& ctx) {
         v << a[0], a[1], a[2];
         return v;
       }))
-      .def_static("UnitX", []() -> Vector3 { return Acts::Vector3::UnitX(); })
-      .def_static("UnitY", []() -> Vector3 { return Acts::Vector3::UnitY(); })
-      .def_static("UnitZ", []() -> Vector3 { return Acts::Vector3::UnitZ(); })
-
       .def("__getitem__",
-           [](const Acts::Vector3& self, Eigen::Index i) { return self[i]; })
-      .def("__str__", [](const Acts::Vector3& self) {
-        std::stringstream ss;
-        ss << self.transpose();
-        return ss.str();
-      });
+           [](const Acts::Vector3& self, Eigen::Index i) { return self[i]; });
 
   py::class_<Acts::Vector4>(m, "Vector4")
       .def(py::init<double, double, double, double>())
@@ -306,78 +271,45 @@ void addAlgebra(Acts::Python::Context& ctx) {
            [](const Acts::Vector4& self, Eigen::Index i) { return self[i]; });
 
   py::class_<Acts::Transform3>(m, "Transform3")
-      .def(py::init<>())
-      .def(py::init([](const Vector3& translation) -> Transform3 {
-        return Transform3{Translation3{translation}};
+      .def(py::init([](std::array<double, 3> translation) {
+        Acts::Transform3 t = Acts::Transform3::Identity();
+        t.pretranslate(
+            Acts::Vector3(translation[0], translation[1], translation[2]));
+        return t;
       }))
-      .def_property_readonly("translation",
-                             [](const Acts::Transform3& self) -> Vector3 {
-                               return self.translation();
-                             })
-      .def_static("Identity", &Acts::Transform3::Identity)
-      .def("__mul__",
-           [](const Acts::Transform3& self, const Acts::Transform3& other) {
-             return self * other;
-           })
-      .def("__mul__",
-           [](const Acts::Transform3& self, const Acts::Translation3& other) {
-             return self * other;
-           })
-      .def("__mul__",
-           [](const Acts::Transform3& self, const Acts::AngleAxis3& other) {
-             return self * other;
-           })
-      .def("__str__", [](const Acts::Transform3& self) {
-        std::stringstream ss;
-        ss << self.matrix();
-        return ss.str();
-      });
-
-  py::class_<Acts::Translation3>(m, "Translation3")
-      .def(py::init(
-          [](const Acts::Vector3& a) { return Acts::Translation3(a); }))
-      .def(py::init([](std::array<double, 3> a) {
-        return Acts::Translation3(Acts::Vector3(a[0], a[1], a[2]));
-      }))
-      .def("__str__", [](const Acts::Translation3& self) {
-        std::stringstream ss;
-        ss << self.translation().transpose();
-        return ss.str();
-      });
-
-  py::class_<Acts::AngleAxis3>(m, "AngleAxis3")
-      .def(py::init([](double angle, const Acts::Vector3& axis) {
-        return Acts::AngleAxis3(angle, axis);
-      }))
-      .def("__str__", [](const Acts::Transform3& self) {
-        std::stringstream ss;
-        ss << self.matrix();
-        return ss.str();
+      .def("getTranslation", [](const Acts::Transform3& self) {
+        return Vector3(self.translation());
       });
 }
 
 void addBinning(Context& ctx) {
   auto& m = ctx.get("main");
+  auto binning = m.def_submodule("Binning", "");
 
-  auto binningValue = py::enum_<Acts::BinningValue>(m, "BinningValue")
-                          .value("binX", Acts::BinningValue::binX)
-                          .value("binY", Acts::BinningValue::binY)
-                          .value("binZ", Acts::BinningValue::binZ)
-                          .value("binR", Acts::BinningValue::binR)
-                          .value("binPhi", Acts::BinningValue::binPhi)
-                          .value("binRPhi", Acts::BinningValue::binRPhi)
-                          .value("binH", Acts::BinningValue::binH)
-                          .value("binEta", Acts::BinningValue::binEta)
-                          .value("binMag", Acts::BinningValue::binMag);
+  auto binningValue = py::enum_<Acts::BinningValue>(binning, "BinningValue")
+                          .value("x", Acts::BinningValue::binX)
+                          .value("y", Acts::BinningValue::binY)
+                          .value("z", Acts::BinningValue::binZ)
+                          .value("r", Acts::BinningValue::binR)
+                          .value("phi", Acts::BinningValue::binPhi)
+                          .export_values();
 
-  auto boundaryType = py::enum_<Acts::AxisBoundaryType>(m, "AxisBoundaryType")
-                          .value("Bound", Acts::AxisBoundaryType::Bound)
-                          .value("Closed", Acts::AxisBoundaryType::Closed)
-                          .value("Open", Acts::AxisBoundaryType::Open);
+  auto BinningOption = py::enum_<Acts::BinningOption>(binning, "BinningOption")
+                          .value("open", Acts::BinningOption::open)
+                          .value("closed", Acts::BinningOption::closed)
+                          .export_values();
 
-  auto axisType = py::enum_<Acts::AxisType>(m, "AxisType")
+  auto boundaryType =
+      py::enum_<Acts::AxisBoundaryType>(binning, "AxisBoundaryType")
+          .value("bound", Acts::AxisBoundaryType::Bound)
+          .value("closed", Acts::AxisBoundaryType::Closed)
+          .value("open", Acts::AxisBoundaryType::Open)
+          .export_values();
+
+  auto axisType = py::enum_<Acts::AxisType>(binning, "AxisType")
                       .value("equidistant", Acts::AxisType::Equidistant)
-                      .value("variable", Acts::AxisType::Variable);
+                      .value("variable", Acts::AxisType::Variable)
+                      .export_values();
 }
 
 }  // namespace Acts::Python

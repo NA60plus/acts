@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Performance/TrackFinderPerformanceWriter.hpp"
 
@@ -37,7 +37,7 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
 
   ReadDataHandle<SimParticleContainer> inputParticles;
   ReadDataHandle<HitParticlesMap> inputMeasurementParticlesMap;
-  ReadDataHandle<TrackParticleMatching> inputTrackParticleMatching;
+  ReadDataHandle<ProtoTrackParticleMatching> inputProtoTrackParticleMatching;
 
   TFile* file = nullptr;
 
@@ -90,10 +90,11 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
       : cfg(std::move(c)),
         inputParticles{parent, "InputParticles"},
         inputMeasurementParticlesMap{parent, "InputMeasurementParticlesMap"},
-        inputTrackParticleMatching{parent, "InputTrackParticleMatching"},
+        inputProtoTrackParticleMatching{parent,
+                                        "InputProtoTrackParticleMatching"},
         _logger(l) {
-    if (cfg.inputTracks.empty()) {
-      throw std::invalid_argument("Missing track input collection");
+    if (cfg.inputProtoTracks.empty()) {
+      throw std::invalid_argument("Missing proto tracks input collection");
     }
     if (cfg.inputParticles.empty()) {
       throw std::invalid_argument("Missing particles input collection");
@@ -101,7 +102,7 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
     if (cfg.inputMeasurementParticlesMap.empty()) {
       throw std::invalid_argument("Missing hit-particles map input collection");
     }
-    if (cfg.inputTrackParticleMatching.empty()) {
+    if (cfg.inputProtoTrackParticleMatching.empty()) {
       throw std::invalid_argument(
           "Missing proto track-particle matching input collection");
     }
@@ -111,7 +112,8 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
 
     inputParticles.initialize(cfg.inputParticles);
     inputMeasurementParticlesMap.initialize(cfg.inputMeasurementParticlesMap);
-    inputTrackParticleMatching.initialize(cfg.inputTrackParticleMatching);
+    inputProtoTrackParticleMatching.initialize(
+        cfg.inputProtoTrackParticleMatching);
 
     // the output file can not be given externally since TFile accesses to the
     // same file from multiple threads are unsafe.
@@ -153,10 +155,10 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
 
   const Acts::Logger& logger() const { return _logger; }
 
-  void write(std::uint64_t eventId, const TrackContainer& tracks,
+  void write(std::uint64_t eventId, const ProtoTrackContainer& tracks,
              const SimParticleContainer& particles,
              const HitParticlesMap& hitParticlesMap,
-             const TrackParticleMatching& trackParticleMatching) {
+             const ProtoTrackParticleMatching& protoTrackParticleMatching) {
     const auto& particleHitsMap = invertIndexMultimap(hitParticlesMap);
 
     // How often a particle was reconstructed.
@@ -169,13 +171,15 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
     // write per-track performance measures
     {
       std::lock_guard<std::mutex> guardTrk(trkMutex);
-      for (auto track : tracks) {
+      for (std::size_t itrack = 0; itrack < tracks.size(); ++itrack) {
+        const auto& track = tracks[itrack];
+
         // Get the truth-matched particle
-        auto imatched = trackParticleMatching.find(track.index());
-        if (imatched == trackParticleMatching.end()) {
+        auto imatched = protoTrackParticleMatching.find(itrack);
+        if (imatched == protoTrackParticleMatching.end()) {
           ACTS_DEBUG(
               "No truth particle associated with this proto track, index = "
-              << track.index());
+              << itrack);
           continue;
         }
         const auto& particleMatch = imatched->second;
@@ -200,8 +204,8 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
         }
 
         trkEventId = eventId;
-        trkTrackId = track.index();
-        trkNumHits = track.nMeasurements();
+        trkTrackId = itrack;
+        trkNumHits = track.size();
         trkNumParticles = particleMatch.contributingParticles.size();
         trkParticleId.clear();
         trkParticleNumHitsTotal.clear();
@@ -268,7 +272,7 @@ struct ActsExamples::TrackFinderPerformanceWriter::Impl {
 ActsExamples::TrackFinderPerformanceWriter::TrackFinderPerformanceWriter(
     ActsExamples::TrackFinderPerformanceWriter::Config config,
     Acts::Logging::Level level)
-    : WriterT(config.inputTracks, "TrackFinderPerformanceWriter", level),
+    : WriterT(config.inputProtoTracks, "TrackFinderPerformanceWriter", level),
       m_impl(std::make_unique<Impl>(this, std::move(config), logger())) {}
 
 ActsExamples::TrackFinderPerformanceWriter::~TrackFinderPerformanceWriter() =
@@ -276,12 +280,13 @@ ActsExamples::TrackFinderPerformanceWriter::~TrackFinderPerformanceWriter() =
 
 ActsExamples::ProcessCode ActsExamples::TrackFinderPerformanceWriter::writeT(
     const ActsExamples::AlgorithmContext& ctx,
-    const ActsExamples::TrackContainer& tracks) {
+    const ActsExamples::ProtoTrackContainer& tracks) {
   const auto& particles = m_impl->inputParticles(ctx);
   const auto& hitParticlesMap = m_impl->inputMeasurementParticlesMap(ctx);
-  const auto& trackParticleMatching = m_impl->inputTrackParticleMatching(ctx);
+  const auto& protoTrackParticleMatching =
+      m_impl->inputProtoTrackParticleMatching(ctx);
   m_impl->write(ctx.eventNumber, tracks, particles, hitParticlesMap,
-                trackParticleMatching);
+                protoTrackParticleMatching);
   return ProcessCode::SUCCESS;
 }
 

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Csv/CsvMeasurementReader.hpp"
 
@@ -18,7 +18,6 @@
 #include "ActsExamples/EventData/IndexSourceLink.hpp"
 #include "ActsExamples/EventData/Measurement.hpp"
 #include "ActsExamples/Framework/AlgorithmContext.hpp"
-#include "ActsExamples/Io/Csv/CsvInputOutput.hpp"
 #include "ActsExamples/Utilities/Paths.hpp"
 
 #include <algorithm>
@@ -29,6 +28,8 @@
 #include <list>
 #include <stdexcept>
 #include <vector>
+
+#include <dfe/dfe_io_dsv.hpp>
 
 #include "CsvOutputData.hpp"
 
@@ -107,7 +108,7 @@ inline std::vector<Data> readEverything(
     const std::string& inputDir, const std::string& filename,
     const std::vector<std::string>& optionalColumns, std::size_t event) {
   std::string path = ActsExamples::perEventFilepath(inputDir, filename, event);
-  ActsExamples::NamedTupleCsvReader<Data> reader(path, optionalColumns);
+  dfe::NamedTupleCsvReader<Data> reader(path, optionalColumns);
 
   std::vector<Data> everything;
   Data one;
@@ -124,7 +125,7 @@ std::vector<ActsExamples::MeasurementData> readMeasurementsByGeometryId(
   auto measurements = readEverything<ActsExamples::MeasurementData>(
       inputDir, "measurements.csv", {"geometry_id", "t"}, event);
   // sort same way they will be sorted in the output container
-  std::ranges::sort(measurements, CompareGeometryId{});
+  std::sort(measurements.begin(), measurements.end(), CompareGeometryId{});
   return measurements;
 }
 
@@ -193,14 +194,11 @@ ActsExamples::ProcessCode ActsExamples::CsvMeasurementReader::read(
       readMeasurementsByGeometryId(m_cfg.inputDir, ctx.eventNumber);
 
   // Prepare containers for the hit data using the framework event data types
-  MeasurementContainer tmpMeasurements;
-  GeometryIdMultimap<ConstVariableBoundMeasurementProxy> orderedMeasurements;
+  GeometryIdMultimap<Measurement> orderedMeasurements;
   IndexMultimap<Index> measurementSimHitsMap;
   IndexSourceLinkContainer sourceLinks;
   // need list here for stable addresses
   std::list<IndexSourceLink> sourceLinkStorage;
-
-  tmpMeasurements.reserve(measurementData.size());
   orderedMeasurements.reserve(measurementData.size());
   // Safe long as we have single particle to sim hit association
   measurementSimHitsMap.reserve(measurementData.size());
@@ -254,15 +252,14 @@ ActsExamples::ProcessCode ActsExamples::CsvMeasurementReader::read(
     // the measurement will be stored is known before adding it.
     const Index index = orderedMeasurements.size();
     IndexSourceLink& sourceLink = sourceLinkStorage.emplace_back(geoId, index);
-    auto measurement =
-        createMeasurement(tmpMeasurements, dParameters, sourceLink);
+    auto measurement = createMeasurement(dParameters, sourceLink);
 
     // Due to the previous sorting of the raw hit data by geometry id, new
     // measurements should always end up at the end of the container. previous
     // elements were not touched; cluster indices remain stable and can
     // be used to identify the m.
-    auto inserted = orderedMeasurements.emplace_hint(orderedMeasurements.end(),
-                                                     geoId, measurement);
+    auto inserted = orderedMeasurements.emplace_hint(
+        orderedMeasurements.end(), geoId, std::move(measurement));
     if (std::next(inserted) != orderedMeasurements.end()) {
       ACTS_FATAL("Something went horribly wrong with the hit sorting");
       return ProcessCode::ABORT;
@@ -273,7 +270,7 @@ ActsExamples::ProcessCode ActsExamples::CsvMeasurementReader::read(
 
   MeasurementContainer measurements;
   for (auto& [_, meas] : orderedMeasurements) {
-    measurements.emplaceMeasurement(meas.size(), meas);
+    measurements.emplace_back(std::move(meas));
   }
 
   // Generate measurement-particles-map

@@ -1,12 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
+
+#include "Acts/Utilities/detail/MPL/all_of.hpp"
 
 #include <tuple>
 #include <type_traits>
@@ -24,11 +26,11 @@ namespace Acts::detail {
 template <typename... extensions_t>
 struct Extendable {
   // clang-format off
-    static_assert((std::is_default_constructible_v<extensions_t> && ...),
+    static_assert(detail::all_of_v<std::is_default_constructible<extensions_t>::value...>,
                   "all extensions must be default constructible");
-    static_assert((std::is_copy_constructible_v<extensions_t> && ...),
+    static_assert(detail::all_of_v<std::is_copy_constructible<extensions_t>::value...>,
                   "all extensions must be copy constructible");
-    static_assert((std::is_move_constructible_v<extensions_t> && ...),
+    static_assert(detail::all_of_v<std::is_move_constructible<extensions_t>::value...>,
                   "all extensions must be move constructible");
   // clang-format on
 
@@ -39,7 +41,7 @@ struct Extendable {
   Extendable(const Extendable<extensions_t...>& extendable) = default;
 
   // Default move constructor
-  Extendable(Extendable<extensions_t...>&& extendable) noexcept = default;
+  Extendable(Extendable<extensions_t...>&& extendable) = default;
 
   /// Constructor from tuple
   ///
@@ -63,7 +65,7 @@ struct Extendable {
   ///
   /// @param extendable The source Extendable list
   Extendable<extensions_t...>& operator=(
-      Extendable<extensions_t...>&& extendable) noexcept = default;
+      Extendable<extensions_t...>&& extendable) = default;
 
   /// Append new entries and return a new condition
   ///

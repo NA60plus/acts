@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -15,18 +15,19 @@
 #include "Acts/Definitions/Tolerance.hpp"
 #include "Acts/Definitions/Units.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
-#include "Acts/EventData/detail/CorrectedTransformationFreeToBound.hpp"
-#include "Acts/Geometry/GeometryContext.hpp"
-#include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/MagneticField/MagneticFieldProvider.hpp"
 #include "Acts/Propagator/ConstrainedStep.hpp"
-#include "Acts/Propagator/EigenStepperDefaultExtension.hpp"
+#include "Acts/Propagator/DefaultExtension.hpp"
+#include "Acts/Propagator/DenseEnvironmentExtension.hpp"
+#include "Acts/Propagator/EigenStepperError.hpp"
 #include "Acts/Propagator/PropagatorTraits.hpp"
-#include "Acts/Propagator/StepperOptions.hpp"
+#include "Acts/Propagator/StepperExtensionList.hpp"
+#include "Acts/Propagator/detail/Auctioneer.hpp"
 #include "Acts/Propagator/detail/SteppingHelper.hpp"
 #include "Acts/Utilities/Intersection.hpp"
 #include "Acts/Utilities/Result.hpp"
 
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <type_traits>
@@ -45,7 +46,8 @@ namespace Acts {
 /// with s being the arc length of the track, q the charge of the particle,
 /// p the momentum magnitude and B the magnetic field
 ///
-template <typename extension_t = EigenStepperDefaultExtension>
+template <typename extensionlist_t = StepperExtensionList<DefaultExtension>,
+          typename auctioneer_t = detail::VoidAuctioneer>
 class EigenStepper {
  public:
   /// Jacobian, Covariance and State definitions
@@ -54,16 +56,6 @@ class EigenStepper {
   using BoundState = std::tuple<BoundTrackParameters, Jacobian, double>;
   using CurvilinearState =
       std::tuple<CurvilinearTrackParameters, Jacobian, double>;
-
-  struct Config {
-    std::shared_ptr<const MagneticFieldProvider> bField;
-  };
-
-  struct Options : public StepperPlainOptions {
-    void setPlainOptions(const StepperPlainOptions& options) {
-      static_cast<StepperPlainOptions&>(*this) = options;
-    }
-  };
 
   /// @brief State for track parameter propagation
   ///
@@ -152,8 +144,11 @@ class EigenStepper {
     /// The geometry context
     std::reference_wrapper<const GeometryContext> geoContext;
 
-    /// Algorithmic extension
-    extension_t extension;
+    /// List of algorithmic extensions
+    extensionlist_t extension;
+
+    /// Auctioneer for choosing the extension
+    auctioneer_t auctioneer;
 
     /// @brief Storage of magnetic field and the sub steps during a RKN4 step
     struct {
@@ -169,11 +164,6 @@ class EigenStepper {
   /// Constructor requires knowledge of the detector's magnetic field
   /// @param bField The magnetic field provider
   explicit EigenStepper(std::shared_ptr<const MagneticFieldProvider> bField);
-
-  /// @brief Constructor with configuration
-  ///
-  /// @param [in] config The configuration of the stepper
-  explicit EigenStepper(const Config& config) : m_bField(config.bField) {}
 
   State makeState(std::reference_wrapper<const GeometryContext> gctx,
                   std::reference_wrapper<const MagneticFieldContext> mctx,
@@ -264,17 +254,16 @@ class EigenStepper {
   /// @param [in] surface The surface provided
   /// @param [in] index The surface intersection index
   /// @param [in] navDir The navigation direction
-  /// @param [in] boundaryTolerance The boundary check for this status update
+  /// @param [in] bcheck The boundary check for this status update
   /// @param [in] surfaceTolerance Surface tolerance used for intersection
   /// @param [in] logger A @c Logger instance
   Intersection3D::Status updateSurfaceStatus(
       State& state, const Surface& surface, std::uint8_t index,
-      Direction navDir, const BoundaryTolerance& boundaryTolerance,
+      Direction navDir, const BoundaryCheck& bcheck,
       ActsScalar surfaceTolerance = s_onSurfaceTolerance,
       const Logger& logger = getDummyLogger()) const {
     return detail::updateSingleSurfaceStatus<EigenStepper>(
-        *this, state, surface, index, navDir, boundaryTolerance,
-        surfaceTolerance, logger);
+        *this, state, surface, index, navDir, bcheck, surfaceTolerance, logger);
   }
 
   /// Update step size

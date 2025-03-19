@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Geometry/CylinderVolumeHelper.hpp"
 
@@ -291,10 +291,6 @@ Acts::CylinderVolumeHelper::createContainerTrackingVolume(
   auto lastVolume = volumes.end();
 
   for (std::size_t ivol = 0; firstVolume != lastVolume; ++firstVolume, ++ivol) {
-    if (*firstVolume == nullptr) {
-      ACTS_ERROR("Volume " << ivol << " is nullptr, return nullptr");
-      return nullptr;
-    }
     ACTS_VERBOSE("   - volume (" << ivol
                                  << ") is : " << (*firstVolume)->volumeName());
     ACTS_VERBOSE("     at position : " << (*firstVolume)->center().x() << ", "
@@ -1002,8 +998,7 @@ std::shared_ptr<const Acts::Layer> Acts::CylinderVolumeHelper::createDiscLayer(
   } else {
     // also binning in phi chosen
     materialBinUtility +=
-        BinUtility(binsPhi, -static_cast<float>(M_PI), static_cast<float>(M_PI),
-                   closed, BinningValue::binPhi);
+        BinUtility(binsPhi, -M_PI, M_PI, closed, BinningValue::binPhi);
     ACTS_VERBOSE(" -> Preparing the binned material with "
                  << binsPhi << " / " << binsR << " bins in phi / R. ");
   }

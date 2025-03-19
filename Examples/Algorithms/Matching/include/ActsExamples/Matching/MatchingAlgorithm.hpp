@@ -8,23 +8,6 @@
 
 #pragma once
 
-#include "Acts/Propagator/EigenStepper.hpp"
-#include "Acts/Propagator/MaterialInteractor.hpp"
-#include "Acts/Propagator/Navigator.hpp"
-#include "Acts/Propagator/Propagator.hpp"
-#include "Acts/Utilities/Logger.hpp"
-#include "Acts/Utilities/TrackHelpers.hpp"
-#include "Acts/Vertexing/TrackAtVertex.hpp"
-#include "ActsExamples/EventData/Index.hpp"
-#include "ActsExamples/EventData/IndexSourceLink.hpp"
-#include "ActsExamples/EventData/Measurement.hpp"
-#include "ActsExamples/EventData/Track.hpp"
-#include "ActsExamples/Framework/DataHandle.hpp"
-#include "ActsExamples/Framework/IAlgorithm.hpp"
-#include "ActsExamples/Framework/ProcessCode.hpp"
-#include "ActsExamples/TrackFitting/TrackFitterFunction.hpp"
-
-
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/Direction.hpp"
 #include "Acts/EventData/Charge.hpp"
@@ -32,24 +15,41 @@
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/MagneticField/MagneticFieldProvider.hpp"
+#include "Acts/Propagator/EigenStepper.hpp"
+#include "Acts/Propagator/MaterialInteractor.hpp"
+#include "Acts/Propagator/Navigator.hpp"
+#include "Acts/Propagator/Propagator.hpp"
+#include "Acts/Utilities/Logger.hpp"
+#include "Acts/Utilities/TrackHelpers.hpp"
 #include "Acts/Vertexing/FullBilloirVertexFitter.hpp"
 #include "Acts/Vertexing/HelicalTrackLinearizer.hpp"
 #include "Acts/Vertexing/ImpactPointEstimator.hpp"
 #include "Acts/Vertexing/IterativeVertexFinder.hpp"
+#include "Acts/Vertexing/TrackAtVertex.hpp"
 #include "Acts/Vertexing/TrackDensityVertexFinder.hpp"
 #include "Acts/Vertexing/Vertex.hpp"
 #include "Acts/Vertexing/VertexingOptions.hpp"
+#include "ActsExamples/EventData/Index.hpp"
+#include "ActsExamples/EventData/IndexSourceLink.hpp"
+#include "ActsExamples/EventData/Measurement.hpp"
+#include "ActsExamples/EventData/ProtoTrack.hpp"
 #include "ActsExamples/EventData/ProtoVertex.hpp"
-#include "ActsExamples/EventData/Trajectories.hpp"
 #include "ActsExamples/EventData/SimParticle.hpp"
-
+#include "ActsExamples/EventData/Track.hpp"
+#include "ActsExamples/EventData/Trajectories.hpp"
+#include "ActsExamples/Framework/DataHandle.hpp"
+#include "ActsExamples/Framework/IAlgorithm.hpp"
+#include "ActsExamples/Framework/ProcessCode.hpp"
+#include "ActsExamples/TrackFitting/TrackFitterFunction.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
-using TrackProxyType = Acts::TrackContainer<Acts::ConstVectorTrackContainer, Acts::ConstVectorMultiTrajectory, std::shared_ptr>::ConstTrackProxy;
+using TrackProxyType = Acts::TrackContainer<Acts::ConstVectorTrackContainer,
+                                            Acts::ConstVectorMultiTrajectory,
+                                            std::shared_ptr>::ConstTrackProxy;
 
 namespace ActsExamples {
 struct AlgorithmContext;
@@ -66,11 +66,19 @@ class MatchingAlgorithm final : public IAlgorithm {
     /// Optional. Input track parameters collection
     std::vector<std::string> inputTrackContainerVT;
     /// Optional. Input track parameters collection
-    std::string outputTrackParameters;
+    std::vector<std::string> inputProtoTracksMS;
     /// Optional. Input track parameters collection
-    std::string outputTracks;
-    std::string outputMatchedTracks;
-    std::string inputParticles;
+    std::vector<std::string> inputProtoTracksVT;
+    /// Optional. Input track parameters collection
+    std::string outputTrackParameters = "trackParameters";
+    /// Optional. Input track parameters collection
+    std::string inputMeasurements = "measurements";
+
+    std::string outputTracksVT = "matchVT";
+    std::string outputTracksMS = "matchMS";
+    std::string outputTracksRefit = "refit";
+    std::string outputMatchedTracks = "matched";
+    std::string inputParticles = "particles";
     std::string inputMeasurementParticlesMapVT;
     std::string inputMeasurementParticlesMapMS;
     std::string inputVertices = "vertices";
@@ -79,8 +87,10 @@ class MatchingAlgorithm final : public IAlgorithm {
     double py = 0;
     double pz = 0;
     double chi2max = 1e12;
+    Acts::GeometryIdentifier geoIdMatching = 72058418671649024;
 
     std::shared_ptr<ActsExamples::TrackFitterFunction> fit;
+    std::shared_ptr<MeasurementCalibrator> calibrator;
 
     /// The tracking geometry that should be used.
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
@@ -120,43 +130,37 @@ class MatchingAlgorithm final : public IAlgorithm {
  private:
   Config m_cfg;
 
+  std::vector<std::unique_ptr<ReadDataHandle<TrackParametersContainer>>>
+      m_inputTrackParametersMS{};
+  std::vector<std::unique_ptr<ReadDataHandle<ConstTrackContainer>>>
+      m_inputTrackContainerMS{};
+  std::vector<std::unique_ptr<ReadDataHandle<TrackParametersContainer>>>
+      m_inputTrackParametersVT{};
+  std::vector<std::unique_ptr<ReadDataHandle<ConstTrackContainer>>>
+      m_inputTrackContainerVT{};
+  std::vector<std::unique_ptr<ReadDataHandle<ProtoTrackContainer>>>
+      m_inputProtoTracksVT{};
+  std::vector<std::unique_ptr<ReadDataHandle<ProtoTrackContainer>>>
+      m_inputProtoTracksMS{};
 
-  std::vector<std::unique_ptr<ReadDataHandle<TrackParametersContainer>>> m_inputTrackParametersMS{};
-  std::vector<std::unique_ptr<ReadDataHandle<ConstTrackContainer>>> m_inputTrackContainerMS{};
-  std::vector<std::unique_ptr<ReadDataHandle<TrackParametersContainer>>> m_inputTrackParametersVT{};
-  std::vector<std::unique_ptr<ReadDataHandle<ConstTrackContainer>>> m_inputTrackContainerVT{};
-    /*
-    ReadDataHandle<TrackParametersContainer> m_inputTrackParametersMS{
-        this, "InputTrackParametersMS"};
-    ReadDataHandle<TrackParametersContainer> m_inputTrackParametersVT{
-        this, "InputTrackParametersVT"};
-    ReadDataHandle<ConstTrackContainer> m_inputTrackContainerMS{
-        this, "InputTrackContainerMS"};
-    ReadDataHandle<ConstTrackContainer> m_inputTrackContainerVT{
-        this, "InputTrackContainerVT"};
-    */
   ReadDataHandle<SimParticleContainer> m_inputParticles{this, "InputParticles"};
-      
-  ReadDataHandle<IndexMultimap<ActsFatras::Barcode>> m_inputMeasurementParticlesMapVT{
-      this, "InputMeasurementParticlesMapVT"};
-  ReadDataHandle<IndexMultimap<ActsFatras::Barcode>> m_inputMeasurementParticlesMapMS{
-      this, "InputMeasurementParticlesMapMS"};
-  ReadDataHandle<std::vector<Acts::Vertex>> m_inputVertices{this, "InputVertices"};
 
-  //using TrackProxyType = Acts::TrackProxy<Acts::ConstVectorTrackContainer, Acts::ConstVectorMultiTrajectory, std::shared_ptr, false>;
+  ReadDataHandle<IndexMultimap<ActsFatras::Barcode>>
+      m_inputMeasurementParticlesMapVT{this, "InputMeasurementParticlesMapVT"};
+  ReadDataHandle<IndexMultimap<ActsFatras::Barcode>>
+      m_inputMeasurementParticlesMapMS{this, "InputMeasurementParticlesMapMS"};
 
-  //////////////
-  // MATCHING
-  //////////////
+  ReadDataHandle<MeasurementContainer> m_inputMeasurements{this,
+                                                           "InputMeasurements"};
 
-  WriteDataHandle<std::vector<std::pair<TrackProxyType, TrackProxyType>>> m_outputMatchedTracks{
-      this, "OutputMatchedTracks"};
-  // ReadDataHandle<VertexCollection> m_outputVertices{this, "OutputVertices"};
+  WriteDataHandle<std::vector<std::pair<TrackProxyType, TrackProxyType>>>
+      m_outputMatchedTracks{this, "OutputMatchedTracks"};
+
   WriteDataHandle<TrackParametersContainer> m_outputTrackParameters{
       this, "OutputTrackParameters"};
-  WriteDataHandle<ConstTrackContainer> m_outputTracks{
-      this, "OutputRefittedTracks"};
-
+  WriteDataHandle<ConstTrackContainer> m_outputTracksMS{this, "OutputRefitVT"};
+  WriteDataHandle<ConstTrackContainer> m_outputTracksVT{this, "OutputRefitMS"};
+  WriteDataHandle<ConstTrackContainer> m_outputTracksRefit{this, "OutputRefit"};
 };
 
 }  // namespace ActsExamples

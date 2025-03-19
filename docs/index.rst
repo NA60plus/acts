@@ -38,7 +38,6 @@ Key features:
    versioning
    formats/formats
    codeguide
-   misc/misc
    authors
    license
 

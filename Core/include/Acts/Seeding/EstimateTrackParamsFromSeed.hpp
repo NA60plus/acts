@@ -1,25 +1,26 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/Definitions/Units.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
+#include "Acts/Seeding/Seed.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Logger.hpp"
-#include "Acts/Utilities/MathHelpers.hpp"
 
 #include <array>
 #include <cmath>
 #include <iostream>
 #include <iterator>
 #include <optional>
+#include <vector>
 
 namespace Acts {
 /// @todo:
@@ -50,7 +51,7 @@ namespace Acts {
 template <typename spacepoint_iterator_t>
 std::optional<BoundVector> estimateTrackParamsFromSeed(
     spacepoint_iterator_t spBegin, spacepoint_iterator_t spEnd,
-    const Logger& logger = getDummyLogger(), bool verbose =false) {
+    const Logger& logger = getDummyLogger()) {
   // Check the number of provided space points
   std::size_t numSP = std::distance(spBegin, spEnd);
   if (numSP < 3) {
@@ -69,7 +70,6 @@ std::optional<BoundVector> estimateTrackParamsFromSeed(
       ACTS_ERROR("Empty space point found. This should not happen.");
       return std::nullopt;
     }
-
     const auto& sp = *it;
 
 
@@ -257,11 +257,12 @@ std::optional<BoundVector> estimateTrackParamsFromSeed(
   int sign = ia > 0 ? -1 : 1;
   const ActsScalar R = circleCenter.norm();
   ActsScalar invTanTheta =
-      local2.z() / (2.f * R * std::asin(local2.head<2>().norm() / (2.f * R)));
+      local2.z() /
+      (2.f * R * std::asin(std::hypot(local2.x(), local2.y()) / (2.f * R)));
   // The momentum direction in the new frame (the center of the circle has the
   // coordinate (-1.*A/(2*B), 1./(2*B)))
   ActsScalar A = -circleCenter(0) / circleCenter(1);
-  Vector3 transDirection(1., A, fastHypot(1, A) * invTanTheta);
+  Vector3 transDirection(1., A, std::hypot(1, A) * invTanTheta);
   // Transform it back to the original frame
   Vector3 direction = rotation * transDirection.normalized();
 
@@ -287,11 +288,13 @@ std::optional<BoundVector> estimateTrackParamsFromSeed(
   params[eBoundLoc1] = bottomLocalPos.y();
   params[eBoundTime] = spGlobalTimes[0].value_or(0.);
 
+  //std::cout<<"eBoundz "<<bottomLocalPos.z()<<std::endl;
+
   // The estimated q/pt in [GeV/c]^-1 (note that the pt is the projection of
   // momentum on the transverse plane of the new frame)
   ActsScalar qOverPt = sign * (UnitConstants::m) / (0.3 * bFieldInTesla * R);
   // The estimated q/p in [GeV/c]^-1
-  params[eBoundQOverP] = qOverPt / fastHypot(1., invTanTheta);
+  params[eBoundQOverP] = qOverPt / std::hypot(1., invTanTheta);
 
   if (params.hasNaN()) {
     ACTS_ERROR(

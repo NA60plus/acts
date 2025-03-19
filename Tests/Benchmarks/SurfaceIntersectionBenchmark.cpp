@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
@@ -31,7 +31,7 @@ namespace Acts::Test {
 // Some randomness & number crunching
 unsigned int ntests = 10;
 unsigned int nrepts = 2000;
-const BoundaryTolerance boundaryTolerance = BoundaryTolerance::Infinite();
+const bool boundaryCheck = false;
 const bool testPlane = true;
 const bool testDisc = true;
 const bool testCylinder = true;
@@ -80,7 +80,7 @@ MicroBenchmarkResult intersectionTest(const surface_t& surface, double phi,
   return Acts::Test::microBenchmark(
       [&] {
         return surface.intersect(tgContext, origin, direction,
-                                 boundaryTolerance);
+                                 BoundaryCheck(boundaryCheck));
       },
       nrepts);
 }

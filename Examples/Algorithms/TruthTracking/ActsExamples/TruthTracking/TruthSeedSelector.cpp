@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/TruthTracking/TruthSeedSelector.hpp"
 
@@ -42,6 +42,8 @@ TruthSeedSelector::TruthSeedSelector(const Config& config,
   m_inputParticles.initialize(m_cfg.inputParticles);
   m_inputMeasurementParticlesMap.initialize(m_cfg.inputMeasurementParticlesMap);
   m_outputParticles.initialize(m_cfg.outputParticles);
+  m_simContainerReadHandle.initialize(m_cfg.inputSimHits);
+
 }
 
 ProcessCode TruthSeedSelector::execute(const AlgorithmContext& ctx) const {
@@ -52,6 +54,7 @@ ProcessCode TruthSeedSelector::execute(const AlgorithmContext& ctx) const {
   // hit_id -> {particle_id...} map on the fly.
   const auto& particleHitsMap = invertIndexMultimap(hitParticlesMap);
 
+  const auto& simHits = m_simContainerReadHandle(ctx);
   // prepare output collection
   SimParticleContainer selectedParticles;
   selectedParticles.reserve(inputParticles.size());
@@ -63,17 +66,41 @@ ProcessCode TruthSeedSelector::execute(const AlgorithmContext& ctx) const {
     const auto eta = Acts::VectorHelpers::eta(p.direction());
     const auto phi = Acts::VectorHelpers::phi(p.direction());
     const auto rho = Acts::VectorHelpers::perp(p.position());
+    
     // find the corresponding hits for this particle
+    int nHitsVT=0;
+    int nHitsMS=0;
     const auto& hits = makeRange(particleHitsMap.equal_range(p.particleId()));
+
+    for(auto hit : hits){
+      unsigned int index = hit.second;
+      auto it = simHits.begin();
+      std::advance(it, index);
+      auto simHit = *it;
+
+      if(simHit.position()[2] < 400)
+        nHitsVT++;
+      else
+        nHitsMS++;
+  
+    }
+
+    bool muonSel = true;
+    if(m_cfg.isMuon && abs(p.pdg()) != 13){
+      muonSel = false;
+    }
+
     // number of recorded hits
-    std::size_t nHits = hits.size();
+    std::size_t nHits = nHitsMS + nHitsVT;
     return within(rho, 0., m_cfg.rhoMax) &&
            within(p.position().z(), m_cfg.zMin, m_cfg.zMax) &&
            within(std::abs(eta), m_cfg.absEtaMin, m_cfg.absEtaMax) &&
            within(eta, m_cfg.etaMin, m_cfg.etaMax) &&
-           within(phi, m_cfg.phiMin, m_cfg.phiMax) &&
+           within(phi, m_cfg.phiMin, m_cfg.phiMax) && muonSel &&
            within(p.transverseMomentum(), m_cfg.ptMin, m_cfg.ptMax) &&
            within(nHits, m_cfg.nHitsMin, m_cfg.nHitsMax) &&
+           within(nHitsVT, m_cfg.nHitsMinVT, m_cfg.nHitsMaxVT) &&
+           within(nHitsMS, m_cfg.nHitsMinMS, m_cfg.nHitsMaxMS) &&
            (m_cfg.keepNeutral || (p.charge() != 0)) and
            ((m_cfg.keepPrimary and !p.isSecondary()) or
            (m_cfg.keepSecondary and p.isSecondary()));

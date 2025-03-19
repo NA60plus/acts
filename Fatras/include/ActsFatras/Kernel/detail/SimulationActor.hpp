@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2018-2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -41,6 +41,24 @@ template <typename generator_t, typename decay_t, typename interactions_t,
 struct SimulationActor {
   using result_type = SimulationResult;
 
+  /// Abort if the particle was killed during a previous interaction.
+  struct ParticleNotAlive {
+    // This references the SimulationActor to automatically access its result
+    // type.
+    using action_type = SimulationActor;
+
+    template <typename propagator_state_t, typename stepper_t,
+              typename navigator_t>
+    constexpr bool operator()(propagator_state_t & /*state*/,
+                              const stepper_t & /*stepper*/,
+                              const navigator_t & /*navigator*/,
+                              const result_type &result,
+                              const Acts::Logger & /*logger*/) const {
+      // must return true if the propagation should abort
+      return !result.isAlive;
+    }
+  };
+
   /// Random number generator used for the simulation.
   generator_t *generator = nullptr;
   /// Decay module.
@@ -66,18 +84,17 @@ struct SimulationActor {
   /// @param logger a logger instance
   template <typename propagator_state_t, typename stepper_t,
             typename navigator_t>
-  void act(propagator_state_t &state, stepper_t &stepper,
-           navigator_t &navigator, result_type &result,
-           const Acts::Logger &logger) const {
-    assert(generator && "The generator pointer must be valid");
+  void operator()(propagator_state_t &state, stepper_t &stepper,
+                  navigator_t &navigator, result_type &result,
+                  const Acts::Logger &logger) const {
+    assert(generator and "The generator pointer must be valid");
 
     // actors are called once more after the propagation terminated
     if (!result.isAlive) {
       return;
     }
 
-    if (Acts::EndOfWorldReached{}.checkAbort(state, stepper, navigator,
-                                             logger)) {
+    if (Acts::EndOfWorldReached{}(state, stepper, navigator, logger)) {
       result.isAlive = false;
       return;
     }
@@ -110,8 +127,8 @@ struct SimulationActor {
         (result.properTimeLimit - result.particle.properTime() <
          result.properTimeLimit * properTimeRelativeTolerance)) {
       auto descendants = decay.run(generator, result.particle);
-      for (const auto &descendant : descendants) {
-        result.generatedParticles.emplace_back(descendant);
+      for (auto &&descendant : descendants) {
+        result.generatedParticles.emplace_back(std::move(descendant));
       }
       result.isAlive = false;
       return;
@@ -166,7 +183,7 @@ struct SimulationActor {
         Acts::MaterialSlab slab =
             surface.surfaceMaterial()->materialSlab(local);
         // again: interact only if there is valid material to interact with
-        if (slab.isValid()) {
+        if (slab) {
           // adapt material for non-zero incidence
           auto normal = surface.normal(state.geoContext, before.position(),
                                        before.direction());
@@ -201,15 +218,6 @@ struct SimulationActor {
     // continue the propagation with the modified parameters
     stepper.update(state.stepping, after.position(), after.direction(),
                    after.qOverP(), after.time());
-  }
-
-  template <typename propagator_state_t, typename stepper_t,
-            typename navigator_t>
-  bool checkAbort(propagator_state_t & /*state*/, const stepper_t & /*stepper*/,
-                  const navigator_t & /*navigator*/, const result_type &result,
-                  const Acts::Logger & /*logger*/) const {
-    // must return true if the propagation should abort
-    return !result.isAlive;
   }
 
   /// Construct the current particle state from the propagation state.
@@ -254,8 +262,8 @@ struct SimulationActor {
 
   /// Run the interaction simulation for the given material.
   ///
-  /// Simulate all continuous processes and at most one point-like process
-  /// within the material.
+  /// Simulate all continous processes and at most one point-like process within
+  /// the material.
   void interact(const Acts::MaterialSlab &slab, result_type &result) const {
     // run the continuous processes over a fraction of the material. returns
     // true on break condition (same as the underlying physics lists).
@@ -275,7 +283,7 @@ struct SimulationActor {
       // the SimulationActor is in charge of keeping track of the material.
       // since the accumulated material is stored in the particle it could (but
       // should not) be modified by a physics process. to avoid issues, the
-      // material is updated only after process simulation has occurred. this
+      // material is updated only after process simulation has occured. this
       // intentionally overwrites any material updates made by the process.
       result.particle.setMaterialPassed(x0, l0);
       return retval;
@@ -298,7 +306,7 @@ struct SimulationActor {
     //
     // fraction < 0:
     //   this is an error case where the point-like interaction should have
-    //   occurred before reaching the material. not sure how this could happen,
+    //   occured before reaching the material. not sure how this could happen,
     //   but in such a case the point-like interaction happens immediately.
     // 1 < fraction:
     //   the next point-like interaction does not occur within the current

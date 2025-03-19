@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Geant4/ParticleTrackingAction.hpp"
 
@@ -69,7 +69,8 @@ void ActsExamples::ParticleTrackingAction::PostUserTrackingAction(
     const G4Track* aTrack) {
   // The initial particle maybe was not registered because a particle ID
   // collision
-  if (!eventStore().trackIdMapping.contains(aTrack->GetTrackID())) {
+  if (eventStore().trackIdMapping.find(aTrack->GetTrackID()) ==
+      eventStore().trackIdMapping.end()) {
     ACTS_WARNING("Particle ID for track ID " << aTrack->GetTrackID()
                                              << " not registered. Skip");
     return;
@@ -77,7 +78,8 @@ void ActsExamples::ParticleTrackingAction::PostUserTrackingAction(
 
   const auto barcode = eventStore().trackIdMapping.at(aTrack->GetTrackID());
 
-  auto hasHits = eventStore().particleHitCount.contains(barcode) &&
+  auto hasHits = eventStore().particleHitCount.find(barcode) !=
+                     eventStore().particleHitCount.end() &&
                  eventStore().particleHitCount.at(barcode) > 0;
 
   if (!m_cfg.keepParticlesWithoutHits && !hasHits) {
@@ -144,11 +146,13 @@ ActsExamples::ParticleTrackingAction::makeParticleId(G4int trackId,
                                                      G4int parentId) const {
   // We already have this particle registered (it is one of the input particles
   // or we are making a final particle state)
-  if (eventStore().trackIdMapping.contains(trackId)) {
+  if (eventStore().trackIdMapping.find(trackId) !=
+      eventStore().trackIdMapping.end()) {
     return std::nullopt;
   }
 
-  if (!eventStore().trackIdMapping.contains(parentId)) {
+  if (eventStore().trackIdMapping.find(parentId) ==
+      eventStore().trackIdMapping.end()) {
     ACTS_DEBUG("Parent particle " << parentId
                                   << " not registered, cannot build barcode");
     eventStore().parentIdNotFound++;

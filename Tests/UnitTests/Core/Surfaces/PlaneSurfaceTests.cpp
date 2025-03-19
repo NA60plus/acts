@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // #include <boost/test/tools/output_test_stream.hpp>
 #include <boost/test/unit_test.hpp>
@@ -150,24 +150,20 @@ BOOST_AUTO_TEST_CASE(PlaneSurfaceProperties) {
 
   /// Test isOnSurface
   Vector3 offSurface{0, 1, -2.};
-  BOOST_CHECK(planeSurfaceObject->isOnSurface(
-      tgContext, globalPosition, momentum, BoundaryTolerance::None()));
   BOOST_CHECK(planeSurfaceObject->isOnSurface(tgContext, globalPosition,
-                                              BoundaryTolerance::None()));
+                                              momentum, BoundaryCheck(true)));
   BOOST_CHECK(!planeSurfaceObject->isOnSurface(tgContext, offSurface, momentum,
-                                               BoundaryTolerance::None()));
-  BOOST_CHECK(!planeSurfaceObject->isOnSurface(tgContext, offSurface,
-                                               BoundaryTolerance::None()));
+                                               BoundaryCheck(true)));
   //
   // Test intersection
   Vector3 direction{0., 0., 1.};
-  auto sfIntersection = planeSurfaceObject
-                            ->intersect(tgContext, offSurface, direction,
-                                        BoundaryTolerance::None())
-                            .closest();
+  auto sfIntersection =
+      planeSurfaceObject
+          ->intersect(tgContext, offSurface, direction, BoundaryCheck(true))
+          .closest();
   Intersection3D expectedIntersect{Vector3{0, 1, 2}, 4.,
                                    Intersection3D::Status::reachable};
-  BOOST_CHECK(sfIntersection.isValid());
+  BOOST_CHECK(sfIntersection);
   BOOST_CHECK_EQUAL(sfIntersection.position(), expectedIntersect.position());
   BOOST_CHECK_EQUAL(sfIntersection.pathLength(),
                     expectedIntersect.pathLength());
@@ -291,16 +287,16 @@ BOOST_AUTO_TEST_CASE(RotatedTrapezoid) {
   std::shared_ptr<TrapezoidBounds> bounds =
       std::make_shared<TrapezoidBounds>(shortHalfX, longHalfX, halfY);
 
-  BOOST_CHECK(bounds->inside(edgePoint, BoundaryTolerance::None()));
+  BOOST_CHECK(bounds->inside(edgePoint, BoundaryCheck(true)));
   BOOST_CHECK(!bounds->inside(Eigen::Rotation2D(-rotAngle) * edgePoint,
-                              BoundaryTolerance::None()));
+                              BoundaryCheck(true)));
 
   std::shared_ptr<TrapezoidBounds> rotatedBounds =
       std::make_shared<TrapezoidBounds>(shortHalfX, longHalfX, halfY, rotAngle);
 
-  BOOST_CHECK(!rotatedBounds->inside(edgePoint, BoundaryTolerance::None()));
+  BOOST_CHECK(!rotatedBounds->inside(edgePoint, BoundaryCheck(true)));
   BOOST_CHECK(rotatedBounds->inside(Eigen::Rotation2D(-rotAngle) * edgePoint,
-                                    BoundaryTolerance::None()));
+                                    BoundaryCheck(true)));
 }
 
 /// Unit test for testing PlaneSurface alignment derivatives
@@ -336,7 +332,7 @@ BOOST_AUTO_TEST_CASE(PlaneSurfaceAlignment) {
                                                     direction);
   // The expected results
   AlignmentToPathMatrix expAlignToPath = AlignmentToPathMatrix::Zero();
-  expAlignToPath << 1, 0, 0, 2, -1, 0;
+  expAlignToPath << 1, 0, 0, 2, -1, -2;
 
   // Check if the calculated derivative is as expected
   CHECK_CLOSE_ABS(alignToPath, expAlignToPath, 1e-10);
@@ -362,9 +358,9 @@ BOOST_AUTO_TEST_CASE(PlaneSurfaceAlignment) {
       alignToBound.block<1, 6>(eBoundLoc1, eAlignmentCenter0);
   // The expected results
   AlignmentToPathMatrix expAlignToloc0;
-  expAlignToloc0 << 0, 0, 1, 0, 0, 2;
+  expAlignToloc0 << 0, 0, 1, 0, 0, 0;
   AlignmentToPathMatrix expAlignToloc1;
-  expAlignToloc1 << 0, -1, 0, 0, 0, -1;
+  expAlignToloc1 << 0, -1, 0, 0, 0, 0;
   // Check if the calculated derivatives are as expected
   CHECK_CLOSE_ABS(alignToloc0, expAlignToloc0, 1e-10);
   CHECK_CLOSE_ABS(alignToloc1, expAlignToloc1, 1e-10);

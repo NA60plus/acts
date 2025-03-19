@@ -24,7 +24,6 @@ import pytest
 import acts
 import acts.examples
 from acts.examples.odd import getOpenDataDetector
-from acts.examples.simulation import addParticleGun, EtaConfig, ParticleConfig
 
 try:
     import ROOT
@@ -202,40 +201,18 @@ def basic_prop_seq(rng):
         if s is None:
             s = acts.examples.Sequencer(events=10, numThreads=1)
 
-        addParticleGun(
-            s,
-            ParticleConfig(num=10, pdg=acts.PdgParticle.eMuon, randomizeCharge=True),
-            EtaConfig(-4.0, 4.0),
-            rnd=rng,
-        )
-
-        # Run particle smearing
-        trackParametersGenerator = acts.examples.ParticleSmearing(
-            level=acts.logging.INFO,
-            inputParticles="particles_input",
-            outputTrackParameters="start_parameters",
-            randomNumbers=rng,
-            sigmaD0=0.0,
-            sigmaZ0=0.0,
-            sigmaPhi=0.0,
-            sigmaTheta=0.0,
-            sigmaPtRel=0.0,
-        )
-        s.addAlgorithm(trackParametersGenerator)
-
         nav = acts.Navigator(trackingGeometry=geo)
         stepper = acts.StraightLineStepper()
 
         prop = acts.examples.ConcretePropagator(acts.Propagator(stepper, nav))
-
         alg = acts.examples.PropagationAlgorithm(
-            level=acts.logging.WARNING,
             propagatorImpl=prop,
+            level=acts.logging.INFO,
+            randomNumberSvc=rng,
+            ntests=10,
             sterileLogger=False,
-            inputTrackParameters="start_parameters",
-            outputSummaryCollection="propagation_summary",
+            propagationStepCollection="propagation-steps",
         )
-
         s.addAlgorithm(alg)
         return s, alg
 
@@ -251,7 +228,9 @@ def trk_geo():
 DetectorConfig = namedtuple(
     "DetectorConfig",
     [
-        "detectorTuple",
+        "detector",
+        "trackingGeometry",
+        "decorators",
         "geometrySelection",
         "digiConfigFile",
         "name",
@@ -264,9 +243,11 @@ def detector_config(request):
     srcdir = Path(__file__).resolve().parent.parent.parent.parent
 
     if request.param == "generic":
-        detectorTuple = acts.examples.GenericDetector.create()
+        detector, trackingGeometry, decorators = acts.examples.GenericDetector.create()
         return DetectorConfig(
-            detectorTuple,
+            detector,
+            trackingGeometry,
+            decorators,
             geometrySelection=(
                 srcdir
                 / "Examples/Algorithms/TrackFinding/share/geoSelection-genericDetector.json"
@@ -285,9 +266,11 @@ def detector_config(request):
             srcdir / "thirdparty/OpenDataDetector/data/odd-material-maps.root",
             level=acts.logging.INFO,
         )
-        detectorTuple = getOpenDataDetector(matDeco)
+        detector, trackingGeometry, decorators = getOpenDataDetector(matDeco)
         return DetectorConfig(
-            detectorTuple,
+            detector,
+            trackingGeometry,
+            decorators,
             digiConfigFile=(
                 srcdir
                 / "thirdparty/OpenDataDetector/config/odd-digi-smearing-config.json"
@@ -297,6 +280,7 @@ def detector_config(request):
             ),
             name=request.param,
         )
+
     else:
         raise ValueError(f"Invalid detector {detector}")
 
@@ -381,18 +365,16 @@ def fatras(ptcl_gun, trk_geo, rng):
 def _do_material_recording(d: Path):
     from material_recording import runMaterialRecording
 
+    detector, trackingGeometry, decorators = getOpenDataDetector()
+
+    detectorConstructionFactory = (
+        acts.examples.geant4.dd4hep.DDG4DetectorConstructionFactory(detector)
+    )
+
     s = acts.examples.Sequencer(events=2, numThreads=1)
 
-    with getOpenDataDetector() as (detector, trackingGeometry, decorators):
-        detectorConstructionFactory = (
-            acts.examples.geant4.dd4hep.DDG4DetectorConstructionFactory(detector)
-        )
-
-        runMaterialRecording(
-            detectorConstructionFactory, str(d), tracksPerEvent=100, s=s
-        )
-
-        s.run()
+    runMaterialRecording(detectorConstructionFactory, str(d), tracksPerEvent=100, s=s)
+    s.run()
 
 
 @pytest.fixture(scope="session")

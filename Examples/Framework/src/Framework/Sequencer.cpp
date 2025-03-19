@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Framework/Sequencer.hpp"
 
@@ -29,7 +29,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
-#include <fstream>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -51,6 +50,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/core/demangle.hpp>
+#include <dfe/dfe_io_dsv.hpp>
+#include <dfe/dfe_namedtuple.hpp>
 
 namespace ActsExamples {
 
@@ -171,6 +172,10 @@ void Sequencer::addElement(const std::shared_ptr<SequenceElement>& element) {
   std::string elementTypeCapitalized = elementType;
   elementTypeCapitalized[0] = std::toupper(elementTypeCapitalized[0]);
   ACTS_INFO("Add " << elementType << " '" << element->name() << "'");
+
+  if (!m_cfg.runDataFlowChecks) {
+    return;
+  }
 
   auto symbol = [&](const char* in) {
     std::string s = demangleAndShorten(in);
@@ -385,20 +390,27 @@ inline std::string perEvent(D duration, std::size_t numEvents) {
   return asString(duration / numEvents) + "/event";
 }
 
+// Store timing data
+struct TimingInfo {
+  std::string identifier;
+  double time_total_s = 0;
+  double time_perevent_s = 0;
+
+  DFE_NAMEDTUPLE(TimingInfo, identifier, time_total_s, time_perevent_s);
+};
+
 void storeTiming(const std::vector<std::string>& identifiers,
                  const std::vector<Duration>& durations, std::size_t numEvents,
                  const std::string& path) {
-  std::ofstream file(path);
-
-  file << "identifier,time_total_s,time_perevent_s\n";
-
+  dfe::NamedTupleTsvWriter<TimingInfo> writer(path, 4);
   for (std::size_t i = 0; i < identifiers.size(); ++i) {
-    const auto time_total_s =
+    TimingInfo info;
+    info.identifier = identifiers[i];
+    info.time_total_s =
         std::chrono::duration_cast<Seconds>(durations[i]).count();
-    file << identifiers[i] << "," << time_total_s << ","
-         << time_total_s / numEvents << "\n";
+    info.time_perevent_s = info.time_total_s / numEvents;
+    writer.append(info);
   }
-  file << "\n";
 }
 }  // namespace
 
@@ -615,11 +627,13 @@ void Sequencer::fpeReport() const {
 
     std::vector<std::reference_wrapper<const Acts::FpeMonitor::Result::FpeInfo>>
         sorted;
-    std::transform(merged.stackTraces().begin(), merged.stackTraces().end(),
-                   std::back_inserter(sorted),
-                   [](const auto& f) -> const auto& { return f; });
-    std::ranges::sort(sorted, std::greater{},
-                      [](const auto& s) { return s.get().count; });
+    std::transform(
+        merged.stackTraces().begin(), merged.stackTraces().end(),
+        std::back_inserter(sorted),
+        [](const auto& f) -> const auto& { return f; });
+    std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
+      return a.get().count > b.get().count;
+    });
 
     std::vector<std::reference_wrapper<const Acts::FpeMonitor::Result::FpeInfo>>
         remaining;

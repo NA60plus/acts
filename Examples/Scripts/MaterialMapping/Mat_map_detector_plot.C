@@ -1,14 +1,12 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <TROOT.h>
-
-#include "Acts/Utilities/Helpers.hpp"
 
 #include "materialPlotHelper.cpp"
 
@@ -19,7 +17,7 @@
 /// Draw and save the histograms.
 
 void plot(std::vector<TH2F*> Map, std::vector<int> detectors, const std::string& name){
-
+  
   std::string sVol = "Detector volumes :";
   for(auto const& det: detectors) {
     sVol += " ";
@@ -100,8 +98,8 @@ void Initialise_hist(std::vector<TH2F*>& detector_hist){
 /// Fill the histograms for the detector.
 
 void Fill(std::vector<TH2F*>& detector_hist, const std::string& input_file, std::vector<int> detectors,  const int& nbprocess){
-
-
+  
+  
   Initialise_hist(detector_hist);
 
   //Get file, tree and set top branch address
@@ -131,7 +129,7 @@ void Fill(std::vector<TH2F*>& detector_hist, const std::string& input_file, std:
   tree->SetBranchAddress("sur_type",&sur_type);
 
   tree->SetBranchAddress("vol_id",&vol_id);
-
+  
   int nentries = tree->GetEntries();
   if(nentries > nbprocess && nbprocess != -1) nentries = nbprocess;
   // Loop over all the material tracks.
@@ -146,7 +144,7 @@ void Fill(std::vector<TH2F*>& detector_hist, const std::string& input_file, std:
     for(int j=0; j<mat_X0->size(); j++ ){
 
       Acts::GeometryIdentifier ID;
-
+      
       if(sur_id->at(j) != 0){
         ID = Acts::GeometryIdentifier(sur_id->at(j));
       }
@@ -155,7 +153,7 @@ void Fill(std::vector<TH2F*>& detector_hist, const std::string& input_file, std:
       }
 
       // Check if the volume/surface is part of the selected ones
-      if(rangeContainsValue(detectors, ID.volume())) {
+      if(std::find(detectors.begin(), detectors.end(), ID.volume()) != detectors.end()) {
         matX0 += mat_step_length->at(j) / mat_X0->at(j);
         matL0 += mat_step_length->at(j) / mat_L0->at(j);
       }

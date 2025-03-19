@@ -38,6 +38,7 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>
 
+
 #include "TRandom.h"
 
 ActsExamples::MatchingAlgorithm::MatchingAlgorithm(
@@ -104,42 +105,34 @@ ActsExamples::MatchingAlgorithm::MatchingAlgorithm(
     handle->initialize(spName);
   }
 
-  // m_inputTrackParametersMS.initialize(m_cfg.inputTrackParametersMS);
-  // m_inputTrackParametersVT.initialize(m_cfg.inputTrackParametersVT);
-  // m_inputTrackContainerMS.initialize(m_cfg.inputTrackContainerMS);
-  // m_inputTrackContainerVT.initialize(m_cfg.inputTrackContainerVT);
-
   m_outputTrackParameters.initialize(m_cfg.outputTrackParameters);
-  m_outputTracks.initialize(m_cfg.outputTracks);
+  m_outputTracksVT.initialize(m_cfg.outputTracksVT);
+  m_outputTracksMS.initialize(m_cfg.outputTracksMS);
+  m_outputTracksRefit.initialize(m_cfg.outputTracksRefit);
   m_outputMatchedTracks.initialize(m_cfg.outputMatchedTracks);
   m_inputParticles.initialize(m_cfg.inputParticles);
   m_inputMeasurementParticlesMapVT.initialize(
       m_cfg.inputMeasurementParticlesMapVT);
   m_inputMeasurementParticlesMapMS.initialize(
       m_cfg.inputMeasurementParticlesMapMS);
-  m_inputVertices.initialize(m_cfg.inputVertices);
-
+  m_inputMeasurements.initialize(m_cfg.inputMeasurements);
 }
 
 ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
     const AlgorithmContext& ctx) const {
-  // const auto& paramsVTinput = m_inputTrackParametersVT(ctx);
-  // const auto& paramsMSinput = m_inputTrackParametersMS(ctx);
-  // const auto& trackContainterVT = m_inputTrackContainerVT(ctx);
-  // const auto& trackContainterMS = m_inputTrackContainerMS(ctx);
+
   const auto& hitParticlesMapMS = m_inputMeasurementParticlesMapMS(ctx);
   const auto& hitParticlesMapVT = m_inputMeasurementParticlesMapVT(ctx);
 
-  // Construct a perigee surface as the target surface
-  const auto& inputVertices = m_inputVertices(ctx);
+  const auto& measurements = m_inputMeasurements(ctx);
+
   Acts::Vector3 propPoint = Acts::Vector3{m_cfg.px, m_cfg.py, m_cfg.pz};
-  std::cout<<"test vtx:\n";
-  for(auto& vt: inputVertices)
-    std::cout<<vt.position()<<std::endl;
-  if (m_cfg.useRecVtx)
-    propPoint = inputVertices[0].position();
 
   auto pSurface = Acts::Surface::makeShared<Acts::PerigeeSurface>(propPoint);
+
+  //const Acts::Surface* pSurface = m_cfg.trackingGeometry->findSurface(m_cfg.geoIdMatching);
+
+  //auto pSurface = Acts::Surface::makeShared<Acts::Surface>(m_cfg.trackingGeometry->findSurface(m_cfg.geoIdMatching));
 
   Acts::Propagator<Acts::EigenStepper<>, Acts::Navigator> extrapolator(
       Acts::EigenStepper<>(m_cfg.magneticField),
@@ -151,8 +144,10 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
   // Set up EigenStepper
   Acts::EigenStepper<> stepper(m_cfg.magneticField);
 
-  Acts::PropagatorPlainOptions pOptions(ctx.geoContext, ctx.magFieldContext);
-  //Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
+  Acts::PropagatorOptions<Acts::ActionList<Acts::MaterialInteractor>,
+                          Acts::AbortList<Acts::EndOfWorldReached>>
+      extrapolationOptions(ctx.geoContext, ctx.magFieldContext);
+  Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
 
   Acts::FullBilloirVertexFitter::Config vertexFitterCfg;
   vertexFitterCfg.extractParameters
@@ -169,10 +164,19 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
   std::vector<ParticleHitCount> particleHitCountsVT;
   std::vector<ParticleHitCount> particleHitCountsMS;
 
-  // auto inputTracksVT = makeInputTracks(paramsVTinput);
+  TrackContainer matchedTracksVT{
+      std::make_shared<Acts::VectorTrackContainer>(),
+      std::make_shared<Acts::VectorMultiTrajectory>()};
+
+  TrackContainer matchedTracksMS{
+      std::make_shared<Acts::VectorTrackContainer>(),
+      std::make_shared<Acts::VectorMultiTrajectory>()};
+
+  bool first = true;
+
   auto it1MS = m_inputTrackParametersMS.begin();
   auto it2MS = m_inputTrackContainerMS.begin();
-
+  std::vector<int> ntracksVTs;
   for (; it1MS != m_inputTrackParametersMS.end() &&
          it2MS != m_inputTrackContainerMS.end();
        ++it1MS, ++it2MS) {
@@ -186,17 +190,15 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
     indexMS = 0;
     for (auto& trackMS : inputTracksMS) {
       indexVT = -1;
-      bool isRec = false;
       std::pair<TrackProxyType, TrackProxyType> trackPairTmp(
           trackContainterMS.getTrack(indexMS),
           trackContainterMS.getTrack(indexMS));
       std::pair<int, int> trackPairIndex(indexMS, indexMS);
 
-      // std::cout<<"Muon bef index: "<<indexMS<<std::endl;
       identifyContributingParticles(hitParticlesMapMS,
                                     trackContainterMS.getTrack(indexMS),
                                     particleHitCountsMS);
-      // std::cout<<"Muon aft index: "<<indexMS<<std::endl;
+
 
       if (particleHitCountsMS.empty()) {
         ACTS_DEBUG(
@@ -208,7 +210,6 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
       ActsFatras::Barcode majorityParticleIdMS =
           particleHitCountsMS.front().particleId;
       ActsFatras::Barcode majorityParticleIdVT;
-      ActsFatras::Barcode majorityParticleIdVTNoLoc;
 
       indexMS += 1;
 
@@ -221,7 +222,6 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
         continue;
       }
       float chi2 = 1e12;
-      float chi2NoLoc = 1e12;
       const auto& endParamsMS = *resMS;
 
       Acts::BoundVector paramsMS = endParamsMS.parameters();
@@ -238,63 +238,32 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
       Acts::ActsScalar phiMS = paramsMS(Acts::BoundIndices::eBoundPhi);
       Acts::ActsScalar thetaMS = paramsMS(Acts::BoundIndices::eBoundTheta);
       Acts::ActsScalar qOvPMS = paramsMS(Acts::BoundIndices::eBoundQOverP);
-    /*
-  /// Phi direction.
-  Scalar phi() const { return m_params[eBoundPhi]; }
-  /// Theta direction.
-  Scalar theta() const { return m_params[eBoundTheta]; }
-  /// Charge over momentum.
-  Scalar qOverP() const { return m_params[eBoundQOverP]; }*/
-      Acts::ActsScalar loc0MS_pre = params1.localPosition()[0];
-      Acts::ActsScalar loc1MS_pre = params1.localPosition()[1];
-      Acts::ActsScalar phiMS_pre = params1.phi();
-      Acts::ActsScalar thetaMS_pre = params1.theta();
-      Acts::ActsScalar qOvPMS_pre = params1.qOverP();
-
-      std::cout<<"loc0: "<<loc0MS<<" "<<loc0MS_pre<<std::endl;
-      std::cout<<"loc1: "<<loc1MS<<" "<<loc1MS_pre<<std::endl;
-      std::cout<<"phiM: "<<phiMS<<" "<<phiMS_pre<<std::endl;
-      std::cout<<"thet: "<<thetaMS<<" "<<thetaMS_pre<<std::endl;
-      std::cout<<"qOvP: "<<qOvPMS<<" "<<qOvPMS_pre<<std::endl;
-
-      Acts::ActsScalar loc0VTmatch = 0;
-      Acts::ActsScalar loc1VTmatch = 0;
-      Acts::ActsScalar phiVTmatch = 0;
-      Acts::ActsScalar thetaVTmatch = 0;
-      Acts::ActsScalar qOvPVTmatch = 0;
-
-      Acts::ActsScalar covLoc0VTmatch = 0;
-      Acts::ActsScalar covLoc1VTmatch = 0;
-      Acts::ActsScalar covPhiVTmatch = 0;
-      Acts::ActsScalar covThetaVTmatch = 0;
-      Acts::ActsScalar covQOvPVTmatch = 0;
-
+      
+      int indexContVtBest = 0;
+      int indexContVt = -1;
       auto it1VT = m_inputTrackParametersVT.begin();
       auto it2VT = m_inputTrackContainerVT.begin();
-      int counter = 0;
-      // auto inputTracksVT = makeInputTracks(paramsVTinput);
+
       for (; it1VT != m_inputTrackParametersVT.end() &&
              it2VT != m_inputTrackContainerVT.end();
            ++it1VT, ++it2VT) {
         const auto& itrkparVT = *it1VT;
         const auto& itrkconVT = *it2VT;
-        // for (const auto& itrkparVT : m_inputTrackParametersVT) {
+
         const auto& paramsVTinput = (*itrkparVT)(ctx);
         const auto& trackContainterVT = (*itrkconVT)(ctx);
-        std::cout<<"new container "<<counter<<std::endl;
-        counter++;
+        indexContVt++;
         indexVT = -1;
         auto inputTracksVT = makeInputTracks(paramsVTinput);
+        int ntracksVT = 0;
         for (auto& trackVT : inputTracksVT) {
+          ntracksVT++;
           indexVT++;
           Acts::BoundTrackParameters params2 =
               vertexFitterCfg.extractParameters(trackVT);
           const auto resVT =
               extrapolator.propagateToSurface(params2, *pSurface, pOptions);
 
-          std::cout << "VT bef index: " << indexVT << " tipIdx: "
-                    << trackContainterVT.getTrack(indexVT).tipIndex()
-                    << std::endl;
           identifyContributingParticles(hitParticlesMapVT,
                                         trackContainterVT.getTrack(indexVT),
                                         particleHitCountsVT);
@@ -304,15 +273,8 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
                 "No truth particle associated with this trajectory with tip "
                 "index = "
                 << trackContainterVT.getTrack(indexVT).tipIndex());
-            std::cout
-                << "No truth particle associated with this trajectory with "
-                   "tip index = "
-                << trackContainterVT.getTrack(indexVT).tipIndex() << std::endl;
-
             continue;
           }
-          std::cout << "particle: " << particleHitCountsVT.front().particleId
-                    << std::endl;
 
           if (!resVT.ok()) {
             continue;
@@ -334,253 +296,132 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
           Acts::ActsScalar thetaVT = paramsVT(Acts::BoundIndices::eBoundTheta);
           Acts::ActsScalar qOvPVT = paramsVT(Acts::BoundIndices::eBoundQOverP);
 
-          float chi2tmp =
-              (loc0VT - loc0MS) * (loc0VT - loc0MS) / (covLoc0VT + covLoc0MS);
-          chi2tmp +=
-              (loc1VT - loc1MS) * (loc1VT - loc1MS) / (covLoc1VT + covLoc1MS);
-          chi2tmp += (phiVT - phiMS) * (phiVT - phiMS) / (covPhiVT + covPhiMS);
-          chi2tmp += (thetaVT - thetaMS) * (thetaVT - thetaMS) /
-                     (covThetaVT + covThetaMS);
-          chi2tmp +=
-              (qOvPVT - qOvPMS) * (qOvPVT - qOvPMS) / (covQOvPVT + covQOvPMS);
+          float chi2tmp  = (loc0VT - loc0MS) * (loc0VT - loc0MS) / (covLoc0VT + covLoc0MS);
+                chi2tmp += (loc1VT - loc1MS) * (loc1VT - loc1MS) / (covLoc1VT + covLoc1MS);
+                chi2tmp += (phiVT - phiMS) * (phiVT - phiMS) / (covPhiVT + covPhiMS);
+                chi2tmp += (thetaVT - thetaMS) * (thetaVT - thetaMS) / (covThetaVT + covThetaMS);
+                chi2tmp += (qOvPVT - qOvPMS) * (qOvPVT - qOvPMS) / (covQOvPVT + covQOvPMS);
 
-          float chi2tmpNoLoc =
-              (phiVT - phiMS) * (phiVT - phiMS) / (covPhiVT + covPhiMS);
-          chi2tmp += (thetaVT - thetaMS) * (thetaVT - thetaMS) /
-                     (covThetaVT + covThetaMS);
-          chi2tmp +=
-              (qOvPVT - qOvPMS) * (qOvPVT - qOvPMS) / (covQOvPVT + covQOvPMS);
-
-          // write stuff for chi2 comparisons
-
-          if (majorityParticleIdMS == particleHitCountsVT.front().particleId) {
-            std::cout << "Match: chi2  = " << chi2tmp << std::endl;
-            std::cout << "Match: chi2Noloc  = " << chi2tmpNoLoc << std::endl;
-            isRec = true;
-          } else {
-            std::cout << "Fake: chi2  = " << chi2tmp << std::endl;
-            std::cout << "Fake: chi2Noloc  = " << chi2tmpNoLoc << std::endl;
-          }
-
-          if (chi2tmpNoLoc < chi2NoLoc) {
-            chi2NoLoc = chi2tmpNoLoc;
-            majorityParticleIdVTNoLoc = particleHitCountsVT.front().particleId;
-          }
           if (chi2tmp < chi2) {
+            indexContVtBest = indexContVt;
             chi2 = chi2tmp;
             trackPairTmp.second = trackContainterVT.getTrack(indexVT);
             trackPairIndex.second = indexVT;
             majorityParticleIdVT = particleHitCountsVT.front().particleId;
-            loc0VTmatch = loc0VT;
-            loc1VTmatch = loc1VT;
-            phiVTmatch = phiVT;
-            thetaVTmatch = thetaVT;
-            qOvPVTmatch = qOvPVT;
-            covLoc0VTmatch = covLoc0VT;
-            covLoc1VTmatch = covLoc1VT;
-            covPhiVTmatch = covPhiVT;
-            covThetaVTmatch = covThetaVT;
-            covQOvPVTmatch = covQOvPVT;
           }
-        }
-      }
-      if (chi2NoLoc != m_cfg.chi2max &&
-          trackPairTmp.first != trackPairTmp.second && isRec) {
-        if (majorityParticleIdVTNoLoc == majorityParticleIdMS) {
-          std::cout << "NOLOCRECMATCHED4!!!!!  p = " << 1. / qOvPMS << ", "
-                    << thetaMS << ", " << phiMS << std::endl;
-        } else {
-          std::cout << "NOLOCRECFAKE MATCH4!!! p = " << 1. / qOvPMS << ", "
-                    << thetaMS << ", " << phiMS << std::endl;
-        }
-      }
 
-      if (chi2NoLoc != m_cfg.chi2max &&
-          trackPairTmp.first != trackPairTmp.second) {
-        if (majorityParticleIdVTNoLoc == majorityParticleIdMS) {
-          std::cout << "NOLOCMATCHED3!!!!!  p = " << 1. / qOvPMS << ", "
-                    << thetaMS << ", " << phiMS << std::endl;
-        } else {
-          std::cout << "NOLOCFAKE MATCH3!!! p = " << 1. / qOvPMS << ", "
-                    << thetaMS << ", " << phiMS << std::endl;
         }
-      }
-
-      if (chi2 != m_cfg.chi2max && trackPairTmp.first != trackPairTmp.second &&
-          isRec) {
-        if (majorityParticleIdVT == majorityParticleIdMS) {
-          std::cout << "RECMATCHED2!!!!!  p = " << 1. / qOvPMS << ", "
-                    << thetaMS << ", " << phiMS << std::endl;
-        } else {
-          std::cout << "RECFAKE MATCH2!!! p = " << 1. / qOvPMS << ", "
-                    << thetaMS << ", " << phiMS << std::endl;
-        }
+        ntracksVTs.push_back(ntracksVT);
       }
 
       if (chi2 != m_cfg.chi2max && trackPairTmp.first != trackPairTmp.second) {
+        //if (majorityParticleIdVT == majorityParticleIdMS) {
         trackPairs.push_back(trackPairTmp);
-        if (majorityParticleIdVT == majorityParticleIdMS) {
-          std::cout << "MATCHED1!!!!!  p = " << 1. / qOvPMS << ", " << thetaMS
-                    << ", " << phiMS << std::endl;
-          std::cout << "chi2/ndf " << chi2 << std::endl;
-          std::cout << "loc0MS: " << loc0MS << " loc0VT: " << loc0VTmatch
-                    << std::endl;
-          std::cout << "loc1MS: " << loc1MS << " loc1VT: " << loc1VTmatch
-                    << std::endl;
-          std::cout << "phiMS: " << phiMS << " phiVT: " << phiVTmatch
-                    << std::endl;
-          std::cout << "thetaMS: " << thetaMS << " thetaVT: " << thetaVTmatch
-                    << std::endl;
-          std::cout << "qOvPMS: " << qOvPMS << " qOvPVT: " << qOvPVTmatch
-                    << std::endl;
+          const auto& itrkparVT = m_inputTrackParametersVT[indexContVtBest];
+          const auto& paramsVTinput = (*itrkparVT)(ctx);
+          
+          auto itVTTmp = m_inputTrackContainerVT.begin();
+          const auto& itrkconVTTmp = *itVTTmp;
+          const auto& trackContainterVT = (*itrkconVTTmp)(ctx);
+          if (first) {
+            matchedTracksVT.ensureDynamicColumns(trackContainterVT);
+            matchedTracksMS.ensureDynamicColumns(trackContainterMS);
+            first = false;
+          }
 
-          std::cout << "dloc0VT : "
-                    << (loc0VTmatch - loc0MS) * (loc0VTmatch - loc0MS) /
-                           (covLoc0VTmatch + covLoc0MS)
-                    << std::endl;
-          std::cout << "dloc1VT : "
-                    << (loc1VTmatch - loc1MS) * (loc1VTmatch - loc1MS) /
-                           (covLoc1VTmatch + covLoc1MS)
-                    << std::endl;
-          std::cout << "dphiVT  : "
-                    << (phiVTmatch - phiMS) * (phiVTmatch - phiMS) /
-                           (covPhiVTmatch + covPhiMS)
-                    << std::endl;
-          std::cout << "dthetaVT: "
-                    << (thetaVTmatch - thetaMS) * (thetaVTmatch - thetaMS) /
-                           (covThetaVTmatch + covThetaMS)
-                    << std::endl;
-          std::cout << "dqOvPVT : "
-                    << (qOvPVTmatch - qOvPMS) * (qOvPVTmatch - qOvPMS) /
-                           (covQOvPVTmatch + covQOvPMS)
-                    << std::endl;
+          auto destProxyMS = matchedTracksMS.makeTrack();
+          auto srcProxyMS = trackPairTmp.first;
+          destProxyMS.copyFrom(srcProxyMS, true);
+          destProxyMS.tipIndex() = srcProxyMS.tipIndex();
+          destProxyMS.parameters() = endParamsMS.parameters();
+          if (endParamsMS.covariance().has_value()) {
+            destProxyMS.covariance() = endParamsMS.covariance().value();
+          }
+        
+          auto inputTracksVT = makeInputTracks(paramsVTinput);  
 
-          std::cout << "MS: " << majorityParticleIdMS << std::endl;
-          std::cout << "VT: " << majorityParticleIdVT << std::endl;
-        } else {
-          std::cout << "FAKE MATCH1!!! p = " << 1. / qOvPMS << ", " << thetaMS
-                    << ", " << phiMS << std::endl;
-          std::cout << "chi2/ndf " << chi2 << std::endl;
-          std::cout << "loc0MS: " << loc0MS << " loc0VT: " << loc0VTmatch
-                    << std::endl;
-          std::cout << "loc1MS: " << loc1MS << " loc1VT: " << loc1VTmatch
-                    << std::endl;
-          std::cout << "phiMS: " << phiMS << " phiVT: " << phiVTmatch
-                    << std::endl;
-          std::cout << "thetaMS: " << thetaMS << " thetaVT: " << thetaVTmatch
-                    << std::endl;
-          std::cout << "qOvPMS: " << qOvPMS << " qOvPVT: " << qOvPVTmatch
-                    << std::endl;
+          Acts::BoundTrackParameters params2Tmp =
+              vertexFitterCfg.extractParameters(inputTracksVT[trackPairIndex.second]);
+          const auto resVTki =
+              extrapolator.propagateToSurface(params2Tmp, *pSurface, pOptions);
+          auto& matchParamsVT = *resVTki;
 
-          std::cout << "dloc0VT : "
-                    << (loc0VTmatch - loc0MS) * (loc0VTmatch - loc0MS) /
-                           (covLoc0VTmatch + covLoc0MS)
-                    << std::endl;
-          std::cout << "dloc1VT : "
-                    << (loc1VTmatch - loc1MS) * (loc1VTmatch - loc1MS) /
-                           (covLoc1VTmatch + covLoc1MS)
-                    << std::endl;
-          std::cout << "dphiVT  : "
-                    << (phiVTmatch - phiMS) * (phiVTmatch - phiMS) /
-                           (covPhiVTmatch + covPhiMS)
-                    << std::endl;
-          std::cout << "dthetaVT: "
-                    << (thetaVTmatch - thetaMS) * (thetaVTmatch - thetaMS) /
-                           (covThetaVTmatch + covThetaMS)
-                    << std::endl;
-          std::cout << "dqOvPVT : "
-                    << (qOvPVTmatch - qOvPMS) * (qOvPVTmatch - qOvPMS) /
-                           (covQOvPVTmatch + covQOvPMS)
-                    << std::endl;
+          auto destProxyVT = matchedTracksVT.makeTrack();
+          auto srcProxyVT = trackPairTmp.second;
+          destProxyVT.copyFrom(srcProxyVT, true);
+          destProxyVT.tipIndex() = srcProxyVT.tipIndex();
+          destProxyVT.parameters() = matchParamsVT.parameters();
+          if (matchParamsVT.covariance().has_value()) {
+            destProxyVT.covariance() = matchParamsVT.covariance().value();
+          }
 
-          std::cout << "MS: " << majorityParticleIdMS << std::endl;
-          std::cout << "VT: " << majorityParticleIdVT << std::endl;
-        }
       }
     }
   }
 
-  //////////////
-  // REFIT PSEUDOCODE
-  //////////////
-
-  // Perform the fit for each input track
-  std::cout << "START REFITTING" << std::endl;
   std::vector<Acts::SourceLink> trackSourceLinks;
-  std::vector<const Acts::Surface*> surfSequence;
-  RefittingCalibrator calibrator;
+
   auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
   auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
   TrackContainer tracks(trackContainer, trackStateContainer);
-  int counter = 0;
+
+  ActsExamples::PassThroughCalibrator pcalibrator;
+  ActsExamples::MeasurementCalibratorAdapter calibrator(pcalibrator,
+                                                        measurements);
+
+  TrackFitterFunction::GeneralFitterOptions options{
+      ctx.geoContext, ctx.magFieldContext, ctx.calibContext, pSurface.get(),
+      Acts::PropagatorPlainOptions()};
 
   for (auto& pair : trackPairs) {
     auto trackMS = pair.first;
     auto trackVT = pair.second;
-    std::cout<<"pair: "<<counter<<"\n";
-    //std::cout<<"trackMS: "<<trackMS<<"\n";
-    //std::cout<<"trackVT: "<<trackVT<<"\n";
 
     trackSourceLinks.clear();
-    surfSequence.clear();
-    Acts::PropagatorPlainOptions pOptionsTmp(ctx.geoContext, ctx.magFieldContext);
 
-    TrackFitterFunction::GeneralFitterOptions options{
-        ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-        &trackVT.referenceSurface(), pOptionsTmp};
+    auto paramsFit = trackVT.covariance();
+    Eigen::Matrix<double, 6, 6> tempParamsFit = paramsFit;  // Copy the data
+    for(int i=0;i<6;i++)
+      for(int j=0;j<6;j++)
+        tempParamsFit(i, j) *= 100.0;  
 
     const Acts::BoundTrackParameters initialParams(
         trackVT.referenceSurface().getSharedPtr(), trackVT.parameters(),
-        trackVT.covariance(), trackVT.particleHypothesis());
-    
+        trackVT.covariance(), trackMS.particleHypothesis());
 
-    // Fill the source links via their indices from the container
-    /*
-    for (auto hitIndex : protoTrack) {
-      if (auto it = sourceLinks.nth(hitIndex); it != sourceLinks.end()) {
-        const IndexSourceLink& sourceLink = *it;
-        trackSourceLinks.push_back(Acts::SourceLink{sourceLink});
-      } else {
-        ACTS_FATAL("Proto track " << itrack << " contains invalid hit index"
-                                  << hitIndex);
-        return ProcessCode::ABORT;
+    for (auto state : trackMS.trackStatesReversed()) {
+      if (!state.hasCalibrated()) {
+        continue;
       }
+      auto source_link =
+          state.getUncalibratedSourceLink().template get<IndexSourceLink>();
+      trackSourceLinks.push_back(Acts::SourceLink{source_link});
     }
 
     for (auto state : trackVT.trackStatesReversed()) {
-      surfSequence.push_back(&state.referenceSurface());
-      auto sl = RefittingCalibrator::RefittingSourceLink{state};
-      trackSourceLinks.push_back(Acts::SourceLink{sl});
-    }
-    */
-
-    for (auto state : trackMS.trackStatesReversed()) {
-      surfSequence.push_back(&state.referenceSurface());
-      auto sl = RefittingCalibrator::RefittingSourceLink{state};
-      trackSourceLinks.push_back(Acts::SourceLink{sl});
-    }
-
-    if (surfSequence.empty()) {
-      std::cout<<"Empty surf found.\n";
-      ACTS_WARNING("Empty surf found.");
-      continue;
+      if (!state.hasCalibrated()) {
+        continue;
+      }
+      auto source_link =
+          state.getUncalibratedSourceLink().template get<IndexSourceLink>();
+      trackSourceLinks.push_back(Acts::SourceLink{source_link});
     }
     
     if (trackSourceLinks.empty()) {
-      std::cout<<"Empty track found.\n";
       ACTS_WARNING("Empty track found.");
       continue;
     }
-    
-    std::cout<<"bef fit\n";
-    auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options, calibrator, surfSequence, tracks);
-    std::cout<<"fail in fit\n";
+    std::reverse(trackSourceLinks.begin(), trackSourceLinks.end());
+
+    auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options,
+                               calibrator, tracks);
+
     if (result.ok()) {
       // Get the fit output object
       const auto& refittedTrack = result.value();
+
       if (refittedTrack.hasReferenceSurface()) {
         ACTS_VERBOSE("Refitted parameters for track ");
-        ACTS_VERBOSE("  " << trackMS.parameters().transpose());
       } else {
         ACTS_DEBUG("No refitted parameters for track ");
       }
@@ -589,17 +430,48 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
                    << result.error() << ", " << result.error().message());
     }
   }
-  // m_outputTrackParameters(ctx, std::move(outputTrackParameter));
+
   ConstTrackContainer constTracks{
       std::make_shared<Acts::ConstVectorTrackContainer>(
           std::move(*trackContainer)),
       std::make_shared<Acts::ConstVectorMultiTrajectory>(
           std::move(*trackStateContainer))};
 
-  m_outputTracks(ctx, std::move(constTracks));
+  m_outputTracksRefit(ctx, std::move(constTracks));
 
   m_outputMatchedTracks(ctx, std::move(trackPairs));
-  m_outputMatchedTracks(ctx, std::move(trackPairs));
 
+  int counter = 0;
+  for(auto ntracksVT : ntracksVTs){
+    if(ntracksVT != 1){
+      break;
+    }
+    counter++;
+  }
+
+  auto itVT = m_inputTrackContainerVT.begin();
+  //itVT+=counter;
+  const auto& itrkconVT = *itVT;
+  const auto& trackContainterVT = (*itrkconVT)(ctx);
+  ActsExamples::ConstTrackContainer outputTracksVT{
+      std::make_shared<Acts::ConstVectorTrackContainer>(
+          std::move(matchedTracksVT.container())),
+      trackContainterVT.trackStateContainerHolder()};
+
+  m_outputTracksVT(ctx, std::move(outputTracksVT));
+
+
+  auto itMS = m_inputTrackContainerMS.begin();
+  const auto& itrkconMS = *itMS;
+  const auto& trackContainterMS = (*itrkconMS)(ctx);
+  ActsExamples::ConstTrackContainer outputTracksMS{
+      std::make_shared<Acts::ConstVectorTrackContainer>(
+          std::move(matchedTracksMS.container())),
+      trackContainterMS.trackStateContainerHolder()};
+
+  m_outputTracksMS(ctx, std::move(outputTracksMS));
+
+
+  
   return ActsExamples::ProcessCode::SUCCESS;
 }

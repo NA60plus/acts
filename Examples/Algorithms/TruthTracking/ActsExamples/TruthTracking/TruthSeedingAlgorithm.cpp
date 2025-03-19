@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/TruthTracking/TruthSeedingAlgorithm.hpp"
 
@@ -151,9 +151,11 @@ ActsExamples::ProcessCode ActsExamples::TruthSeedingAlgorithm::execute(
       continue;
     }
     // Sort the space points
-    std::ranges::sort(spacePointsOnTrack, {}, [](const SimSpacePoint* s) {
-      return std::hypot(s->r(), s->z());
-    });
+    std::sort(spacePointsOnTrack.begin(), spacePointsOnTrack.end(),
+              [](const SimSpacePoint* lhs, const SimSpacePoint* rhs) {
+                return std::hypot(lhs->r(), lhs->z()) <
+                       std::hypot(rhs->r(), rhs->z());
+              });
 
     // Loop over the found space points to find the seed with maximum deltaR
     // between the bottom and top space point
@@ -181,14 +183,14 @@ ActsExamples::ProcessCode ActsExamples::TruthSeedingAlgorithm::execute(
     }
 
     if (seedFound) {
-      SimSeed seed{*spacePointsOnTrack[bestSPIndices[0]],
-                   *spacePointsOnTrack[bestSPIndices[1]],
-                   *spacePointsOnTrack[bestSPIndices[2]]};
-      seed.setVertexZ(
-          static_cast<float>(spacePointsOnTrack[bestSPIndices[1]]->z()));
+      SimSeed seed{
+          *spacePointsOnTrack[bestSPIndices[0]],
+          *spacePointsOnTrack[bestSPIndices[1]],
+          *spacePointsOnTrack[bestSPIndices[2]],
+          static_cast<float>(spacePointsOnTrack[bestSPIndices[1]]->z())};
 
       seededParticles.insert(particle);
-      seeds.emplace_back(seed);
+      seeds.emplace_back(std::move(seed));
       tracks.emplace_back(std::move(track));
     }
   }

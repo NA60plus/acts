@@ -1,17 +1,15 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "ActsExamples/EventData/MeasurementCalibration.hpp"
-
-#include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/EventData/SourceLink.hpp"
 #include "ActsExamples/EventData/IndexSourceLink.hpp"
 #include "ActsExamples/EventData/Measurement.hpp"
+#include <ActsExamples/EventData/MeasurementCalibration.hpp>
 
 #include <cassert>
 #include <variant>
@@ -26,26 +24,25 @@ void ActsExamples::PassThroughCalibrator::calibrate(
     const Acts::CalibrationContext& /*cctx*/,
     const Acts::SourceLink& sourceLink,
     Acts::VectorMultiTrajectory::TrackStateProxy& trackState) const {
-  trackState.setUncalibratedSourceLink(Acts::SourceLink{sourceLink});
+  trackState.setUncalibratedSourceLink(sourceLink);
   const IndexSourceLink& idxSourceLink = sourceLink.get<IndexSourceLink>();
 
   assert((idxSourceLink.index() < measurements.size()) &&
          "Source link index is outside the container bounds");
 
-  const ConstVariableBoundMeasurementProxy measurement =
-      measurements.getMeasurement(idxSourceLink.index());
+  std::visit(
+      [&trackState](const auto& meas) {
+        using MeasurementType = std::decay_t<decltype(meas)>;
+        constexpr std::size_t size = MeasurementType::size();
 
-  Acts::visit_measurement(measurement.size(), [&](auto N) -> void {
-    constexpr std::size_t kMeasurementSize = decltype(N)::value;
-    const ConstFixedBoundMeasurementProxy<kMeasurementSize> fixedMeasurement =
-        measurement;
+        trackState.allocateCalibrated(meas.size());
+        assert(trackState.hasCalibrated());
 
-    trackState.allocateCalibrated(kMeasurementSize);
-    trackState.calibrated<kMeasurementSize>() = fixedMeasurement.parameters();
-    trackState.calibratedCovariance<kMeasurementSize>() =
-        fixedMeasurement.covariance();
-    trackState.setSubspaceIndices(fixedMeasurement.subspaceIndices());
-  });
+        trackState.calibrated<size>() = meas.parameters();
+        trackState.calibratedCovariance<size>() = meas.covariance();
+        trackState.setProjector(meas.projector());
+      },
+      measurements[idxSourceLink.index()]);
 }
 
 ActsExamples::MeasurementCalibratorAdapter::MeasurementCalibratorAdapter(

@@ -1,30 +1,23 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/EventData/ParticleHypothesis.hpp"
 #include "Acts/EventData/TrackContainer.hpp"
-#include "Acts/EventData/TrackStateProxy.hpp"
 #include "Acts/EventData/detail/DynamicColumn.hpp"
 #include "Acts/Plugins/Podio/PodioDynamicColumns.hpp"
 #include "Acts/Plugins/Podio/PodioUtil.hpp"
-#include "Acts/Utilities/Helpers.hpp"
-#include "ActsPodioEdm/Surface.h"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include "ActsPodioEdm/ParticleHypothesis.h"
 #include "ActsPodioEdm/Track.h"
 #include "ActsPodioEdm/TrackCollection.h"
 #include "ActsPodioEdm/TrackInfo.h"
-#pragma GCC diagnostic pop
 
 #include <mutex>
 #include <stdexcept>
@@ -52,14 +45,14 @@ class PodioTrackContainerBase {
       MultiTrajectoryTraits::MeasurementSizeMax;
 
   using Parameters =
-      typename detail_lt::FixedSizeTypes<eBoundSize, false>::CoefficientsMap;
+      typename detail_lt::Types<eBoundSize, false>::CoefficientsMap;
   using Covariance =
-      typename detail_lt::FixedSizeTypes<eBoundSize, false>::CovarianceMap;
+      typename detail_lt::Types<eBoundSize, false>::CovarianceMap;
 
   using ConstParameters =
-      typename detail_lt::FixedSizeTypes<eBoundSize, true>::CoefficientsMap;
+      typename detail_lt::Types<eBoundSize, true>::CoefficientsMap;
   using ConstCovariance =
-      typename detail_lt::FixedSizeTypes<eBoundSize, true>::CovarianceMap;
+      typename detail_lt::Types<eBoundSize, true>::CovarianceMap;
 
  protected:
   PodioTrackContainerBase(const PodioUtil::ConversionHelper& helper)
@@ -82,7 +75,7 @@ class PodioTrackContainerBase {
     if constexpr (EnsureConst) {
       dataPtr = &track.getData();
     } else {
-      dataPtr = &PodioUtil::getDataMutable(track);
+      dataPtr = &track.data();
     }
     auto& data = *dataPtr;
     switch (key) {
@@ -189,7 +182,7 @@ class MutablePodioTrackContainer : public PodioTrackContainerBase {
   }
 
   bool hasColumn_impl(HashedString key) const {
-    return m_dynamic.contains(key);
+    return m_dynamic.find(key) != m_dynamic.end();
   }
 
   std::size_t size_impl() const { return m_collection->size(); }
@@ -209,15 +202,9 @@ class MutablePodioTrackContainer : public PodioTrackContainerBase {
   void setReferenceSurface_impl(IndexType itrack,
                                 std::shared_ptr<const Surface> surface) {
     auto track = m_collection->at(itrack);
-    if (surface == nullptr) {
-      track.setReferenceSurface({.surfaceType = PodioUtil::kNoSurface,
-                                 .identifier = PodioUtil::kNoIdentifier});
-      m_surfaces.at(itrack) = nullptr;
-    } else {
-      track.setReferenceSurface(
-          PodioUtil::convertSurfaceToPodio(m_helper, *surface));
-      m_surfaces.at(itrack) = std::move(surface);
-    }
+    track.setReferenceSurface(
+        PodioUtil::convertSurfaceToPodio(m_helper, *surface));
+    m_surfaces.at(itrack) = std::move(surface);
   }
 
  public:
@@ -225,8 +212,7 @@ class MutablePodioTrackContainer : public PodioTrackContainerBase {
 
   IndexType addTrack_impl() {
     auto track = m_collection->create();
-    PodioUtil::getReferenceSurfaceMutable(track).surfaceType =
-        PodioUtil::kNoSurface;
+    track.referenceSurface().surfaceType = PodioUtil::kNoSurface;
     m_surfaces.emplace_back();
     for (const auto& [key, vec] : m_dynamic) {
       vec->add();
@@ -244,8 +230,7 @@ class MutablePodioTrackContainer : public PodioTrackContainerBase {
   }
 
   Parameters parameters(IndexType itrack) {
-    return Parameters{
-        PodioUtil::getDataMutable(m_collection->at(itrack)).parameters.data()};
+    return Parameters{m_collection->at(itrack).data().parameters.data()};
   }
 
   ConstParameters parameters(IndexType itrack) const {
@@ -254,8 +239,7 @@ class MutablePodioTrackContainer : public PodioTrackContainerBase {
   }
 
   Covariance covariance(IndexType itrack) {
-    return Covariance{
-        PodioUtil::getDataMutable(m_collection->at(itrack)).covariance.data()};
+    return Covariance{m_collection->at(itrack).data().covariance.data()};
   }
 
   ConstCovariance covariance(IndexType itrack) const {
@@ -319,9 +303,7 @@ class MutablePodioTrackContainer : public PodioTrackContainerBase {
       m_dynamic;
 };
 
-static_assert(
-    TrackContainerBackend<MutablePodioTrackContainer>,
-    "MutablePodioTrackContainer does not fulfill TrackContainerBackend");
+ACTS_STATIC_CHECK_CONCEPT(TrackContainerBackend, MutablePodioTrackContainer);
 
 class ConstPodioTrackContainer : public PodioTrackContainerBase {
  public:
@@ -340,7 +322,8 @@ class ConstPodioTrackContainer : public PodioTrackContainerBase {
     std::string tracksKey = "tracks" + s;
 
     std::vector<std::string> available = frame.getAvailableCollections();
-    if (!rangeContainsValue(available, tracksKey)) {
+    if (std::find(available.begin(), available.end(), tracksKey) ==
+        available.end()) {
       throw std::runtime_error{"Track collection '" + tracksKey +
                                "' not found in frame"};
     }
@@ -365,7 +348,7 @@ class ConstPodioTrackContainer : public PodioTrackContainerBase {
   }
 
   bool hasColumn_impl(HashedString key) const {
-    return m_dynamic.contains(key);
+    return m_dynamic.find(key) != m_dynamic.end();
   }
 
   std::size_t size_impl() const { return m_collection->size(); }
@@ -407,8 +390,6 @@ class ConstPodioTrackContainer : public PodioTrackContainerBase {
   std::vector<HashedString> m_dynamicKeys;
 };
 
-static_assert(
-    ConstTrackContainerBackend<ConstPodioTrackContainer>,
-    "ConstPodioTrackContainer does not fulfill ConstTrackContainerBackend");
+ACTS_STATIC_CHECK_CONCEPT(ConstTrackContainerBackend, ConstPodioTrackContainer);
 
 }  //  namespace Acts

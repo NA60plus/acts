@@ -83,10 +83,17 @@ ActsExamples::ProcessCode ActsExamples::TrackletVertexingAlgorithm::execute(
   if(m_cfg.noGuessing){
     double zper = m_cfg.zPerigee;
     m_outputRecPrimaryVertex(ctx, std::move(zper));
+    m_outputFitPrimaryVertex(ctx, std::move(zper));
     for (const auto& particle : particles) {
       m_outputGenPrimaryVertex(ctx, std::move(particle.position()[2]));
       break;
     }
+
+    std::vector<double> zTrackletBins;
+    for(int i=0; i<60; i++)
+      zTrackletBins.push_back(0);
+    m_outputZTracklets(ctx, std::move(zTrackletBins));
+    m_outputZTrackletsPeak(ctx, std::move(zTrackletBins));
     return ActsExamples::ProcessCode::SUCCESS;
   }
 
@@ -133,7 +140,7 @@ ActsExamples::ProcessCode ActsExamples::TrackletVertexingAlgorithm::execute(
   int bin_max = hist->FindBin(1);
 
   // Initialize variables to track the maximum bin
-  maxBin = -1;
+  maxBin = bin_min;
   double max_value = -1;
   // Loop over the bins in the specified range
   for (int bin = bin_min; bin <= bin_max; ++bin) {
@@ -282,7 +289,8 @@ ActsExamples::ProcessCode ActsExamples::TrackletVertexingAlgorithm::execute(
     zPVId = -41.25;
   else
     zPVId = -54.75;
-  
+  if((hist->GetEntries()-hist->GetBinContent(-1)-hist->GetBinContent(hist->GetNbinsX()+1))==0)
+    zPVId = -27.75;
   m_outputRecPrimaryVertex(ctx, std::move(zPVId));
 
   return ActsExamples::ProcessCode::SUCCESS;

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Surfaces/Surface.hpp"
 
@@ -13,7 +13,6 @@
 #include "Acts/Surfaces/detail/AlignmentHelper.hpp"
 #include "Acts/Utilities/JacobianHelpers.hpp"
 #include "Acts/Utilities/VectorHelpers.hpp"
-#include "Acts/Visualization/ViewConfig.hpp"
 
 #include <iomanip>
 #include <utility>
@@ -49,20 +48,20 @@ Acts::Surface::~Surface() = default;
 bool Acts::Surface::isOnSurface(const GeometryContext& gctx,
                                 const Vector3& position,
                                 const Vector3& direction,
-                                const BoundaryTolerance& boundaryTolerance,
-                                double tolerance) const {
+                                const BoundaryCheck& bcheck) const {
   // global to local transformation
-  auto lpResult = globalToLocal(gctx, position, direction, tolerance);
-  if (!lpResult.ok()) {
-    return false;
+  auto lpResult = globalToLocal(gctx, position, direction);
+  if (lpResult.ok()) {
+    return bcheck.isEnabled() ? bounds().inside(lpResult.value(), bcheck)
+                              : true;
   }
-  return bounds().inside(lpResult.value(), boundaryTolerance);
+  return false;
 }
 
 Acts::AlignmentToBoundMatrix Acts::Surface::alignmentToBoundDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction, const FreeVector& pathDerivative) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // 1) Calculate the derivative of bound parameter local position w.r.t.
   // alignment parameters without path length correction
@@ -86,7 +85,7 @@ Acts::Surface::alignmentToBoundDerivativeWithoutCorrection(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
   (void)direction;
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The vector between position and center
   const auto pcRowVec = (position - center(gctx)).transpose().eval();
@@ -126,7 +125,7 @@ Acts::Surface::alignmentToBoundDerivativeWithoutCorrection(
 Acts::AlignmentToPathMatrix Acts::Surface::alignmentToPathDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The vector between position and center
   const auto pcRowVec = (position - center(gctx)).transpose().eval();
@@ -235,6 +234,10 @@ std::string Acts::Surface::toString(const GeometryContext& gctx) const {
   return ss.str();
 }
 
+bool Acts::Surface::operator!=(const Acts::Surface& sf) const {
+  return !(operator==(sf));
+}
+
 Acts::Vector3 Acts::Surface::center(const GeometryContext& gctx) const {
   // fast access via transform matrix (and not translation())
   auto tMatrix = transform(gctx).matrix();
@@ -249,10 +252,9 @@ const Acts::Transform3& Acts::Surface::transform(
   return *m_transform;
 }
 
-bool Acts::Surface::insideBounds(
-    const Vector2& lposition,
-    const BoundaryTolerance& boundaryTolerance) const {
-  return bounds().inside(lposition, boundaryTolerance);
+bool Acts::Surface::insideBounds(const Vector2& lposition,
+                                 const BoundaryCheck& bcheck) const {
+  return bounds().inside(lposition, bcheck);
 }
 
 Acts::RotationMatrix3 Acts::Surface::referenceFrame(
@@ -264,7 +266,7 @@ Acts::RotationMatrix3 Acts::Surface::referenceFrame(
 Acts::BoundToFreeMatrix Acts::Surface::boundToFreeJacobian(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // retrieve the reference frame
   const auto rframe = referenceFrame(gctx, position, direction);
@@ -285,7 +287,7 @@ Acts::BoundToFreeMatrix Acts::Surface::boundToFreeJacobian(
 Acts::FreeToBoundMatrix Acts::Surface::freeToBoundJacobian(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The measurement frame of the surface
   RotationMatrix3 rframeT =
@@ -307,7 +309,7 @@ Acts::FreeToBoundMatrix Acts::Surface::freeToBoundJacobian(
 Acts::FreeToPathMatrix Acts::Surface::freeToPathDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The measurement frame of the surface
   const RotationMatrix3 rframe = referenceFrame(gctx, position, direction);
@@ -354,12 +356,4 @@ void Acts::Surface::assignSurfaceMaterial(
 
 void Acts::Surface::associateLayer(const Acts::Layer& lay) {
   m_associatedLayer = (&lay);
-}
-
-void Acts::Surface::visualize(IVisualization3D& helper,
-                              const GeometryContext& gctx,
-                              const ViewConfig& viewConfig) const {
-  Polyhedron polyhedron =
-      polyhedronRepresentation(gctx, viewConfig.quarterSegments);
-  polyhedron.visualize(helper, viewConfig);
 }

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -17,7 +17,7 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Geometry/GeometryObject.hpp"
 #include "Acts/Geometry/Polyhedron.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/SurfaceBounds.hpp"
 #include "Acts/Surfaces/SurfaceError.hpp"
 #include "Acts/Surfaces/detail/AlignmentHelper.hpp"
@@ -25,7 +25,6 @@
 #include "Acts/Utilities/BinningType.hpp"
 #include "Acts/Utilities/Intersection.hpp"
 #include "Acts/Utilities/Result.hpp"
-#include "Acts/Visualization/ViewConfig.hpp"
 
 #include <array>
 #include <cstddef>
@@ -165,6 +164,11 @@ class Surface : public virtual GeometryObject,
   /// @param other source surface for the comparison
   virtual bool operator==(const Surface& other) const;
 
+  /// Comparison (non-equality) operator
+  ///
+  /// @param sf Source surface for the comparison
+  virtual bool operator!=(const Surface& sf) const;
+
  public:
   /// Return method for the Surface type to avoid dynamic casts
   virtual SurfaceType type() const = 0;
@@ -247,24 +251,21 @@ class Surface : public virtual GeometryObject,
   /// @param gctx The current geometry context object, e.g. alignment
   /// @param position global position to be evaludated
   /// @param direction global momentum direction (required for line-type surfaces)
-  /// @param boundaryTolerance BoundaryTolerance directive for this onSurface check
-  /// @param tolerance optional tolerance within which a point is considered on surface
+  /// @param bcheck BoundaryCheck directive for this onSurface check
   ///
   /// @return boolean indication if operation was successful
-  bool isOnSurface(
-      const GeometryContext& gctx, const Vector3& position,
-      const Vector3& direction,
-      const BoundaryTolerance& boundaryTolerance = BoundaryTolerance::None(),
-      double tolerance = s_onSurfaceTolerance) const;
+  bool isOnSurface(const GeometryContext& gctx, const Vector3& position,
+                   const Vector3& direction,
+                   const BoundaryCheck& bcheck = BoundaryCheck(true)) const;
 
   /// The insideBounds method for local positions
   ///
   /// @param lposition The local position to check
-  /// @param boundaryTolerance BoundaryTolerance directive for this onSurface check
+  /// @param bcheck BoundaryCheck directive for this onSurface check
   /// @return boolean indication if operation was successful
-  virtual bool insideBounds(const Vector2& lposition,
-                            const BoundaryTolerance& boundaryTolerance =
-                                BoundaryTolerance::None()) const;
+  virtual bool insideBounds(
+      const Vector2& lposition,
+      const BoundaryCheck& bcheck = BoundaryCheck(true)) const;
 
   /// Local to global transformation
   /// Generalized local to global transformation for the surface types. Since
@@ -390,15 +391,14 @@ class Surface : public virtual GeometryObject,
   /// @param gctx The current geometry context object, e.g. alignment
   /// @param position The position to start from
   /// @param direction The direction at start
-  /// @param boundaryTolerance the BoundaryTolerance
+  /// @param bcheck the Boundary Check
   /// @param tolerance the tolerance used for the intersection
   ///
   /// @return @c SurfaceMultiIntersection object (contains intersection & surface)
   virtual SurfaceMultiIntersection intersect(
       const GeometryContext& gctx, const Vector3& position,
       const Vector3& direction,
-      const BoundaryTolerance& boundaryTolerance =
-          BoundaryTolerance::Infinite(),
+      const BoundaryCheck& bcheck = BoundaryCheck(false),
       ActsScalar tolerance = s_onSurfaceTolerance) const = 0;
 
   /// Helper method for printing: the returned object captures the
@@ -418,21 +418,20 @@ class Surface : public virtual GeometryObject,
   /// Return properly formatted class name
   virtual std::string name() const = 0;
 
-  /// Return a Polyhedron for surface objects
+  /// Return a Polyhedron for this object
   ///
   /// @param gctx The current geometry context object, e.g. alignment
-  /// @param quarterSegments The number of segemtns to approximate a 0.5*pi sector,
-  /// which represents a quarter of the full circle
-  ///
-  /// @note In order to symmetrize the code between sectoral and closed cylinders
-  /// in case of closed cylinders, both (-pi, pi) are given as separate vertices
+  /// @param lseg Number of segments along curved lines, if the lseg
+  /// is set to one, only the corners and the extrema are given,
+  /// otherwise it represents the number of segments for a full 2*M_PI
+  /// circle and is scaled to the relevant sector
   ///
   /// @note An internal surface transform can invalidate the extrema
   /// in the transformed space
   ///
   /// @return A list of vertices and a face/facett description of it
-  virtual Polyhedron polyhedronRepresentation(
-      const GeometryContext& gctx, unsigned int quarterSegments = 2u) const = 0;
+  virtual Polyhedron polyhedronRepresentation(const GeometryContext& gctx,
+                                              std::size_t lseg) const = 0;
 
   /// The derivative of bound track parameters w.r.t. alignment
   /// parameters of its reference surface (i.e. local frame origin in
@@ -480,9 +479,6 @@ class Surface : public virtual GeometryObject,
   /// cartesian coordinates
   virtual ActsMatrix<2, 3> localCartesianToBoundLocalDerivative(
       const GeometryContext& gctx, const Vector3& position) const = 0;
-
-  void visualize(IVisualization3D& helper, const GeometryContext& gctx,
-                 const ViewConfig& viewConfig = s_viewSurface) const;
 
  protected:
   /// Output Method for std::ostream, to be overloaded by child classes

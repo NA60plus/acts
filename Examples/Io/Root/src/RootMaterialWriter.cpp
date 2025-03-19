@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Root/RootMaterialWriter.hpp"
 
@@ -192,10 +192,6 @@ void ActsExamples::RootMaterialWriter::writeMaterial(
   for (auto& [key, value] : volumeMaps) {
     // Get the Volume material
     const Acts::IVolumeMaterial* vMaterial = value.get();
-    if (vMaterial == nullptr) {
-      ACTS_WARNING("No material for volume " << key << " skipping");
-      continue;
-    }
 
     // get the geometry ID
     Acts::GeometryIdentifier geoID = key;
@@ -297,7 +293,7 @@ void ActsExamples::RootMaterialWriter::writeMaterial(
         Acts::MaterialGrid3D grid = bvMaterial3D->getMapper().getGrid();
         for (std::size_t point = 0; point < points; point++) {
           auto mat = Acts::Material(grid.at(point));
-          if (mat.isValid()) {
+          if (mat) {
             x0->SetBinContent(point + 1, mat.X0());
             l0->SetBinContent(point + 1, mat.L0());
             A->SetBinContent(point + 1, mat.Ar());
@@ -311,7 +307,7 @@ void ActsExamples::RootMaterialWriter::writeMaterial(
         Acts::MaterialGrid2D grid = bvMaterial2D->getMapper().getGrid();
         for (std::size_t point = 0; point < points; point++) {
           auto mat = Acts::Material(grid.at(point));
-          if (mat.isValid()) {
+          if (mat) {
             x0->SetBinContent(point + 1, mat.X0());
             l0->SetBinContent(point + 1, mat.L0());
             A->SetBinContent(point + 1, mat.Ar());
@@ -351,8 +347,8 @@ void ActsExamples::RootMaterialWriter::collectMaterial(
     const Acts::TrackingVolume& tVolume,
     Acts::DetectorMaterialMaps& detMatMap) {
   // If the volume has volume material, write that
-  if (tVolume.volumeMaterialPtr() != nullptr && m_cfg.processVolumes) {
-    detMatMap.second[tVolume.geometryId()] = tVolume.volumeMaterialPtr();
+  if (tVolume.volumeMaterialSharedPtr() != nullptr && m_cfg.processVolumes) {
+    detMatMap.second[tVolume.geometryId()] = tVolume.volumeMaterialSharedPtr();
   }
 
   // If confined layers exist, loop over them and collect the layer material

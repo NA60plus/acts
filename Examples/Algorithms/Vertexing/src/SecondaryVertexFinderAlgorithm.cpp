@@ -130,10 +130,7 @@ ActsExamples::ProcessCode ActsExamples::SecondaryVertexFinderAlgorithm::execute(
   // charge selection
 
   // Create propagator options
-  //Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
-
-  Acts::PropagatorPlainOptions pOptions(ctx.geoContext, ctx.magFieldContext);
-
+  Acts::PropagatorOptions<> pOptions(ctx.geoContext, ctx.magFieldContext);
 
   float mass1 = 0.13957039;
   float mass2 = 0.13957039;
@@ -152,8 +149,8 @@ ActsExamples::ProcessCode ActsExamples::SecondaryVertexFinderAlgorithm::execute(
 
       Acts::BoundVector tmppar1 = params1.parameters();
       Acts::BoundVector tmppar2 = params2.parameters();
-      Acts::ActsScalar d01 = tmppar1(Acts::BoundIndices::eBoundLoc0);
-      Acts::ActsScalar d02 = tmppar2(Acts::BoundIndices::eBoundLoc0);
+      //Acts::ActsScalar d01 = tmppar1(Acts::BoundIndices::eBoundLoc0);
+      //Acts::ActsScalar d02 = tmppar2(Acts::BoundIndices::eBoundLoc0);
       Acts::ActsScalar qOvP1 = tmppar1(Acts::BoundIndices::eBoundQOverP);
       Acts::ActsScalar qOvP2 = tmppar2(Acts::BoundIndices::eBoundQOverP);
       if (qOvP1 * qOvP2 > 0) {

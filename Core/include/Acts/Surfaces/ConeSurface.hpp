@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -14,12 +14,13 @@
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Geometry/Polyhedron.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/ConeBounds.hpp"
 #include "Acts/Surfaces/RegularSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Surfaces/SurfaceConcept.hpp"
 #include "Acts/Utilities/BinningType.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/Result.hpp"
 #include "Acts/Utilities/detail/RealQuadraticEquation.hpp"
 
@@ -175,7 +176,7 @@ class ConeSurface : public RegularSurface {
   /// @param gctx The current geometry context object, e.g. alignment
   /// @param position The position to start from
   /// @param direction The direction at start
-  /// @param boundaryTolerance the Boundary Check
+  /// @param bcheck the Boundary Check
   /// @param tolerance the tolerance used for the intersection
   ///
   /// If possible returns both solutions for the cylinder
@@ -184,8 +185,7 @@ class ConeSurface : public RegularSurface {
   SurfaceMultiIntersection intersect(
       const GeometryContext& gctx, const Vector3& position,
       const Vector3& direction,
-      const BoundaryTolerance& boundaryTolerance =
-          BoundaryTolerance::Infinite(),
+      const BoundaryCheck& bcheck = BoundaryCheck(false),
       double tolerance = s_onSurfaceTolerance) const final;
 
   /// The pathCorrection for derived classes with thickness
@@ -200,16 +200,15 @@ class ConeSurface : public RegularSurface {
   /// Return a Polyhedron for the surfaces
   ///
   /// @param gctx The current geometry context object, e.g. alignment
-  /// @param quarterSegments Number of segments used to approximate a quarter
-  ///
-  /// @note The phi extrema points at (-pi, -1/2 pi, 0, 1/2 pi) that fall within
-  /// the surface will be inserted to guarantee an appropriate extent
-  /// measurement in x and y
+  /// @param lseg Number of segments along curved lines, it represents
+  /// the full 2*M_PI coverange, if lseg is set to 1 only the extrema
+  /// are given
+  /// @note that a surface transform can invalidate the extrema
+  /// in the transformed space
   ///
   /// @return A list of vertices and a face/facett description of it
-  Polyhedron polyhedronRepresentation(
-      const GeometryContext& gctx,
-      unsigned int quarterSegments = 2u) const override;
+  Polyhedron polyhedronRepresentation(const GeometryContext& gctx,
+                                      std::size_t lseg) const override;
 
   /// Return properly formatted class name for screen output
   std::string name() const override;
@@ -283,7 +282,6 @@ class ConeSurface : public RegularSurface {
       const Vector3& direction) const;
 };
 
-static_assert(RegularSurfaceConcept<ConeSurface>,
-              "ConeSurface does not fulfill RegularSurfaceConcept");
+ACTS_STATIC_CHECK_CONCEPT(RegularSurfaceConcept, ConeSurface);
 
 }  // namespace Acts

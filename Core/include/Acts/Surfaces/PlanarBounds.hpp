@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -26,15 +26,14 @@ class PlanarBounds : public SurfaceBounds {
  public:
   /// Return the vertices
   ///
-  /// @param quarterSegments is the number of segments used to describe curved
-  /// segments in a quarter of the phi range. If it is 1, then only the extrema
-  /// points in phi are inserted next to the segment corners.
+  /// @param lseg the number of segments used to approximate
+  /// and eventually curved line
   ///
-  /// @note for planar bounds without curved segments @c quarterSegments is ignored
+  /// @note that the extremas are given, which may slightly alter the
+  /// number of segments returned
   ///
   /// @return vector for vertices in 2D
-  virtual std::vector<Vector2> vertices(
-      unsigned int quarterSegments = 2u) const = 0;
+  virtual std::vector<Vector2> vertices(unsigned int lseg = 1) const = 0;
 
   /// Bounding box parameters
   ///

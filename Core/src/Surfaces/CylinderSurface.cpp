@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Surfaces/CylinderSurface.hpp"
 
@@ -188,15 +188,19 @@ const Acts::CylinderBounds& Acts::CylinderSurface::bounds() const {
 }
 
 Acts::Polyhedron Acts::CylinderSurface::polyhedronRepresentation(
-    const GeometryContext& gctx, unsigned int quarterSegments) const {
+    const GeometryContext& gctx, std::size_t lseg) const {
   auto ctrans = transform(gctx);
 
   // Prepare vertices and faces
-  std::vector<Vector3> vertices =
-      bounds().circleVertices(ctrans, quarterSegments);
-  auto [faces, triangularMesh] =
-      detail::FacesHelper::cylindricalFaceMesh(vertices);
-  return Polyhedron(vertices, faces, triangularMesh, false);
+  std::vector<Vector3> vertices = bounds().createCircles(ctrans, lseg);
+  std::vector<Polyhedron::FaceType> faces;
+  std::vector<Polyhedron::FaceType> triangularMesh;
+
+  bool fullCylinder = bounds().coversFullAzimuth();
+
+  auto facesMesh =
+      detail::FacesHelper::cylindricalFaceMesh(vertices, fullCylinder);
+  return Polyhedron(vertices, facesMesh.first, facesMesh.second, false);
 }
 
 Acts::Vector3 Acts::CylinderSurface::rotSymmetryAxis(
@@ -229,7 +233,7 @@ Acts::detail::RealQuadraticEquation Acts::CylinderSurface::intersectionSolver(
 
 Acts::SurfaceMultiIntersection Acts::CylinderSurface::intersect(
     const GeometryContext& gctx, const Vector3& position,
-    const Vector3& direction, const BoundaryTolerance& boundaryTolerance,
+    const Vector3& direction, const BoundaryCheck& bcheck,
     ActsScalar tolerance) const {
   const auto& gctxTransform = transform(gctx);
 
@@ -252,26 +256,26 @@ Acts::SurfaceMultiIntersection Acts::CylinderSurface::intersect(
       [&](const Vector3& solution,
           Intersection3D::Status status) -> Intersection3D::Status {
     // No check to be done, return current status
-    if (boundaryTolerance.isInfinite()) {
+    if (!bcheck.isEnabled()) {
       return status;
     }
     const auto& cBounds = bounds();
-    if (auto absoluteBound = boundaryTolerance.asAbsoluteBoundOpt();
-        absoluteBound.has_value() && cBounds.coversFullAzimuth()) {
+    if (cBounds.coversFullAzimuth() &&
+        bcheck.type() == BoundaryCheck::Type::eAbsolute) {
       // Project out the current Z value via local z axis
       // Built-in local to global for speed reasons
       const auto& tMatrix = gctxTransform.matrix();
       // Create the reference vector in local
       const Vector3 vecLocal(solution - tMatrix.block<3, 1>(0, 3));
       double cZ = vecLocal.dot(tMatrix.block<3, 1>(0, 2));
-      double modifiedTolerance = tolerance + absoluteBound->tolerance1;
+      double modifiedTolerance = tolerance + bcheck.tolerance()[eBoundLoc1];
       double hZ = cBounds.get(CylinderBounds::eHalfLengthZ) + modifiedTolerance;
       return std::abs(cZ) < std::abs(hZ) ? status
                                          : Intersection3D::Status::missed;
     }
-    return isOnSurface(gctx, solution, direction, boundaryTolerance)
-               ? status
-               : Intersection3D::Status::missed;
+    return (isOnSurface(gctx, solution, direction, bcheck)
+                ? status
+                : Intersection3D::Status::missed);
   };
   // Check first solution for boundary compatibility
   status1 = boundaryCheck(solution1, status1);
@@ -298,7 +302,7 @@ Acts::SurfaceMultiIntersection Acts::CylinderSurface::intersect(
 Acts::AlignmentToPathMatrix Acts::CylinderSurface::alignmentToPathDerivative(
     const GeometryContext& gctx, const Vector3& position,
     const Vector3& direction) const {
-  assert(isOnSurface(gctx, position, direction, BoundaryTolerance::Infinite()));
+  assert(isOnSurface(gctx, position, direction, BoundaryCheck(false)));
 
   // The vector between position and center
   const auto pcRowVec = (position - center(gctx)).transpose().eval();
@@ -364,32 +368,20 @@ Acts::CylinderSurface::localCartesianToBoundLocalDerivative(
   return loc3DToLocBound;
 }
 
-std::pair<std::shared_ptr<Acts::CylinderSurface>, bool>
-Acts::CylinderSurface::mergedWith(const CylinderSurface& other,
-                                  BinningValue direction, bool externalRotation,
-                                  const Logger& logger) const {
+std::shared_ptr<Acts::CylinderSurface> Acts::CylinderSurface::mergedWith(
+    const GeometryContext& gctx, const CylinderSurface& other,
+    BinningValue direction, const Logger& logger) const {
   using namespace Acts::UnitLiterals;
 
-  ACTS_VERBOSE("Merging cylinder surfaces in " << binningValueName(direction)
-                                               << " direction");
+  ACTS_DEBUG("Merging cylinder surfaces in " << binningValueName(direction)
+                                             << " direction");
 
-  if (m_associatedDetElement != nullptr ||
-      other.m_associatedDetElement != nullptr) {
-    throw SurfaceMergingException(getSharedPtr(), other.getSharedPtr(),
-                                  "CylinderSurface::merge: surfaces are "
-                                  "associated with a detector element");
-  }
-
-  assert(m_transform != nullptr && other.m_transform != nullptr);
-
-  Transform3 otherLocal = m_transform->inverse() * *other.m_transform;
+  Transform3 otherLocal = transform(gctx).inverse() * other.transform(gctx);
 
   constexpr auto tolerance = s_onSurfaceTolerance;
 
   // surface cannot have any relative rotation
-
-  if (std::abs(otherLocal.linear().col(eX)[eZ]) >= tolerance ||
-      std::abs(otherLocal.linear().col(eY)[eZ]) >= tolerance) {
+  if (!otherLocal.linear().isApprox(RotationMatrix3::Identity())) {
     ACTS_ERROR("CylinderSurface::merge: surfaces have relative rotation");
     throw SurfaceMergingException(
         getSharedPtr(), other.getSharedPtr(),
@@ -444,31 +436,17 @@ Acts::CylinderSurface::mergedWith(const CylinderSurface& other,
         "CylinderSurface::merge: surfaces have relative translation in x/y");
   }
 
-  ActsScalar hlZ = bounds().get(CylinderBounds::eHalfLengthZ);
-  ActsScalar minZ = -hlZ;
-  ActsScalar maxZ = hlZ;
-
-  ActsScalar zShift = translation[2];
-  ActsScalar otherHlZ = other.bounds().get(CylinderBounds::eHalfLengthZ);
-  ActsScalar otherMinZ = -otherHlZ + zShift;
-  ActsScalar otherMaxZ = otherHlZ + zShift;
-
-  ActsScalar hlPhi = bounds().get(CylinderBounds::eHalfPhiSector);
-  ActsScalar avgPhi = bounds().get(CylinderBounds::eAveragePhi);
-
-  ActsScalar otherHlPhi = other.bounds().get(CylinderBounds::eHalfPhiSector);
-  ActsScalar otherAvgPhi = other.bounds().get(CylinderBounds::eAveragePhi);
-
   if (direction == Acts::BinningValue::binZ) {
     // z shift must match the bounds
 
-    if (std::abs(otherLocal.linear().col(eY)[eX]) >= tolerance &&
-        (!bounds().coversFullAzimuth() ||
-         !other.bounds().coversFullAzimuth())) {
-      throw SurfaceMergingException(getSharedPtr(), other.getSharedPtr(),
-                                    "CylinderSurface::merge: surfaces have "
-                                    "relative rotation in z and phi sector");
-    }
+    ActsScalar hlZ = bounds().get(CylinderBounds::eHalfLengthZ);
+    ActsScalar minZ = -hlZ;
+    ActsScalar maxZ = hlZ;
+
+    ActsScalar zShift = translation[2];
+    ActsScalar otherHlZ = other.bounds().get(CylinderBounds::eHalfLengthZ);
+    ActsScalar otherMinZ = -otherHlZ + zShift;
+    ActsScalar otherMaxZ = otherHlZ + zShift;
 
     ACTS_VERBOSE("this: [" << minZ << ", " << maxZ << "] ~> "
                            << (minZ + maxZ) / 2.0 << " +- " << hlZ);
@@ -477,18 +455,13 @@ Acts::CylinderSurface::mergedWith(const CylinderSurface& other,
     ACTS_VERBOSE("other: [" << otherMinZ << ", " << otherMaxZ << "] ~> "
                             << (otherMinZ + otherMaxZ) / 2.0 << " +- "
                             << otherHlZ);
+
     if (std::abs(maxZ - otherMinZ) > tolerance &&
         std::abs(minZ - otherMaxZ) > tolerance) {
       ACTS_ERROR("CylinderSurface::merge: surfaces have incompatible z bounds");
       throw SurfaceMergingException(
           getSharedPtr(), other.getSharedPtr(),
           "CylinderSurface::merge: surfaces have incompatible z bounds");
-    }
-
-    if (hlPhi != otherHlPhi || avgPhi != otherAvgPhi) {
-      throw SurfaceMergingException(getSharedPtr(), other.getSharedPtr(),
-                                    "CylinderSurface::merge: surfaces have "
-                                    "different phi sectors");
     }
 
     ActsScalar newMaxZ = std::max(maxZ, otherMaxZ);
@@ -498,13 +471,12 @@ Acts::CylinderSurface::mergedWith(const CylinderSurface& other,
     ACTS_VERBOSE("merged: [" << newMinZ << ", " << newMaxZ << "] ~> " << newMidZ
                              << " +- " << newHlZ);
 
-    auto newBounds = std::make_shared<CylinderBounds>(r, newHlZ, hlPhi, avgPhi);
+    auto newBounds = std::make_shared<CylinderBounds>(r, newHlZ);
 
     Transform3 newTransform =
-        *m_transform * Translation3{Vector3::UnitZ() * newMidZ};
+        transform(gctx) * Translation3{Vector3::UnitZ() * newMidZ};
 
-    return {Surface::makeShared<CylinderSurface>(newTransform, newBounds),
-            zShift < 0};
+    return Surface::makeShared<CylinderSurface>(newTransform, newBounds);
 
   } else if (direction == Acts::BinningValue::binRPhi) {
     // no z shift is allowed
@@ -518,47 +490,20 @@ Acts::CylinderSurface::mergedWith(const CylinderSurface& other,
           "rPhi merging");
     }
 
-    if (hlZ != otherHlZ) {
-      throw SurfaceMergingException(getSharedPtr(), other.getSharedPtr(),
-                                    "CylinderSurface::merge: surfaces have "
-                                    "different z bounds");
-    }
+    ActsScalar hlPhi = bounds().get(CylinderBounds::eHalfPhiSector);
+    ActsScalar avgPhi = bounds().get(CylinderBounds::eAveragePhi);
 
-    // Figure out signed relative rotation
-    Vector2 rotatedX = otherLocal.linear().col(eX).head<2>();
-    ActsScalar zrotation = std::atan2(rotatedX[1], rotatedX[0]);
-
-    ACTS_VERBOSE("this:  [" << avgPhi / 1_degree << " +- " << hlPhi / 1_degree
-                            << "]");
-    ACTS_VERBOSE("other: [" << otherAvgPhi / 1_degree << " +- "
-                            << otherHlPhi / 1_degree << "]");
-
-    ACTS_VERBOSE("Relative rotation around local z: " << zrotation / 1_degree);
-
-    ActsScalar prevOtherAvgPhi = otherAvgPhi;
-    otherAvgPhi = detail::radian_sym(otherAvgPhi + zrotation);
-    ACTS_VERBOSE("~> local other average phi: "
-                 << otherAvgPhi / 1_degree
-                 << " (was: " << prevOtherAvgPhi / 1_degree << ")");
+    ActsScalar otherHlPhi = other.bounds().get(CylinderBounds::eHalfPhiSector);
+    ActsScalar otherAvgPhi = other.bounds().get(CylinderBounds::eAveragePhi);
 
     try {
-      auto [newHlPhi, newAvgPhi, reversed] = detail::mergedPhiSector(
+      auto [newHlPhi, newAvgPhi] = detail::mergedPhiSector(
           hlPhi, avgPhi, otherHlPhi, otherAvgPhi, logger, tolerance);
-
-      Transform3 newTransform = *m_transform;
-
-      if (externalRotation) {
-        ACTS_VERBOSE("Modifying transform for external rotation of "
-                     << newAvgPhi / 1_degree);
-        newTransform = newTransform * AngleAxis3(newAvgPhi, Vector3::UnitZ());
-        newAvgPhi = 0.;
-      }
 
       auto newBounds = std::make_shared<CylinderBounds>(
           r, bounds().get(CylinderBounds::eHalfLengthZ), newHlPhi, newAvgPhi);
 
-      return {Surface::makeShared<CylinderSurface>(newTransform, newBounds),
-              reversed};
+      return Surface::makeShared<CylinderSurface>(transform(gctx), newBounds);
     } catch (const std::invalid_argument& e) {
       throw SurfaceMergingException(getSharedPtr(), other.getSharedPtr(),
                                     e.what());

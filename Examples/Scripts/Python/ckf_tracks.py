@@ -23,7 +23,6 @@ def runCKFTracks(
 ):
     from acts.examples.simulation import (
         addParticleGun,
-        MomentumConfig,
         EtaConfig,
         PhiConfig,
         ParticleConfig,
@@ -40,8 +39,6 @@ def runCKFTracks(
         SeedingAlgorithm,
         TruthEstimatedSeedingAlgorithmConfigArg,
         addCKFTracks,
-        TrackSelectorConfig,
-        CkfConfig,
     )
 
     s = s or acts.examples.Sequencer(
@@ -55,10 +52,9 @@ def runCKFTracks(
     if inputParticlePath is None:
         addParticleGun(
             s,
-            MomentumConfig(1 * u.GeV, 10 * u.GeV, transverse=True),
-            EtaConfig(-2.0, 2.0, uniform=True),
+            EtaConfig(-2.0, 2.0),
+            ParticleConfig(4, acts.PdgParticle.eMuon, True),
             PhiConfig(0.0, 360.0 * u.degree),
-            ParticleConfig(4, acts.PdgParticle.eMuon, randomizeCharge=True),
             multiplicity=2,
             rnd=rnd,
         )
@@ -95,19 +91,7 @@ def runCKFTracks(
         trackingGeometry,
         field,
         TruthSeedRanges(pt=(500.0 * u.MeV, None), nHits=(9, None)),
-        ParticleSmearingSigmas(  # only used by SeedingAlgorithm.TruthSmeared
-            # zero eveything so the CKF has a chance to find the measurements
-            d0=0,
-            d0PtA=0,
-            d0PtB=0,
-            z0=0,
-            z0PtA=0,
-            z0PtB=0,
-            t0=0,
-            phi=0,
-            theta=0,
-            ptRel=0,
-        ),
+        ParticleSmearingSigmas(pRel=0.01),  # only used by SeedingAlgorithm.TruthSmeared
         SeedFinderConfigArg(
             r=(None, 200 * u.mm),  # rMin=default, 33mm
             deltaR=(1 * u.mm, 60 * u.mm),
@@ -130,16 +114,6 @@ def runCKFTracks(
                 else SeedingAlgorithm.Default
             )
         ),
-        initialSigmas=[
-            1 * u.mm,
-            1 * u.mm,
-            1 * u.degree,
-            1 * u.degree,
-            0.1 * u.e / u.GeV,
-            1 * u.ns,
-        ],
-        initialSigmaPtRel=0.01,
-        initialVarInflation=[1.0] * 6,
         geoSelectionConfigFile=geometrySelection,
         outputDirRoot=outputDir,
         rnd=rnd,  # only used by SeedingAlgorithm.TruthSmeared
@@ -149,21 +123,6 @@ def runCKFTracks(
         s,
         trackingGeometry,
         field,
-        TrackSelectorConfig(
-            pt=(500 * u.MeV, None),
-            absEta=(None, 3.0),
-            loc0=(-4.0 * u.mm, 4.0 * u.mm),
-            nMeasurementsMin=7,
-            maxHoles=2,
-            maxOutliers=2,
-        ),
-        CkfConfig(
-            chi2CutOffMeasurement=15.0,
-            chi2CutOffOutlier=25.0,
-            numMeasurementsCutOff=10,
-            seedDeduplication=True if not truthSmearedSeeded else False,
-            stayOnSeed=True if not truthSmearedSeeded else False,
-        ),
         outputDirRoot=outputDir,
         outputDirCsv=outputDir / "csv" if outputCsv else None,
     )

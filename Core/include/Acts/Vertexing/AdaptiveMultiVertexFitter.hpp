@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019-2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -22,7 +22,6 @@
 #include "Acts/Vertexing/VertexingError.hpp"
 #include "Acts/Vertexing/VertexingOptions.hpp"
 
-#include <algorithm>
 #include <functional>
 
 namespace Acts {
@@ -42,7 +41,6 @@ class AdaptiveMultiVertexFitter {
           const Acts::MagneticFieldContext& magContext)
         : ipState{field.makeCache(magContext)},
           fieldCache(field.makeCache(magContext)) {}
-
     // Vertex collection to be fitted
     std::vector<Vertex*> vertexCollection;
 
@@ -82,7 +80,8 @@ class AdaptiveMultiVertexFitter {
 
     Result<void> removeVertexFromCollection(Vertex& vtxToRemove,
                                             const Logger& logger) {
-      auto it = std::ranges::find(vertexCollection, &vtxToRemove);
+      auto it = std::find(vertexCollection.begin(), vertexCollection.end(),
+                          &vtxToRemove);
       // Check if the value was found before erasing
       if (it == vertexCollection.end()) {
         ACTS_ERROR("vtxToRemove is not part of vertexCollection.");

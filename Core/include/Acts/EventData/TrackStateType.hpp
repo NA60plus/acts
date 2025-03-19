@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <limits>
 #include <ostream>
-#include <type_traits>
 
 namespace Acts {
 
@@ -39,36 +38,33 @@ class TrackStateType {
  public:
   using raw_type = std::uint64_t;
   static constexpr std::size_t kRawBits =
-      std::numeric_limits<std::make_unsigned_t<raw_type>>::digits;
-
-  // Delete default constructor
-  TrackStateType() = delete;
-
+      std::numeric_limits<std::make_unsigned<raw_type>::type>::digits;
   /// Constructor from a reference to the underlying value container
   /// @param raw the value container
-  TrackStateType(raw_type& raw) : m_raw{&raw} { assert(m_raw != nullptr); }
+  TrackStateType(raw_type& raw) : m_raw{&raw} {}
 
-  // Delete copy constructor
-  TrackStateType(const TrackStateType&) = delete;
-
-  // Delete move constructor
-  TrackStateType(TrackStateType&&) = delete;
-
-  // Disable assignment
-  TrackStateType& operator=(const TrackStateType&) = delete;
-
-  // Disable move assignment
-  TrackStateType& operator=(TrackStateType&&) = delete;
+  /// Assign the value from another set of flags
+  /// @param other the other set of flags to assign
+  /// @return this object
+  TrackStateType& operator=(const TrackStateType& other) {
+    assert(other.m_raw != nullptr);
+    *m_raw = *other.m_raw;
+    return *this;
+  }
 
   /// Assign the value from another set of flags
   /// @param other the other set of flags to assign
   /// @return this object
   TrackStateType& operator=(const ConstTrackStateType& other);
 
+  /// Automatically convert to const track state type
+  operator ConstTrackStateType();
+
   /// Return if the bit at position @p pos is 1
   /// @param pos the bit position
   /// @return if the bit at @p pos is one or not
   bool test(std::size_t pos) const {
+    assert(m_raw != nullptr);
     std::bitset<kRawBits> bs{*m_raw};
     return bs.test(pos);
   }
@@ -77,6 +73,7 @@ class TrackStateType {
   /// @param pos the position of the bit to change
   /// @param value the value to change the bit to
   void set(std::size_t pos, bool value = true) {
+    assert(m_raw != nullptr);
     std::bitset<kRawBits> bs{*m_raw};
     bs.set(pos, value);
     *m_raw = bs.to_ullong();
@@ -86,7 +83,8 @@ class TrackStateType {
   /// @param pos the position of the bit to change
   void reset(std::size_t pos) { set(pos, false); }
 
-  friend std::ostream& operator<<(std::ostream& os, const TrackStateType& t) {
+  friend std::ostream& operator<<(std::ostream& os, TrackStateType t) {
+    assert(t.m_raw != nullptr);
     std::bitset<kRawBits> bs{*t.m_raw};
     std::bitset<TrackStateFlag::NumTrackStateFlags> trunc;
     for (std::size_t i = 0; i < TrackStateFlag::NumTrackStateFlags; i++) {
@@ -107,39 +105,23 @@ class ConstTrackStateType {
  public:
   using raw_type = std::uint64_t;
   static constexpr std::size_t kRawBits =
-      std::numeric_limits<std::make_unsigned_t<raw_type>>::digits;
-
-  // Delete default constructor
-  ConstTrackStateType() = delete;
+      std::numeric_limits<std::make_unsigned<raw_type>::type>::digits;
 
   /// Constructor from a reference to the underlying value container
   /// @param raw the value container
-  ConstTrackStateType(const raw_type& raw) : m_raw{&raw} {
-    assert(m_raw != nullptr);
-  }
-
-  // Disable copy constructor
-  ConstTrackStateType(const ConstTrackStateType& other) = delete;
-
-  // Delete move constructor
-  ConstTrackStateType(ConstTrackStateType&& other) = delete;
-
-  // Disable assignment
-  ConstTrackStateType& operator=(const ConstTrackStateType&) = delete;
-
-  // Disable move assignment
-  ConstTrackStateType& operator=(ConstTrackStateType&&) = delete;
+  ConstTrackStateType(const raw_type& raw) : m_raw{&raw} {}
 
   /// Return if the bit at position @p pos is 1
   /// @param pos the bit position
   /// @return if the bit at @p pos is one or not
   bool test(std::size_t pos) const {
+    assert(m_raw != nullptr);
     std::bitset<kRawBits> bs{*m_raw};
     return bs.test(pos);
   }
 
-  friend std::ostream& operator<<(std::ostream& os,
-                                  const ConstTrackStateType& t) {
+  friend std::ostream& operator<<(std::ostream& os, ConstTrackStateType t) {
+    assert(t.m_raw != nullptr);
     std::bitset<kRawBits> bs{*t.m_raw};
     std::bitset<TrackStateFlag::NumTrackStateFlags> trunc;
     for (std::size_t i = 0; i < TrackStateFlag::NumTrackStateFlags; i++) {
@@ -157,8 +139,12 @@ class ConstTrackStateType {
 
 inline TrackStateType& TrackStateType::operator=(
     const ConstTrackStateType& other) {
+  assert(other.m_raw != nullptr);
   *m_raw = *other.m_raw;
   return *this;
+}
+inline TrackStateType::operator ConstTrackStateType() {
+  return {*m_raw};
 }
 
 }  // namespace Acts

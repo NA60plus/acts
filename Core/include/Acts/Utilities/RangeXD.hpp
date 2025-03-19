@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -60,15 +60,15 @@ class RangeXD {
   /// @note Only available for one-dimensional ranges
   /// @param minimum The minimum value of the range
   /// @param maximum The maximum value of the range
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
   RangeXD(Type minimum, Type maximum)
-    requires(Dims == 1)
       : m_minima({minimum}), m_maxima({maximum}) {}
 
   /// @brief Construct a range from a pair of minimum and maximum values
   /// @note Only available for one-dimensional ranges
   /// @param p The pair of minimum and maximum values
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
   RangeXD(const std::pair<Type, Type>& p)
-    requires(Dims == 1)
       : m_minima({p.first}), m_maxima({p.second}) {}
 
   /// @brief Determine whether this range is degenerate
@@ -430,9 +430,8 @@ class RangeXD {
   /// range would be smaller than the current range), this is a no-op.
   ///
   /// @param v The proposed new minimum for the range
-  void expandMin(const Type& v)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void expandMin(const Type& v) {
     min() = std::min(min(), v);
   }
 
@@ -443,9 +442,8 @@ class RangeXD {
   /// range would be smaller than the current range), this is a no-op.
   ///
   /// @param v The proposed new maximum for the range
-  void expandMax(const Type& v)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void expandMax(const Type& v) {
     max() = std::max(max(), v);
   }
 
@@ -461,9 +459,8 @@ class RangeXD {
   ///
   /// @param min The proposed new minimum for the range
   /// @param max The proposed new maximum for the range
-  void expand(const Type& min, const Type& max)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void expand(const Type& min, const Type& max) {
     expandMin(min);
     expandMax(max);
   }
@@ -475,9 +472,8 @@ class RangeXD {
   /// range would be larger than the current range), this is a no-op.
   ///
   /// @param v The proposed new minimum for the range
-  void shrinkMin(const Type& v)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void shrinkMin(const Type& v) {
     min() = std::max(min(), v);
   }
 
@@ -488,9 +484,8 @@ class RangeXD {
   /// range would be larger than the current range), this is a no-op.
   ///
   /// @param v The proposed new maximum for the range
-  void shrinkMax(const Type& v)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void shrinkMax(const Type& v) {
     max() = std::min(max(), v);
   }
 
@@ -506,9 +501,8 @@ class RangeXD {
   ///
   /// @param min The proposed new minimum for the range
   /// @param max The proposed new maximum for the range
-  void shrink(const Type& min, const Type& max)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void shrink(const Type& min, const Type& max) {
     shrinkMin(min);
     shrinkMax(max);
   }
@@ -522,9 +516,8 @@ class RangeXD {
   /// expand methods.
   ///
   /// @param v The value to use as the new minimum
-  void setMin(const Type& v)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void setMin(const Type& v) {
     min() = v;
   }
 
@@ -537,9 +530,8 @@ class RangeXD {
   /// expand methods.
   ///
   /// @param v The value to use as the new maximum
-  void setMax(const Type& v)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void setMax(const Type& v) {
     max() = v;
   }
 
@@ -556,38 +548,33 @@ class RangeXD {
   ///
   /// @param min The new minimum value of the range
   /// @param max The new maximum value of the range
-  void set(const Type& min, const Type& max)
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  void set(const Type& min, const Type& max) {
     setMin(min);
     setMax(max);
   }
 
   /// @brief Return the minimum value of the range (inclusive)
-  Type min() const
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  Type min() const {
     return min(0);
   }
 
   /// @brief Return the minimum value of the range (inclusive)
-  Type& min()
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  Type& min() {
     return min(0);
   }
 
   /// @brief Return the maximum value of the range (inclusive)
-  Type max() const
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  Type max() const {
     return max(0);
   }
 
   /// @brief Return the maximum value of the range (inclusive)
-  Type& max()
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  Type& max() {
     return max(0);
   }
 
@@ -603,9 +590,8 @@ class RangeXD {
   /// this can be awkward when working with integers.
   ///
   /// @return The size of the range
-  Type size() const
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  Type size() const {
     return std::max(static_cast<Type>(0), max() - min());
   }
 
@@ -618,9 +604,8 @@ class RangeXD {
   ///
   /// @return true The value is inside the range
   /// @return false The value is not inside the range
-  bool contains(const Type& v) const
-    requires(Dims == 1)
-  {
+  template <std::size_t I = Dims, typename = std::enable_if_t<I == 1>>
+  bool contains(const Type& v) const {
     return min() <= v && v < max();
   }
 

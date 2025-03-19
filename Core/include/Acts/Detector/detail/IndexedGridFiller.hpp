@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -17,7 +17,6 @@
 #include "Acts/Utilities/Delegate.hpp"
 #include "Acts/Utilities/Enumerate.hpp"
 #include "Acts/Utilities/GridAccessHelpers.hpp"
-#include "Acts/Utilities/Helpers.hpp"
 #include "Acts/Utilities/IAxis.hpp"
 #include "Acts/Utilities/Logger.hpp"
 
@@ -194,7 +193,7 @@ struct IndexedGridFiller {
     // Loop over the surfaces to be filled
     for (auto [io, o] : enumerate(iObjects)) {
       // Exclude indices that should be handled differently
-      if (rangeContainsValue(aToAll, io)) {
+      if (std::find(aToAll.begin(), aToAll.end(), io) != aToAll.end()) {
         continue;
       }
       // Get the reference positions
@@ -217,7 +216,7 @@ struct IndexedGridFiller {
       // Now fill the surface indices
       for (const auto& li : lIndices) {
         auto& bContent = iGrid.grid.atLocalBins(li);
-        if (!rangeContainsValue(bContent, io)) {
+        if (std::find(bContent.begin(), bContent.end(), io) == bContent.end()) {
           bContent.push_back(io);
         }
       }
@@ -239,7 +238,7 @@ struct IndexedGridFiller {
     for (std::size_t gi = 0; gi < iGrid.grid.size(true); ++gi) {
       auto& bContent = iGrid.grid.at(gi);
       for (const auto& io : idcs) {
-        if (!rangeContainsValue(bContent, io)) {
+        if (std::find(bContent.begin(), bContent.end(), io) == bContent.end()) {
           bContent.push_back(io);
         }
       }

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/unit_test.hpp>
 
@@ -12,7 +12,6 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Geometry/PlaneLayer.hpp"
 #include "Acts/Material/HomogeneousSurfaceMaterial.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Surfaces/RectangleBounds.hpp"  //to get s_noBounds
 #include "Acts/Surfaces/Surface.hpp"
@@ -101,11 +100,11 @@ BOOST_AUTO_TEST_CASE(SurfaceProperties) {
                   // "no bounds" hard-coded
   Vector3 mom{100., 200., 300.};
   // isOnSurface
-  BOOST_CHECK(surface.isOnSurface(tgContext, reference, mom,
-                                  BoundaryTolerance::Infinite()));
-  BOOST_CHECK(surface.isOnSurface(
-      tgContext, reference, mom,
-      BoundaryTolerance::None()));  // need to improve bounds()
+  BOOST_CHECK(
+      surface.isOnSurface(tgContext, reference, mom, BoundaryCheck(false)));
+  BOOST_CHECK(
+      surface.isOnSurface(tgContext, reference, mom,
+                          BoundaryCheck(true)));  // need to improve bounds()
   // referenceFrame()
   RotationMatrix3 unitary;
   unitary << 1, 0, 0, 0, 1, 0, 0, 0, 1;

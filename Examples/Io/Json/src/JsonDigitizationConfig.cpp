@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Json/JsonDigitizationConfig.hpp"
 
@@ -69,10 +69,9 @@ void to_json(nlohmann::json& j, const ActsFatras::SingleParameterSmearFunction<
     return;
   }
   // Exact
-  auto exact = f.target<const Digitization::Exact>();
+  auto exact = f.target<const Digitization::Digital>();
   if (exact != nullptr) {
     j["type"] = "Exact";
-    j["stddev"] = exact->sigma;
     return;
   }
 
@@ -97,13 +96,13 @@ void from_json(
   } else if (sType == "Uniform") {
     Acts::BinningData bd;
     from_json(j["bindata"], bd);
-    f = Digitization::Uniform(bd);
+    f = Digitization::Uniform(std::move(bd));
   } else if (sType == "Digitial") {
     Acts::BinningData bd;
     from_json(j["bindata"], bd);
-    f = Digitization::Digital(bd);
+    f = Digitization::Digital(std::move(bd));
   } else if (sType == "Exact") {
-    f = Digitization::Exact(j["stddev"]);
+    f = Digitization::Exact{};
   } else {
     throw std::invalid_argument("Unknown smearer type '" + sType + "'");
   }
@@ -139,9 +138,7 @@ void ActsExamples::to_json(nlohmann::json& j,
   j["thickness"] = gdc.thickness;
   j["threshold"] = gdc.threshold;
   j["digital"] = gdc.digital;
-  if (j.find("charge-smearing") != j.end()) {
-    to_json(j["charge-smearing"], gdc.chargeSmearer);
-  }
+  to_json(j["charge-smearing"], gdc.chargeSmearer);
 }
 
 void ActsExamples::from_json(const nlohmann::json& j,
@@ -163,9 +160,7 @@ void ActsExamples::from_json(const nlohmann::json& j,
       gdc.varianceMap[idx] = vars;
     }
   }
-  if (j.find("charge-smearing") != j.end()) {
-    from_json(j["charge-smearing"], gdc.chargeSmearer);
-  }
+  from_json(j["charge-smearing"], gdc.chargeSmearer);
 }
 
 void ActsExamples::to_json(nlohmann::json& j,

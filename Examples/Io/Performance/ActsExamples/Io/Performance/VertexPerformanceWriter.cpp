@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Performance/VertexPerformanceWriter.hpp"
 
@@ -12,8 +12,8 @@
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/EventData/GenericBoundTrackParameters.hpp"
 #include "Acts/EventData/TrackParameters.hpp"
+#include "Acts/Propagator/EigenStepper.hpp"
 #include "Acts/Propagator/Propagator.hpp"
-#include "Acts/Propagator/SympyStepper.hpp"
 #include "Acts/Surfaces/PerigeeSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Logger.hpp"
@@ -153,7 +153,6 @@ VertexPerformanceWriter::VertexPerformanceWriter(
 
   m_outputTree->Branch("nRecoVtx", &m_nRecoVtx);
   m_outputTree->Branch("nTrueVtx", &m_nTrueVtx);
-  m_outputTree->Branch("nCleanVtx", &m_nCleanVtx);
   m_outputTree->Branch("nMergedVtx", &m_nMergedVtx);
   m_outputTree->Branch("nSplitVtx", &m_nSplitVtx);
   m_outputTree->Branch("nVtxDetectorAcceptance", &m_nVtxDetAcceptance);
@@ -404,7 +403,6 @@ ProcessCode VertexPerformanceWriter::writeT(
   std::lock_guard<std::mutex> lock(m_writeMutex);
 
   m_nRecoVtx = vertices.size();
-  m_nCleanVtx = 0;
   m_nMergedVtx = 0;
   m_nSplitVtx = 0;
 
@@ -436,8 +434,8 @@ ProcessCode VertexPerformanceWriter::writeT(
   // We compare the reconstructed momenta to the true momenta at the vertex. For
   // this, we propagate the reconstructed tracks to the PCA of the true vertex
   // position. Setting up propagator:
-  Acts::SympyStepper stepper(m_cfg.bField);
-  using Propagator = Acts::Propagator<Acts::SympyStepper>;
+  Acts::EigenStepper<> stepper(m_cfg.bField);
+  using Propagator = Acts::Propagator<Acts::EigenStepper<>>;
   auto propagator = std::make_shared<Propagator>(stepper);
 
   struct ToTruthMatching {
@@ -654,9 +652,7 @@ ProcessCode VertexPerformanceWriter::writeT(
       m_recoVertexClassification.push_back(
           static_cast<int>(recoVertexClassification));
 
-      if (recoVertexClassification == RecoVertexClassification::Clean) {
-        ++m_nCleanVtx;
-      } else if (recoVertexClassification == RecoVertexClassification::Merged) {
+      if (recoVertexClassification == RecoVertexClassification::Merged) {
         ++m_nMergedVtx;
       } else if (recoVertexClassification == RecoVertexClassification::Split) {
         ++m_nSplitVtx;
@@ -771,13 +767,11 @@ ProcessCode VertexPerformanceWriter::writeT(
       auto intersection =
           perigeeSurface
               ->intersect(ctx.geoContext, params.position(ctx.geoContext),
-                          params.direction(),
-                          Acts::BoundaryTolerance::Infinite())
+                          params.direction(), Acts::BoundaryCheck(false))
               .closest();
 
       // Setting the geometry/magnetic field context for the event
-      using PropagatorOptions = Propagator::Options<>;
-      PropagatorOptions pOptions(ctx.geoContext, ctx.magFieldContext);
+      Acts::PropagatorOptions pOptions(ctx.geoContext, ctx.magFieldContext);
       pOptions.direction =
           Acts::Direction::fromScalarZeroAsPositive(intersection.pathLength());
 

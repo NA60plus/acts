@@ -58,13 +58,6 @@ try:
 except ImportError:
     onnxEnabled = False
 
-try:
-    from acts import covfie
-
-    covfieEnabled = True
-except ImportError:
-    covfieEnabled = False
-
 
 try:
     import acts.examples
@@ -72,13 +65,6 @@ try:
     pythia8Enabled = hasattr(acts.examples, "pythia8")
 except ImportError:
     pythia8Enabled = False
-
-try:
-    import acts.examples
-
-    hashingSeedingEnabled = hasattr(acts.examples, "hashing")
-except ImportError:
-    hashingSeedingEnabled = False
 
 
 exatrkxEnabled = shutil.which("nvidia-smi") is not None

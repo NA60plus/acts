@@ -1,15 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Io/Csv/CsvParticleWriter.hpp"
 
 #include "ActsExamples/Framework/AlgorithmContext.hpp"
-#include "ActsExamples/Io/Csv/CsvInputOutput.hpp"
 #include "ActsExamples/Utilities/Paths.hpp"
 #include "ActsFatras/EventData/Barcode.hpp"
 #include "ActsFatras/EventData/Particle.hpp"
@@ -17,6 +16,8 @@
 
 #include <stdexcept>
 #include <vector>
+
+#include <dfe/dfe_io_dsv.hpp>
 
 #include "CsvOutputData.hpp"
 
@@ -35,8 +36,8 @@ ActsExamples::ProcessCode ActsExamples::CsvParticleWriter::writeT(
     const SimParticleContainer& particles) {
   auto pathParticles = perEventFilepath(
       m_cfg.outputDir, m_cfg.outputStem + ".csv", ctx.eventNumber);
-  ActsExamples::NamedTupleCsvWriter<ParticleData> writer(pathParticles,
-                                                         m_cfg.outputPrecision);
+  dfe::NamedTupleCsvWriter<ParticleData> writer(pathParticles,
+                                                m_cfg.outputPrecision);
 
   ParticleData data;
   for (const auto& particle : particles) {

@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/TrackFitting/TrackFittingAlgorithm.hpp"
 
@@ -18,7 +18,6 @@
 #include "Acts/Surfaces/PerigeeSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Result.hpp"
-#include "ActsExamples/EventData/Measurement.hpp"
 #include "ActsExamples/EventData/MeasurementCalibration.hpp"
 #include "ActsExamples/EventData/ProtoTrack.hpp"
 #include "ActsExamples/Framework/AlgorithmContext.hpp"
@@ -39,6 +38,9 @@ ActsExamples::TrackFittingAlgorithm::TrackFittingAlgorithm(
   if (m_cfg.inputMeasurements.empty()) {
     throw std::invalid_argument("Missing input measurement collection");
   }
+  if (m_cfg.inputSourceLinks.empty()) {
+    throw std::invalid_argument("Missing input source links collection");
+  }
   if (m_cfg.inputProtoTracks.empty()) {
     throw std::invalid_argument("Missing input proto tracks collection");
   }
@@ -57,6 +59,7 @@ ActsExamples::TrackFittingAlgorithm::TrackFittingAlgorithm(
   }
 
   m_inputMeasurements.initialize(m_cfg.inputMeasurements);
+  m_inputSourceLinks.initialize(m_cfg.inputSourceLinks);
   m_inputProtoTracks.initialize(m_cfg.inputProtoTracks);
   m_inputInitialTrackParameters.initialize(m_cfg.inputInitialTrackParameters);
   m_inputClusters.maybeInitialize(m_cfg.inputClusters);
@@ -67,6 +70,7 @@ ActsExamples::ProcessCode ActsExamples::TrackFittingAlgorithm::execute(
     const ActsExamples::AlgorithmContext& ctx) const {
   // Read input data
   const auto& measurements = m_inputMeasurements(ctx);
+  const auto& sourceLinks = m_inputSourceLinks(ctx);
   const auto& protoTracks = m_inputProtoTracks(ctx);
   const auto& initialParameters = m_inputInitialTrackParameters(ctx);
 
@@ -92,7 +96,7 @@ ActsExamples::ProcessCode ActsExamples::TrackFittingAlgorithm::execute(
 
   TrackFitterFunction::GeneralFitterOptions options{
       ctx.geoContext, ctx.magFieldContext, ctx.calibContext, pSurface.get(),
-      Acts::PropagatorPlainOptions(ctx.geoContext, ctx.magFieldContext)};
+      Acts::PropagatorPlainOptions()};
 
   auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
   auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
@@ -127,9 +131,14 @@ ActsExamples::ProcessCode ActsExamples::TrackFittingAlgorithm::execute(
 
     // Fill the source links via their indices from the container
     for (auto hitIndex : protoTrack) {
-      ConstVariableBoundMeasurementProxy measurement =
-          measurements.getMeasurement(hitIndex);
-      trackSourceLinks.push_back(measurement.sourceLink());
+      if (auto it = sourceLinks.nth(hitIndex); it != sourceLinks.end()) {
+        const IndexSourceLink& sourceLink = *it;
+        trackSourceLinks.push_back(Acts::SourceLink{sourceLink});
+      } else {
+        ACTS_FATAL("Proto track " << itrack << " contains invalid hit index"
+                                  << hitIndex);
+        return ProcessCode::ABORT;
+      }
     }
 
     ACTS_DEBUG("Invoke direct fitter for track " << itrack);

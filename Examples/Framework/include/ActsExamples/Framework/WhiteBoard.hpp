@@ -1,14 +1,13 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2017-2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
-#include <Acts/Utilities/Concepts.hpp>
 #include <Acts/Utilities/Logger.hpp>
 
 #include <algorithm>
@@ -72,7 +71,9 @@ class WhiteBoard {
     virtual ~IHolder() = default;
     virtual const std::type_info& type() const = 0;
   };
-  template <Acts::Concepts::nothrow_move_constructible T>
+  template <typename T,
+            typename =
+                std::enable_if_t<std::is_nothrow_move_constructible<T>::value>>
   struct HolderT : public IHolder {
     T value;
 
@@ -108,7 +109,7 @@ inline void ActsExamples::WhiteBoard::add(const std::string& name, T&& object) {
   if (name.empty()) {
     throw std::invalid_argument("Object can not have an empty name");
   }
-  if (m_store.contains(name)) {
+  if (0 < m_store.count(name)) {
     throw std::invalid_argument("Object '" + name + "' already exists");
   }
   auto holder = std::make_shared<HolderT<T>>(std::forward<T>(object));
@@ -154,6 +155,5 @@ inline const T& ActsExamples::WhiteBoard::get(const std::string& name) const {
 }
 
 inline bool ActsExamples::WhiteBoard::exists(const std::string& name) const {
-  // TODO remove this function?
-  return m_store.contains(name);
+  return m_store.find(name) != m_store.end();
 }

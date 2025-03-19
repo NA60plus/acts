@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -14,6 +14,7 @@
 #include "Acts/EventData/TrackParameters.hpp"
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/MagneticField/MagneticFieldProvider.hpp"
+#include "Acts/Propagator/EigenStepper.hpp"
 #include "Acts/Propagator/Propagator.hpp"
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Vertexing/FullBilloirVertexFitter.hpp"
@@ -60,9 +61,9 @@ class VertexFitterAlgorithm final : public IAlgorithm {
     Acts::Vector4 constraintPos = Acts::Vector4(0, 0, 0, 0);
     /// Vertex constraint covariance matrix
     Acts::SquareMatrix4 constraintCov =
-        Acts::Vector4(1e2 * Acts::UnitConstants::mm * Acts::UnitConstants::mm,
-                      1e2 * Acts::UnitConstants::mm * Acts::UnitConstants::mm,
-                      1e2 * Acts::UnitConstants::mm * Acts::UnitConstants::mm,
+        Acts::Vector4(0.05*0.05 * Acts::UnitConstants::mm * Acts::UnitConstants::mm,
+                      0.05*0.05 * Acts::UnitConstants::mm * Acts::UnitConstants::mm,
+                      0.05*0.05 * Acts::UnitConstants::mm * Acts::UnitConstants::mm,
                       1e8 * Acts::UnitConstants::mm * Acts::UnitConstants::mm)
             .asDiagonal();
   };

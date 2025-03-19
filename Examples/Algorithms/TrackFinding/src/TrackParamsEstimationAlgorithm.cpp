@@ -1,19 +1,22 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021-2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/TrackFinding/TrackParamsEstimationAlgorithm.hpp"
 
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/TrackParametrization.hpp"
-#include "Acts/EventData/Seed.hpp"
+#include "Acts/EventData/ParticleHypothesis.hpp"
+#include "Acts/EventData/SourceLink.hpp"
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/MagneticField/MagneticFieldProvider.hpp"
 #include "Acts/Seeding/EstimateTrackParamsFromSeed.hpp"
+#include "Acts/Seeding/Seed.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Result.hpp"
 #include "ActsExamples/EventData/IndexSourceLink.hpp"
@@ -41,32 +44,22 @@ Acts::BoundSquareMatrix makeInitialCovariance(
 
   for (std::size_t i = Acts::eBoundLoc0; i < Acts::eBoundSize; ++i) {
     double sigma = config.initialSigmas[i];
-    double variance = sigma * sigma;
 
-    if (i == Acts::eBoundQOverP) {
-      // note that we rely on the fact that sigma theta is already computed
-      double varianceTheta = result(Acts::eBoundTheta, Acts::eBoundTheta);
+    // Add momentum dependent uncertainties
+    sigma +=
+        config.initialSimgaQoverPCoefficients[i] * params[Acts::eBoundQOverP];
 
-      // transverse momentum contribution
-      variance +=
-          std::pow(config.initialSigmaPtRel * params[Acts::eBoundQOverP], 2);
-
-      // theta contribution
-      variance +=
-          varianceTheta * std::pow(params[Acts::eBoundQOverP] /
-                                       std::tan(params[Acts::eBoundTheta]),
-                                   2);
-    }
+    double var = sigma * sigma;
 
     // Inflate the time uncertainty if no time measurement is available
     if (i == Acts::eBoundTime && !sp.t().has_value()) {
-      variance *= config.noTimeVarInflation;
+      var *= config.noTimeVarInflation;
     }
 
     // Inflate the initial covariance
-    variance *= config.initialVarInflation[i];
+    var *= config.initialVarInflation[i];
 
-    result(i, i) = variance;
+    result(i, i) = var;
   }
 
   return result;
@@ -74,9 +67,11 @@ Acts::BoundSquareMatrix makeInitialCovariance(
 
 }  // namespace
 
-TrackParamsEstimationAlgorithm::TrackParamsEstimationAlgorithm(
-    TrackParamsEstimationAlgorithm::Config cfg, Acts::Logging::Level lvl)
-    : IAlgorithm("TrackParamsEstimationAlgorithm", lvl), m_cfg(std::move(cfg)) {
+ActsExamples::TrackParamsEstimationAlgorithm::TrackParamsEstimationAlgorithm(
+    ActsExamples::TrackParamsEstimationAlgorithm::Config cfg,
+    Acts::Logging::Level lvl)
+    : ActsExamples::IAlgorithm("TrackParamsEstimationAlgorithm", lvl),
+      m_cfg(std::move(cfg)) {
   if (m_cfg.inputSeeds.empty()) {
     throw std::invalid_argument("Missing seeds input collection");
   }
@@ -98,8 +93,8 @@ TrackParamsEstimationAlgorithm::TrackParamsEstimationAlgorithm(
   m_outputTracks.maybeInitialize(m_cfg.outputProtoTracks);
 }
 
-ProcessCode TrackParamsEstimationAlgorithm::execute(
-    const AlgorithmContext& ctx) const {
+ActsExamples::ProcessCode ActsExamples::TrackParamsEstimationAlgorithm::execute(
+    const ActsExamples::AlgorithmContext& ctx) const {
   auto const& seeds = m_inputSeeds(ctx);
 
   //==================================================================
@@ -167,7 +162,17 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
     // Get the bottom space point and its reference surface
     const auto bottomSP = seed.sp().front();
     const auto middleSP = seed.sp()[1];
-    const auto topSP = seed.sp()[1];
+    const auto topSP = seed.sp()[2];
+
+    if (m_cfg.verbose){
+      std::cout << "TrackParamsEstimationAlgorithm_bottomSP= " << bottomSP->x()
+                << " " << bottomSP->y() << " " << bottomSP->z() << std::endl;
+      std::cout << "TrackParamsEstimationAlgorithm_middleSP= " << middleSP->x()
+                << " " << middleSP->y() << " " << middleSP->z() << std::endl;
+      std::cout << "TrackParamsEstimationAlgorithm_topSP= " << topSP->x() 
+                << " " << topSP->y() << " " << topSP->z() << std::endl;
+    }
+
     if (bottomSP->sourceLinks().empty()) {
       ACTS_WARNING("Missing source link in the space point");
       continue;
@@ -181,31 +186,61 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
       continue;
     }
 
-    if (m_cfg.verbose)
-      std::cout << "TrackParamsEstimationAlgorithm_bottomSP= " << bottomSP->x()
-                << " " << bottomSP->y() << " " << bottomSP->z() << std::endl;
-
-
     // Get the magnetic field at the bottom space point
+    // The field is rotated
     auto fieldRes = m_cfg.magneticField->getField(
         {(bottomSP->x()+middleSP->x()+topSP->x())/3.,
           (bottomSP->z()+middleSP->z()+topSP->z())/3.,
           -(bottomSP->y()+middleSP->y()+topSP->y())/3.}, bCache);
+      
+    auto fieldResBot = m_cfg.magneticField->getField(
+        {bottomSP->x(),
+          bottomSP->z(),
+          -bottomSP->y()}, bCache);
+
+    auto fieldResMid = m_cfg.magneticField->getField(
+        {middleSP->x(),
+          middleSP->z(),
+          -middleSP->y()}, bCache);
+
+    auto fieldResTop = m_cfg.magneticField->getField(
+        {topSP->x(),
+          topSP->z(),
+          -topSP->y()}, bCache);
+          
     if (!fieldRes.ok()) {
       ACTS_ERROR("Field lookup error: " << fieldRes.error());
       return ProcessCode::ABORT;
     }
-    Acts::Vector3 field = *fieldRes;
-
-    if (!m_cfg.truthSeeding) {
-      field.y() = -field.z();
-      field.z() = 0.0;
-    }
+    //Acts::Vector3 field;// = *fieldRes;
+    Acts::Vector3 field2 = *fieldRes;
+    /*
+    Acts::Vector3 fieldBot = *fieldResBot;
+    Acts::Vector3 fieldMid = *fieldResMid;
+    Acts::Vector3 fieldTop = *fieldResTop;
+    field.x() = (fieldBot.x()+fieldMid.x()+fieldTop.x())/3.;
+    field.y() = (fieldBot.y()+fieldMid.y()+fieldTop.y())/3.;
+    field.z() = (fieldBot.z()+fieldMid.z()+fieldTop.z())/3.;
+    
+    field.x() = field.x();
+    auto a = field.y();
+    field.y() = -field.z();
+    field.z() = field.y();
+*/
+    field2.x() = field2.x();
+    auto a2 = field2.y();
+    field2.y() = -field2.z();
+    field2.z() = a2;
 
     // Estimate the track parameters from seed
     auto optParams = Acts::estimateTrackParamsFromSeed(
-        ctx.geoContext, seed.sp().begin(), seed.sp().end(), *surface, field,
-         m_cfg.bFieldMin, logger(), m_cfg.verbose);
+        ctx.geoContext, seed.sp().begin(), seed.sp().end(), *surface, field2,
+         m_cfg.bFieldMin, logger());
+
+
+    ////////////////////////////////////////////
+        // Clear & reserve the right size
+
 
     // ===================== ALTERNATIVE WAY OF EXTRACTING TRACK PARAMETERS
     // (Noemi)
@@ -258,5 +293,4 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
 
   return ProcessCode::SUCCESS;
 }
-
 }  // namespace ActsExamples

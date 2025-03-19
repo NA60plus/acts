@@ -1,16 +1,16 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
 #include "Acts/Definitions/Algebra.hpp"
 #include "Acts/Definitions/TrackParametrization.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
+#include "Acts/Surfaces/BoundaryCheck.hpp"
 #include "Acts/Surfaces/DiscBounds.hpp"
 #include "Acts/Surfaces/SurfaceBounds.hpp"
 #include "Acts/Utilities/detail/periodic.hpp"
@@ -73,11 +73,11 @@ class RadialBounds : public DiscBounds {
   /// For disc surfaces the local position in (r,phi) is checked
   ///
   /// @param lposition local position to be checked
-  /// @param boundaryTolerance boundary check directive
+  /// @param bcheck boundary check directive
   ///
   /// @return is a boolean indicating the operation success
   bool inside(const Vector2& lposition,
-              const BoundaryTolerance& boundaryTolerance) const final;
+              const BoundaryCheck& bcheck) const final;
 
   /// Outstream operator
   ///
@@ -164,9 +164,9 @@ inline std::vector<double> RadialBounds::values() const {
 }
 
 inline void RadialBounds::checkConsistency() noexcept(false) {
-  if (get(eMinR) < 0. || get(eMaxR) <= 0. || get(eMinR) > get(eMaxR)) {
-    throw std::invalid_argument("RadialBounds: invalid radial setup");
-  }
+//  if (get(eMinR) < 0. || get(eMaxR) <= 0. || get(eMinR) > get(eMaxR)) {
+//    throw std::invalid_argument("RadialBounds: invalid radial setup");
+//  }
   if (get(eHalfPhiSector) < 0. || get(eHalfPhiSector) > M_PI) {
     throw std::invalid_argument("RadialBounds: invalid phi sector setup.");
   }

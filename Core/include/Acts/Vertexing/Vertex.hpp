@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2019 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -73,10 +73,11 @@ class Vertex {
   /// @return Returns pair of (chi2, numberDoF)
   std::pair<double, double> fitQuality() const;
 
-  /// @brief Set position
+  /// @brief Set position and time
   ///
   /// @param position Vertex position
-  void setPosition(const Vector3& position);
+  /// @param time The time
+  void setPosition(const Vector3& position, ActsScalar time = 0);
 
   /// @brief Set position and time
   ///

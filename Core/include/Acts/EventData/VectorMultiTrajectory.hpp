@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2022 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -13,9 +13,9 @@
 #include "Acts/EventData/MultiTrajectoryBackendConcept.hpp"
 #include "Acts/EventData/SourceLink.hpp"
 #include "Acts/EventData/TrackStatePropMask.hpp"
-#include "Acts/EventData/Types.hpp"
 #include "Acts/EventData/detail/DynamicColumn.hpp"
 #include "Acts/EventData/detail/DynamicKeyIterator.hpp"
+#include "Acts/Utilities/Concepts.hpp"
 #include "Acts/Utilities/HashedString.hpp"
 #include "Acts/Utilities/Helpers.hpp"
 #include "Acts/Utilities/ThrowAssert.hpp"
@@ -28,7 +28,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -133,7 +132,7 @@ class VectorMultiTrajectoryBase {
         h("meas", isMeas, weight(meas_size));
         h("measCov", isMeas, weight(meas_cov_size));
         h("sourceLinks", isMeas, weight(sizeof(const SourceLink)));
-        h("projectors", isMeas, weight(sizeof(SerializedSubspaceIndices)));
+        h("projectors", isMeas, weight(sizeof(ProjectorBitset)));
       }
 
       if (ts.hasJacobian() &&
@@ -157,8 +156,8 @@ class VectorMultiTrajectoryBase {
     double pathLength = 0;
     TrackStateType::raw_type typeFlags{};
 
-    IndexType iUncalibrated = kInvalid;
-    IndexType iCalibratedSourceLink = kInvalid;
+    IndexType iuncalibrated = kInvalid;
+    IndexType icalibratedsourcelink = kInvalid;
     IndexType measdim = kInvalid;
 
     TrackStatePropMask allocMask = TrackStatePropMask::None;
@@ -209,7 +208,7 @@ class VectorMultiTrajectoryBase {
       case "projector"_hash:
         return instance.m_index[istate].iprojector != kInvalid;
       case "uncalibratedSourceLink"_hash:
-        return instance.m_sourceLinks[instance.m_index[istate].iUncalibrated]
+        return instance.m_sourceLinks[instance.m_index[istate].iuncalibrated]
             .has_value();
       case "previous"_hash:
       case "next"_hash:
@@ -220,7 +219,7 @@ class VectorMultiTrajectoryBase {
       case "typeFlags"_hash:
         return true;
       default:
-        return instance.m_dynamic.contains(key);
+        return instance.m_dynamic.find(key) != instance.m_dynamic.end();
     }
   }
 
@@ -287,7 +286,7 @@ class VectorMultiTrajectoryBase {
       case "typeFlags"_hash:
         return true;
       default:
-        return instance.m_dynamic.contains(key);
+        return instance.m_dynamic.find(key) != instance.m_dynamic.end();
     }
   }
 
@@ -304,7 +303,7 @@ class VectorMultiTrajectoryBase {
   }
 
   SourceLink getUncalibratedSourceLink_impl(IndexType istate) const {
-    return m_sourceLinks[m_index[istate].iUncalibrated].value();
+    return m_sourceLinks[m_index[istate].iuncalibrated].value();
   }
 
   const Surface* referenceSurface_impl(IndexType istate) const {
@@ -316,18 +315,17 @@ class VectorMultiTrajectoryBase {
   std::vector<IndexData> m_index;
   std::vector<IndexType> m_previous;
   std::vector<IndexType> m_next;
-  std::vector<typename detail_lt::FixedSizeTypes<eBoundSize>::Coefficients>
-      m_params;
-  std::vector<typename detail_lt::FixedSizeTypes<eBoundSize>::Covariance> m_cov;
+  std::vector<typename detail_lt::Types<eBoundSize>::Coefficients> m_params;
+  std::vector<typename detail_lt::Types<eBoundSize>::Covariance> m_cov;
 
   std::vector<double> m_meas;
   std::vector<MultiTrajectoryTraits::IndexType> m_measOffset;
   std::vector<double> m_measCov;
   std::vector<MultiTrajectoryTraits::IndexType> m_measCovOffset;
 
-  std::vector<typename detail_lt::FixedSizeTypes<eBoundSize>::Covariance> m_jac;
+  std::vector<typename detail_lt::Types<eBoundSize>::Covariance> m_jac;
   std::vector<std::optional<SourceLink>> m_sourceLinks;
-  std::vector<SerializedSubspaceIndices> m_projectors;
+  std::vector<ProjectorBitset> m_projectors;
 
   // owning vector of shared pointers to surfaces
   //
@@ -395,30 +393,30 @@ class VectorMultiTrajectory final
   }
 
   template <std::size_t measdim>
-  TrackStateProxy::Calibrated<measdim> calibrated_impl(IndexType istate) {
+  TrackStateProxy::Measurement<measdim> measurement_impl(IndexType istate) {
     IndexType offset = m_measOffset[istate];
-    return TrackStateProxy::Calibrated<measdim>{&m_meas[offset]};
+    return TrackStateProxy::Measurement<measdim>{&m_meas[offset]};
   }
 
   template <std::size_t measdim>
-  ConstTrackStateProxy::Calibrated<measdim> calibrated_impl(
+  ConstTrackStateProxy::Measurement<measdim> measurement_impl(
       IndexType istate) const {
     IndexType offset = m_measOffset[istate];
-    return ConstTrackStateProxy::Calibrated<measdim>{&m_meas[offset]};
+    return ConstTrackStateProxy::Measurement<measdim>{&m_meas[offset]};
   }
 
   template <std::size_t measdim>
-  TrackStateProxy::CalibratedCovariance<measdim> calibratedCovariance_impl(
+  TrackStateProxy::MeasurementCovariance<measdim> measurementCovariance_impl(
       IndexType istate) {
     IndexType offset = m_measCovOffset[istate];
-    return TrackStateProxy::CalibratedCovariance<measdim>{&m_measCov[offset]};
+    return TrackStateProxy::MeasurementCovariance<measdim>{&m_measCov[offset]};
   }
 
   template <std::size_t measdim>
-  ConstTrackStateProxy::CalibratedCovariance<measdim> calibratedCovariance_impl(
-      IndexType istate) const {
+  ConstTrackStateProxy::MeasurementCovariance<measdim>
+  measurementCovariance_impl(IndexType istate) const {
     IndexType offset = m_measCovOffset[istate];
-    return ConstTrackStateProxy::CalibratedCovariance<measdim>{
+    return ConstTrackStateProxy::MeasurementCovariance<measdim>{
         &m_measCov[offset]};
   }
 
@@ -440,7 +438,9 @@ class VectorMultiTrajectory final
     return detail_vmt::VectorMultiTrajectoryBase::has_impl(*this, key, istate);
   }
 
-  IndexType size_impl() const { return m_index.size(); }
+  IndexType size_impl() const {
+    return m_index.size();
+  }
 
   void clear_impl();
 
@@ -456,7 +456,7 @@ class VectorMultiTrajectory final
 
   template <typename T>
   void addColumn_impl(std::string_view key) {
-    HashedString hashedKey = hashString(key);
+    Acts::HashedString hashedKey = hashString(key);
     m_dynamic.insert({hashedKey, std::make_unique<detail::DynamicColumn<T>>()});
   }
 
@@ -483,9 +483,8 @@ class VectorMultiTrajectory final
     m_measCov.resize(m_measCov.size() + measdim * measdim);
   }
 
-  void setUncalibratedSourceLink_impl(IndexType istate,
-                                      SourceLink&& sourceLink) {
-    m_sourceLinks[m_index[istate].iUncalibrated] = std::move(sourceLink);
+  void setUncalibratedSourceLink_impl(IndexType istate, SourceLink sourceLink) {
+    m_sourceLinks[m_index[istate].iuncalibrated] = std::move(sourceLink);
   }
 
   void setReferenceSurface_impl(IndexType istate,
@@ -499,9 +498,7 @@ class VectorMultiTrajectory final
   // END INTERFACE
 };
 
-static_assert(
-    MutableMultiTrajectoryBackend<VectorMultiTrajectory>,
-    "VectorMultiTrajectory does not fulfill MutableMultiTrajectoryBackend");
+ACTS_STATIC_CHECK_CONCEPT(MutableMultiTrajectoryBackend, VectorMultiTrajectory);
 
 class ConstVectorMultiTrajectory;
 
@@ -550,17 +547,17 @@ class ConstVectorMultiTrajectory final
   }
 
   template <std::size_t measdim>
-  ConstTrackStateProxy::Calibrated<measdim> calibrated_impl(
+  ConstTrackStateProxy::Measurement<measdim> measurement_impl(
       IndexType istate) const {
     IndexType offset = m_measOffset[istate];
-    return ConstTrackStateProxy::Calibrated<measdim>{&m_meas[offset]};
+    return ConstTrackStateProxy::Measurement<measdim>{&m_meas[offset]};
   }
 
   template <std::size_t measdim>
-  ConstTrackStateProxy::CalibratedCovariance<measdim> calibratedCovariance_impl(
-      IndexType istate) const {
+  ConstTrackStateProxy::MeasurementCovariance<measdim>
+  measurementCovariance_impl(IndexType istate) const {
     IndexType offset = m_measCovOffset[istate];
-    return ConstTrackStateProxy::CalibratedCovariance<measdim>{
+    return ConstTrackStateProxy::MeasurementCovariance<measdim>{
         &m_measCov[offset]};
   }
 
@@ -568,7 +565,9 @@ class ConstVectorMultiTrajectory final
     return detail_vmt::VectorMultiTrajectoryBase::has_impl(*this, key, istate);
   }
 
-  IndexType size_impl() const { return m_index.size(); }
+  IndexType size_impl() const {
+    return m_index.size();
+  }
 
   std::any component_impl(HashedString key, IndexType istate) const {
     return detail_vmt::VectorMultiTrajectoryBase::component_impl<true>(
@@ -582,8 +581,7 @@ class ConstVectorMultiTrajectory final
   // END INTERFACE
 };
 
-static_assert(
-    ConstMultiTrajectoryBackend<ConstVectorMultiTrajectory>,
-    "ConctVectorMultiTrajectory does not fulfill ConstMultiTrajectoryBackend");
+ACTS_STATIC_CHECK_CONCEPT(ConstMultiTrajectoryBackend,
+                          ConstVectorMultiTrajectory);
 
 }  // namespace Acts

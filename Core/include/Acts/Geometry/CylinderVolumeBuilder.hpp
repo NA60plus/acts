@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
@@ -492,10 +492,10 @@ class CylinderVolumeBuilder : public ITrackingVolumeBuilder {
     std::shared_ptr<const IConfinedTrackingVolumeBuilder> ctVolumeBuilder =
         nullptr;
     /// Additional envelope in R to create rMin, rMax
-    std::pair<double, double> layerEnvelopeR = {1. * UnitConstants::mm,
-                                                1. * UnitConstants::mm};
+    std::pair<double, double> layerEnvelopeR = {0.0001 * UnitConstants::mm,
+                                                0.0001 * UnitConstants::mm};
     /// the additional envelope in Z to create zMin, zMax
-    double layerEnvelopeZ = 1. * UnitConstants::mm;
+    double layerEnvelopeZ = 0.0001 * UnitConstants::mm;
 
     // The potential boundary material (MB) options - there are 6 at maximum
     /// -------------------- MB (outer [1]) ---------------

@@ -1,17 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2023 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Plugins/ExaTrkX/TorchEdgeClassifier.hpp"
 
-#ifndef ACTS_EXATRKX_CPUONLY
 #include <c10/cuda/CUDAGuard.h>
-#endif
-
 #include <torch/script.h>
 #include <torch/torch.h>
 
@@ -67,12 +64,9 @@ std::tuple<std::any, std::any, std::any> TorchEdgeClassifier::operator()(
   c10::InferenceMode guard(true);
 
   // add a protection to avoid calling for kCPU
-#ifndef ACTS_EXATRKX_CPUONLY
-  std::optional<c10::cuda::CUDAGuard> device_guard;
   if (device.is_cuda()) {
-    device_guard.emplace(device.index());
+    c10::cuda::CUDAGuard device_guard(device.index());
   }
-#endif
 
   auto nodes = std::any_cast<torch::Tensor>(inputNodes).to(device);
   auto edgeList = std::any_cast<torch::Tensor>(inputEdges).to(device);

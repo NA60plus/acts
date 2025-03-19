@@ -1,10 +1,10 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2021 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "ActsExamples/Digitization/DigitizationAlgorithm.hpp"
 
@@ -70,52 +70,34 @@ ActsExamples::DigitizationAlgorithm::DigitizationAlgorithm(
     throw std::invalid_argument(
         "Missing hit-to-simulated-hits map output collection");
   }
+  if (m_cfg.outputMeasurementParticlesMapVT.empty()) {
+    throw std::invalid_argument(
+        "Missing hit-to-particles map output collection");
+  }
+  if (m_cfg.outputMeasurementSimHitsMapVT.empty()) {
+    throw std::invalid_argument(
+        "Missing hit-to-simulated-hits map output collection");
+  }
+  if (m_cfg.outputMeasurementParticlesMapMS.empty()) {
+    throw std::invalid_argument(
+        "Missing hit-to-particles map output collection");
+  }
+  if (m_cfg.outputMeasurementSimHitsMapMS.empty()) {
+    throw std::invalid_argument(
+        "Missing hit-to-simulated-hits map output collection");
+  }
   if (m_cfg.surfaceByIdentifier.empty()) {
     throw std::invalid_argument("Missing Surface-GeometryID association map");
   }
   if (!m_cfg.randomNumbers) {
     throw std::invalid_argument("Missing random numbers tool");
   }
+
   if (m_cfg.digitizationConfigs.empty()) {
     throw std::invalid_argument("Missing digitization configuration");
   }
 
-  if (m_cfg.doClusterization) {
-    if (m_cfg.outputSourceLinks.empty()) {
-      throw std::invalid_argument("Missing source links output collection");
-    }
-    if (m_cfg.outputMeasurements.empty()) {
-      throw std::invalid_argument("Missing measurements output collection");
-    }
-    if (m_cfg.outputClusters.empty()) {
-      throw std::invalid_argument("Missing cluster output collection");
-    }
-    if (m_cfg.outputMeasurementParticlesMap.empty()) {
-      throw std::invalid_argument(
-          "Missing hit-to-particles map output collection");
-    }
-    if (m_cfg.outputMeasurementSimHitsMap.empty()) {
-      throw std::invalid_argument(
-          "Missing hit-to-simulated-hits map output collection");
-    }
-
-    m_sourceLinkWriteHandle.initialize(m_cfg.outputSourceLinks);
-    m_measurementWriteHandle.initialize(m_cfg.outputMeasurements);
-    m_clusterWriteHandle.initialize(m_cfg.outputClusters);
-    m_measurementParticlesMapWriteHandle.initialize(
-        m_cfg.outputMeasurementParticlesMap);
-    m_measurementSimHitsMapWriteHandle.initialize(
-        m_cfg.outputMeasurementSimHitsMap);
-  }
-
-  if (m_cfg.doOutputCells) {
-    if (m_cfg.outputCells.empty()) {
-      throw std::invalid_argument("Missing cell output collection");
-    }
-
-    m_cellsWriteHandle.initialize(m_cfg.outputCells);
-  }
-
+  m_inputParticles.initialize(m_cfg.inputParticles);
   m_simContainerReadHandle.initialize(m_cfg.inputSimHits);
   m_sourceLinkWriteHandle.initialize(m_cfg.outputSourceLinks);
   m_measurementWriteHandle.initialize(m_cfg.outputMeasurements);
@@ -124,10 +106,20 @@ ActsExamples::DigitizationAlgorithm::DigitizationAlgorithm(
   m_sourceLinkWriteHandleMS.initialize(m_cfg.outputSourceLinksMS);
   m_measurementWriteHandleMS.initialize(m_cfg.outputMeasurementsMS);
   m_clusterWriteHandle.initialize(m_cfg.outputClusters);
+  m_clusterWriteHandleVT.initialize(m_cfg.outputClustersVT);
+  m_clusterWriteHandleMS.initialize(m_cfg.outputClustersMS);
   m_measurementParticlesMapWriteHandle.initialize(
       m_cfg.outputMeasurementParticlesMap);
   m_measurementSimHitsMapWriteHandle.initialize(
       m_cfg.outputMeasurementSimHitsMap);
+  m_measurementParticlesMapWriteHandleVT.initialize(
+      m_cfg.outputMeasurementParticlesMapVT);
+  m_measurementSimHitsMapWriteHandleVT.initialize(
+      m_cfg.outputMeasurementSimHitsMapVT);
+  m_measurementParticlesMapWriteHandleMS.initialize(
+      m_cfg.outputMeasurementParticlesMapMS);
+  m_measurementSimHitsMapWriteHandleMS.initialize(
+      m_cfg.outputMeasurementSimHitsMapMS);
 
   // Create the digitizers from the configuration
   std::vector<std::pair<Acts::GeometryIdentifier, Digitizer>> digitizerInput;
@@ -149,7 +141,7 @@ ActsExamples::DigitizationAlgorithm::DigitizationAlgorithm(
                    geoCfg.indices.end());
 
     // Make sure the configured input parameter indices are sorted and unique
-    std::ranges::sort(indices);
+    std::sort(indices.begin(), indices.end());
 
     auto dup = std::adjacent_find(indices.begin(), indices.end());
     if (dup != indices.end()) {
@@ -185,6 +177,8 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
     const AlgorithmContext& ctx) const {
   // Retrieve input
   const auto& simHits = m_simContainerReadHandle(ctx);
+  const auto& particles = m_inputParticles(ctx);
+
   ACTS_DEBUG("Loaded " << simHits.size() << " sim hits");
 
   // Prepare output containers
@@ -195,9 +189,16 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
   MeasurementContainer measurementsVT;
   IndexSourceLinkContainer sourceLinksMS;
   MeasurementContainer measurementsMS;
+
   ClusterContainer clusters;
   IndexMultimap<ActsFatras::Barcode> measurementParticlesMap;
   IndexMultimap<Index> measurementSimHitsMap;
+  ClusterContainer clustersVT;
+  IndexMultimap<ActsFatras::Barcode> measurementParticlesMapVT;
+  IndexMultimap<Index> measurementSimHitsMapVT;
+  ClusterContainer clustersMS;
+  IndexMultimap<ActsFatras::Barcode> measurementParticlesMapMS;
+  IndexMultimap<Index> measurementSimHitsMapMS;
   sourceLinks.reserve(simHits.size());
   measurements.reserve(simHits.size());
   sourceLinksVT.reserve(simHits.size());
@@ -206,16 +207,16 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
   measurementsMS.reserve(simHits.size());
   measurementParticlesMap.reserve(simHits.size());
   measurementSimHitsMap.reserve(simHits.size());
+  measurementParticlesMapVT.reserve(simHits.size());
+  measurementSimHitsMapVT.reserve(simHits.size());
+  measurementParticlesMapMS.reserve(simHits.size());
+  measurementSimHitsMapMS.reserve(simHits.size());
 
   // Setup random number generator
   auto rng = m_cfg.randomNumbers->spawnGenerator(ctx);
-  std::uniform_real_distribution<double> uniformDist(0.0,1.0);
+  std::uniform_real_distribution<double> uniformDist(0.0, 1.0);
   // Some statistics
   std::size_t skippedHits = 0;
-
-  // Some algorithms do the clusterization themselves such as the traccc chain.
-  // Thus we need to store the cell data from the simulation.
-  CellsMap cellsMap;
 
   ACTS_DEBUG("Starting loop over modules ...");
   for (const auto& simHitsGroup : groupByModule(simHits)) {
@@ -265,12 +266,40 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
               continue;
             }
             double rndm = uniformDist(rng);
-            if (rndm > m_cfg.efficiency){
-                ACTS_VERBOSE("Skip due to inefficiency");
+            if (rndm > m_cfg.efficiency) {
+              ACTS_VERBOSE("Skip due to inefficiency");
+              continue;
+            }
+            auto pos = simHit.fourPosition();
+            
+            if (pos[2] > 400) {
+              auto particleId = simHit.particleId();
+              if (abs((*particles.find(particleId)).absolutePdg()) != 13) {
+                continue;
+              }
+            }
+            /*
+            if (pos[2] > 6000) {
+              continue;
+            }
+              */
+        
+            if (abs(pos[0]) < 110 && abs(pos[1]) < 110 && pos[2] < 3200 &&
+                pos[2] > 2800) {
+              continue;
+            }
+            
+            if (m_cfg.applyHole){
+              if(abs(pos[0])<3 and abs(pos[1])<3 and pos[2] < 400)
                 continue;
             }
-
-            auto pos = simHit.fourPosition();
+            /*
+              std::cout<<"Skip hit because inside the hole\n";
+              std::cout<<"pos[0]: "<<pos[0]<<" pos[1]: "<<pos[1]<<" pos[2]:
+            "<<pos[2]<<std::endl; continue;
+            }
+            */
+            /*
             if (m_cfg.applyDeadAreas){
               if (m_cfg.applyReadout){
                 ACTS_VERBOSE("Skip hit because in the readout");
@@ -281,35 +310,26 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
                 ACTS_VERBOSE("Skip hit because in the backbone");
                 continue;
               }
-              
-              if (m_cfg.applyHole){
-                if(abs(pos[0])<3 and abs(pos[1])<3 and pos[2] < 400){
-                  ACTS_VERBOSE("Skip hit because inside the hole");
-                  continue;
-                }
-                if(abs(pos[0])<110 && abs(pos[1])<110 && pos[3]<3200 && pos[3]>2800){
-                  ACTS_VERBOSE("Skip hit because inside the hole");
-                  continue;
-                }
-              }
-              
+
+
               if (m_cfg.applyEndcapShort){
                 ACTS_VERBOSE("Skip hit because in the short endcap");
                 continue;
               }
-              
+
               if (m_cfg.applyEndcapLong){
                 ACTS_VERBOSE("Skip hit because in the long endcap");
                 continue;
               }
             }
-
             if (m_cfg.applyFastSimSelections) {
-              if((sqrt(pos[0]*pos[0]+pos[1]*pos[1])>150 or sqrt(pos[0]*pos[0]+pos[1]*pos[1])<3) and pos[2] < 400){
-                ACTS_VERBOSE("Skip hit because outside the fast simulation geometry");
-                continue;
+              if((sqrt(pos[0]*pos[0]+pos[1]*pos[1])>150 or
+            sqrt(pos[0]*pos[0]+pos[1]*pos[1])<3) and pos[2] < 400){
+                ACTS_VERBOSE("Skip hit because outside the fast simulation
+            geometry"); continue;
               }
             }
+            */
             // Geometric part - 0, 1, 2 local parameters are possible
             if (!digitizer.geometric.indices.empty()) {
               ACTS_VERBOSE("Configured to geometric digitize "
@@ -363,58 +383,58 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
             moduleClusters.add(std::move(dParameters), simHitIdx);
           }
 
-          auto digitizeParametersResult = moduleClusters.digitizedParameters();
+          for (auto& [dParameters, simhits] :
+               moduleClusters.digitizedParameters()) {
+            // The measurement container is unordered and the index under which
+            // the measurement will be stored is known before adding it.
+            Index measurementIdx = measurements.size();
+            IndexSourceLink sourceLink{moduleGeoId, measurementIdx};
 
-          // Store the cell data into a map.
-          if (m_cfg.doOutputCells) {
-            std::vector<Cluster::Cell> cells;
-            for (const auto& [dParameters, simhits] :
-                 digitizeParametersResult) {
-              for (const auto& cell : dParameters.cluster.channels) {
-                cells.push_back(cell);
-              }
-            }
-            cellsMap.insert({moduleGeoId, std::move(cells)});
-          }
+            // Add to output containers:
+            // index map and source link container are geometry-ordered.
+            // since the input is also geometry-ordered, new items can
+            // be added at the end.
+            auto measurement = createMeasurement(dParameters, sourceLink);
+            if (dParameters.variances[0] == 0.005*0.005) {
+              sourceLinksVT.insert(sourceLinksVT.end(), sourceLink);
 
-          if (m_cfg.doClusterization) {
-            for (auto& [dParameters, simhits] : digitizeParametersResult) {
-              // The measurement container is unordered and the index under
-              // which the measurement will be stored is known before adding it.
-              Index measurementIdx = measurements.size();
-              IndexSourceLink sourceLink{moduleGeoId, measurementIdx};
+              measurementsVT.emplace_back(measurement);
 
-              // Add to output containers:
-              // index map and source link container are geometry-ordered.
-              // since the input is also geometry-ordered, new items can
-              // be added at the end.
-              sourceLinks.insert(sourceLinks.end(), sourceLink);
-
-              createMeasurement(measurements, dParameters, sourceLink);
-              clusters.emplace_back(std::move(dParameters.cluster));
-              if(dParameters.variances[0] < 0.01){
-                sourceLinksVT.insert(sourceLinksVT.end(), sourceLink);
-
-                measurementsVT.emplace_back(
-                    createMeasurement(dParameters, sourceLink));
-
-              }
-              else{
-                sourceLinksMS.insert(sourceLinksMS.end(), sourceLink);
-
-                measurementsMS.emplace_back(
-                    createMeasurement(dParameters, sourceLink));
-
-              }
-              // this digitization does hit merging so there can be more than
-              // one mapping entry for each digitized hit.
               for (auto simHitIdx : simhits) {
-                measurementParticlesMap.emplace_hint(
-                    measurementParticlesMap.end(), measurementIdx,
+                measurementParticlesMapVT.emplace_hint(
+                    measurementParticlesMapVT.end(), measurementIdx,
                     simHits.nth(simHitIdx)->particleId());
-                measurementSimHitsMap.emplace_hint(measurementSimHitsMap.end(),
-                                                   measurementIdx, simHitIdx);
+                measurementSimHitsMapVT.emplace_hint(
+                    measurementSimHitsMapVT.end(), measurementIdx, simHitIdx);
               }
+              clustersVT.emplace_back(std::move(dParameters.cluster));
+
+            } else {
+              sourceLinksMS.insert(sourceLinksMS.end(), sourceLink);
+              measurementsMS.emplace_back(measurement);
+
+              for (auto simHitIdx : simhits) {
+                measurementParticlesMapMS.emplace_hint(
+                    measurementParticlesMapMS.end(), measurementIdx,
+                    simHits.nth(simHitIdx)->particleId());
+                measurementSimHitsMapMS.emplace_hint(
+                    measurementSimHitsMapMS.end(), measurementIdx, simHitIdx);
+              }
+              clustersMS.emplace_back(std::move(dParameters.cluster));
+            }
+
+            sourceLinks.insert(sourceLinks.end(), sourceLink);
+            measurements.emplace_back(measurement);
+            clusters.emplace_back(std::move(dParameters.cluster));
+
+            // this digitization does hit merging so there can be more than one
+            // mapping entry for each digitized hit.
+            for (auto simHitIdx : simhits) {
+              measurementParticlesMap.emplace_hint(
+                  measurementParticlesMap.end(), measurementIdx,
+                  simHits.nth(simHitIdx)->particleId());
+              measurementSimHitsMap.emplace_hint(measurementSimHitsMap.end(),
+                                                 measurementIdx, simHitIdx);
             }
           }
         },
@@ -427,23 +447,23 @@ ActsExamples::ProcessCode ActsExamples::DigitizationAlgorithm::execute(
         << " skipped in Digitization. Enable DEBUG mode to see more details.");
   }
 
-  if (m_cfg.doOutputCells) {
-    m_cellsWriteHandle(ctx, std::move(cellsMap));
-  }
-
-  if (m_cfg.doClusterization) {
-    m_sourceLinkWriteHandleVT(ctx, std::move(sourceLinksVT));
-    m_measurementWriteHandleVT(ctx, std::move(measurementsVT));
-    m_sourceLinkWriteHandleMS(ctx, std::move(sourceLinksMS));
-    m_measurementWriteHandleMS(ctx, std::move(measurementsMS));
-    m_sourceLinkWriteHandle(ctx, std::move(sourceLinks));
-    m_measurementWriteHandle(ctx, std::move(measurements));
-    m_clusterWriteHandle(ctx, std::move(clusters));
-    m_measurementParticlesMapWriteHandle(ctx,
-                                         std::move(measurementParticlesMap));
-    m_measurementSimHitsMapWriteHandle(ctx, std::move(measurementSimHitsMap));
-  }
-
+  m_sourceLinkWriteHandle(ctx, std::move(sourceLinks));
+  m_measurementWriteHandle(ctx, std::move(measurements));
+  m_sourceLinkWriteHandleVT(ctx, std::move(sourceLinksVT));
+  m_measurementWriteHandleVT(ctx, std::move(measurementsVT));
+  m_sourceLinkWriteHandleMS(ctx, std::move(sourceLinksMS));
+  m_measurementWriteHandleMS(ctx, std::move(measurementsMS));
+  m_clusterWriteHandle(ctx, std::move(clusters));
+  m_measurementParticlesMapWriteHandle(ctx, std::move(measurementParticlesMap));
+  m_measurementSimHitsMapWriteHandle(ctx, std::move(measurementSimHitsMap));
+  m_clusterWriteHandleVT(ctx, std::move(clustersVT));
+  m_measurementParticlesMapWriteHandleVT(ctx,
+                                         std::move(measurementParticlesMapVT));
+  m_measurementSimHitsMapWriteHandleVT(ctx, std::move(measurementSimHitsMapVT));
+  m_clusterWriteHandleMS(ctx, std::move(clustersMS));
+  m_measurementParticlesMapWriteHandleMS(ctx,
+                                         std::move(measurementParticlesMapMS));
+  m_measurementSimHitsMapWriteHandleMS(ctx, std::move(measurementSimHitsMapMS));
   return ProcessCode::SUCCESS;
 }
 

@@ -1,16 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2016-2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "Acts/Surfaces/CylinderBounds.hpp"
 
 #include "Acts/Definitions/TrackParametrization.hpp"
-#include "Acts/Surfaces/BoundaryTolerance.hpp"
-#include "Acts/Surfaces/detail/BoundaryCheckHelper.hpp"
 #include "Acts/Surfaces/detail/VerticesHelper.hpp"
 #include "Acts/Utilities/VectorHelpers.hpp"
 
@@ -43,9 +41,8 @@ Acts::ActsMatrix<2, 2> Acts::CylinderBounds::jacobian() const {
   return j;
 }
 
-bool Acts::CylinderBounds::inside(
-    const Vector2& lposition,
-    const BoundaryTolerance& boundaryTolerance) const {
+bool Acts::CylinderBounds::inside(const Vector2& lposition,
+                                  const BoundaryCheck& bcheck) const {
   double bevelMinZ = get(eBevelMinZ);
   double bevelMaxZ = get(eBevelMaxZ);
 
@@ -53,9 +50,9 @@ bool Acts::CylinderBounds::inside(
   double halfPhi = get(eHalfPhiSector);
 
   if (bevelMinZ == 0. || bevelMaxZ == 0.) {
-    return detail::insideAlignedBox(
-        Vector2(-halfPhi, -halfLengthZ), Vector2(halfPhi, halfLengthZ),
-        boundaryTolerance, shifted(lposition), jacobian());
+    return bcheck.transformed(jacobian())
+        .isInside(shifted(lposition), Vector2(-halfPhi, -halfLengthZ),
+                  Vector2(halfPhi, halfLengthZ));
   }
 
   double radius = get(eR);
@@ -79,6 +76,9 @@ bool Acts::CylinderBounds::inside(
     return true;
   }
 
+  // check within tolerance
+  auto boundaryCheck = bcheck.transformed(jacobian());
+
   Vector2 lowerLeft = {-radius, -halfLengthZ};
   Vector2 middleLeft = {0., -(halfLengthZ + radius * std::tan(bevelMinZ))};
   Vector2 upperLeft = {radius, -halfLengthZ};
@@ -87,9 +87,10 @@ bool Acts::CylinderBounds::inside(
   Vector2 lowerRight = {-radius, halfLengthZ};
   Vector2 vertices[] = {lowerLeft,  middleLeft,  upperLeft,
                         upperRight, middleRight, lowerRight};
+  Vector2 closestPoint =
+      boundaryCheck.computeClosestPointOnPolygon(lposition, vertices);
 
-  return detail::insidePolygon(vertices, boundaryTolerance, lposition,
-                               jacobian());
+  return boundaryCheck.isTolerated(closestPoint - lposition);
 }
 
 std::ostream& Acts::CylinderBounds::toStream(std::ostream& sl) const {
@@ -104,40 +105,45 @@ std::ostream& Acts::CylinderBounds::toStream(std::ostream& sl) const {
   return sl;
 }
 
-std::vector<Acts::Vector3> Acts::CylinderBounds::circleVertices(
-    const Transform3 transform, unsigned int quarterSegments) const {
+std::vector<Acts::Vector3> Acts::CylinderBounds::createCircles(
+    const Transform3 ctrans, std::size_t lseg) const {
   std::vector<Vector3> vertices;
 
   double avgPhi = get(eAveragePhi);
   double halfPhi = get(eHalfPhiSector);
 
-  std::vector<ActsScalar> phiRef = {};
-  if (bool fullCylinder = coversFullAzimuth(); fullCylinder) {
-    phiRef = {static_cast<ActsScalar>(avgPhi)};
-  }
+  bool fullCylinder = coversFullAzimuth();
+
+  // Get the phi segments from the helper - ensures extra points
+  auto phiSegs = fullCylinder ? detail::VerticesHelper::phiSegments()
+                              : detail::VerticesHelper::phiSegments(
+                                    avgPhi - halfPhi, avgPhi + halfPhi,
+                                    {static_cast<ActsScalar>(avgPhi)});
 
   // Write the two bows/circles on either side
   std::vector<int> sides = {-1, 1};
   for (auto& side : sides) {
-    /// Helper method to create the segment
-    auto svertices = detail::VerticesHelper::segmentVertices(
-        {get(eR), get(eR)}, avgPhi - halfPhi, avgPhi + halfPhi, phiRef,
-        quarterSegments, Vector3(0., 0., side * get(eHalfLengthZ)), transform);
-    vertices.insert(vertices.end(), svertices.begin(), svertices.end());
+    for (std::size_t iseg = 0; iseg < phiSegs.size() - 1; ++iseg) {
+      int addon = (iseg == phiSegs.size() - 2 && !fullCylinder) ? 1 : 0;
+      /// Helper method to create the segment
+      detail::VerticesHelper::createSegment(
+          vertices, {get(eR), get(eR)}, phiSegs[iseg], phiSegs[iseg + 1], lseg,
+          addon, Vector3(0., 0., side * get(eHalfLengthZ)), ctrans);
+    }
   }
 
-  ActsScalar bevelMinZ = get(eBevelMinZ);
-  ActsScalar bevelMaxZ = get(eBevelMaxZ);
+  double bevelMinZ = get(eBevelMinZ);
+  double bevelMaxZ = get(eBevelMaxZ);
 
   // Modify the vertices position if bevel is defined
   if ((bevelMinZ != 0. || bevelMaxZ != 0.) && vertices.size() % 2 == 0) {
     auto halfWay = vertices.end() - vertices.size() / 2;
-    ActsScalar mult{1};
-    auto invTransform = transform.inverse();
-    auto func = [&mult, &transform, &invTransform](Vector3& v) {
-      v = invTransform * v;
+    double mult{1};
+    auto invCtrans = ctrans.inverse();
+    auto func = [&mult, &ctrans, &invCtrans](Vector3& v) {
+      v = invCtrans * v;
       v(2) += v(1) * mult;
-      v = transform * v;
+      v = ctrans * v;
     };
     if (bevelMinZ != 0.) {
       mult = std::tan(-bevelMinZ);
@@ -153,12 +159,10 @@ std::vector<Acts::Vector3> Acts::CylinderBounds::circleVertices(
 
 void Acts::CylinderBounds::checkConsistency() noexcept(false) {
   if (get(eR) <= 0.) {
-    throw std::invalid_argument(
-        "CylinderBounds: invalid radial setup: radius is negative");
+    throw std::invalid_argument("CylinderBounds: invalid radial setup.");
   }
   if (get(eHalfLengthZ) <= 0.) {
-    throw std::invalid_argument(
-        "CylinderBounds: invalid length setup: half length is negative");
+    throw std::invalid_argument("CylinderBounds: invalid length setup.");
   }
   if (get(eHalfPhiSector) <= 0. || get(eHalfPhiSector) > M_PI) {
     throw std::invalid_argument("CylinderBounds: invalid phi sector setup.");

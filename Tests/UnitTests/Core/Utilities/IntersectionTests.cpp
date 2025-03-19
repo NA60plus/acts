@@ -1,15 +1,14 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2018 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/test/unit_test.hpp>
 
 #include "Acts/Definitions/Algebra.hpp"
-#include "Acts/Surfaces/CurvilinearSurface.hpp"
 #include "Acts/Surfaces/PlaneSurface.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Intersection.hpp"
@@ -38,20 +37,21 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
                      Intersection3D::Status::reachable);
   Intersection3D tIp(Vector3(0., 3., 0.), 3.,
                      Intersection3D::Status::reachable);
-  BOOST_CHECK(fIp.isValid());
-  BOOST_CHECK(sIp.isValid());
-  BOOST_CHECK(tIp.isValid());
+  BOOST_CHECK(bool(fIp));
+  BOOST_CHECK(bool(sIp));
+  BOOST_CHECK(bool(tIp));
 
   // a non-valid intersection
   Intersection3D nIp(Vector3(3., 3., 0.), 3.,
                      Intersection3D::Status::unreachable);
-  BOOST_CHECK(!nIp.isValid());
+  BOOST_CHECK(!bool(nIp));
 
   std::vector<Intersection3D> fstpIntersections = {fIp, sIp, tIp};
   std::vector<Intersection3D> tsfpIntersections = {tIp, sIp, fIp};
 
   // let's sort the tsf intersection, it should give fst
-  std::ranges::sort(tsfpIntersections, Intersection3D::pathLengthOrder);
+  std::sort(tsfpIntersections.begin(), tsfpIntersections.end(),
+            Intersection3D::pathLengthOrder);
   BOOST_CHECK_EQUAL(fstpIntersections[0].pathLength(),
                     tsfpIntersections[0].pathLength());
   BOOST_CHECK_EQUAL(fstpIntersections[1].pathLength(),
@@ -65,7 +65,8 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
   std::vector<Intersection3D> tfnsnpIntersections = {tIp, fIp, nIp, sIp, nIp};
 
   // shuffle the intersections
-  std::ranges::sort(ntfspIntersections, Intersection3D::pathLengthOrder);
+  std::sort(ntfspIntersections.begin(), ntfspIntersections.end(),
+            Intersection3D::pathLengthOrder);
   BOOST_CHECK_EQUAL(fstpIntersections[0].pathLength(),
                     ntfspIntersections[0].pathLength());
   BOOST_CHECK_EQUAL(fstpIntersections[1].pathLength(),
@@ -73,7 +74,8 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
   BOOST_CHECK_EQUAL(fstpIntersections[2].pathLength(),
                     ntfspIntersections[2].pathLength());
 
-  std::ranges::sort(tfnsnpIntersections, Intersection3D::pathLengthOrder);
+  std::sort(tfnsnpIntersections.begin(), tfnsnpIntersections.end(),
+            Intersection3D::pathLengthOrder);
   BOOST_CHECK_EQUAL(fstpIntersections[0].pathLength(),
                     tfnsnpIntersections[0].pathLength());
   BOOST_CHECK_EQUAL(fstpIntersections[1].pathLength(),
@@ -93,7 +95,8 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
   std::vector<Intersection3D> fstnIntersections = {fIn, sIn, tIn};
 
   // this time around, sort the f-s-t-n to match the t-s-f-n
-  std::ranges::sort(fstnIntersections, Intersection3D::pathLengthOrder);
+  std::sort(fstnIntersections.begin(), fstnIntersections.end(),
+            Intersection3D::pathLengthOrder);
   BOOST_CHECK_EQUAL(fstnIntersections[0].pathLength(),
                     tsfnIntersections[0].pathLength());
   BOOST_CHECK_EQUAL(fstnIntersections[1].pathLength(),
@@ -103,7 +106,8 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
 
   // shuffle negative and positive solutions
   std::vector<Intersection3D> pnsolutions = {tIp, sIn, sIp, fIn, tIn, fIp};
-  std::ranges::sort(pnsolutions, Intersection3D::pathLengthOrder);
+  std::sort(pnsolutions.begin(), pnsolutions.end(),
+            Intersection3D::pathLengthOrder);
 
   BOOST_CHECK_EQUAL(pnsolutions[0].pathLength(), -3.);
   BOOST_CHECK_EQUAL(pnsolutions[1].pathLength(), -2.);
@@ -116,7 +120,8 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
   Intersection3D zI(Vector3(0., 0., 0.), 0., Intersection3D::Status::onSurface);
   std::vector<Intersection3D> tszfpIntersections = {tIp, sIp, zI, fIp};
 
-  std::ranges::sort(tszfpIntersections, Intersection3D::pathLengthOrder);
+  std::sort(tszfpIntersections.begin(), tszfpIntersections.end(),
+            Intersection3D::pathLengthOrder);
   BOOST_CHECK_EQUAL(tszfpIntersections[0].pathLength(), 0.);
   BOOST_CHECK_EQUAL(tszfpIntersections[1].pathLength(), 1.);
   BOOST_CHECK_EQUAL(tszfpIntersections[2].pathLength(), 2.);
@@ -125,7 +130,8 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
   std::vector<Intersection3D> tfsznIntersections = {tIn, fIn, sIn, zI};
   std::vector<Intersection3D> ztfsnIntersections = {zI, tIn, fIn, sIn};
 
-  std::ranges::sort(tfsznIntersections, Intersection3D::pathLengthOrder);
+  std::sort(tfsznIntersections.begin(), tfsznIntersections.end(),
+            Intersection3D::pathLengthOrder);
   BOOST_CHECK_EQUAL(tfsznIntersections[0].pathLength(), -3.);
   BOOST_CHECK_EQUAL(tfsznIntersections[1].pathLength(), -2.);
   BOOST_CHECK_EQUAL(tfsznIntersections[2].pathLength(), -1.);
@@ -134,16 +140,16 @@ BOOST_AUTO_TEST_CASE(IntersectionTest) {
 
 /// test of the object intersection class
 BOOST_AUTO_TEST_CASE(ObjectIntersectionTest) {
-  auto psf6 = CurvilinearSurface(Vector3(6., 0., 0.), Vector3(1., 0., 0.))
-                  .planeSurface();
-  auto psf7 = CurvilinearSurface(Vector3(7., 0., 0.), Vector3(1., 0., 0.))
-                  .planeSurface();
-  auto psf8 = CurvilinearSurface(Vector3(8., 0., 0.), Vector3(1., 0., 0.))
-                  .planeSurface();
-  auto psf9 = CurvilinearSurface(Vector3(9., 0., 0.), Vector3(1., 0., 0.))
-                  .planeSurface();
-  auto psf10 = CurvilinearSurface(Vector3(10., 0., 0.), Vector3(1., 0., 0.))
-                   .planeSurface();
+  auto psf6 = Surface::makeShared<PlaneSurface>(Vector3(6., 0., 0.),
+                                                Vector3(1., 0., 0.));
+  auto psf7 = Surface::makeShared<PlaneSurface>(Vector3(7., 0., 0.),
+                                                Vector3(1., 0., 0.));
+  auto psf8 = Surface::makeShared<PlaneSurface>(Vector3(8., 0., 0.),
+                                                Vector3(1., 0., 0.));
+  auto psf9 = Surface::makeShared<PlaneSurface>(Vector3(9., 0., 0.),
+                                                Vector3(1., 0., 0.));
+  auto psf10 = Surface::makeShared<PlaneSurface>(Vector3(10., 0., 0.),
+                                                 Vector3(1., 0., 0.));
 
   using PlaneIntersection = ObjectIntersection<PlaneSurface>;
 

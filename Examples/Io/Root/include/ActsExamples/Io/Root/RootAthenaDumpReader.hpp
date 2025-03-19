@@ -1,23 +1,19 @@
-// This file is part of the ACTS project.
+// This file is part of the Acts project.
 //
-// Copyright (C) 2016 CERN for the benefit of the ACTS project
+// Copyright (C) 2024 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #pragma once
-
 #include "Acts/Utilities/Logger.hpp"
-#include "ActsExamples/EventData/GeometryContainers.hpp"
 #include "ActsExamples/EventData/Measurement.hpp"
 #include "ActsExamples/EventData/SimSpacePoint.hpp"
 #include "ActsExamples/Framework/DataHandle.hpp"
 #include "ActsExamples/Framework/IReader.hpp"
 #include "ActsExamples/Framework/ProcessCode.hpp"
 #include <ActsExamples/EventData/Cluster.hpp>
-#include <ActsExamples/EventData/SimParticle.hpp>
-#include <ActsExamples/EventData/Track.hpp>
 
 #include <map>
 #include <memory>
@@ -47,49 +43,15 @@ class RootAthenaDumpReader : public IReader {
     // Name of inputfile
     std::string inputfile;
     // name of the output measurements
-    std::string outputMeasurements = "athena_measurements";
+    std::string outputMeasurements = "ath_meas";
     // name of the output pixel space points
-    std::string outputPixelSpacePoints = "athena_pixel_spacepoints";
+    std::string outputPixelSpacePoints = "outputPixelSpacepoints";
     // name of the output strip space points
-    std::string outputStripSpacePoints = "athena_strip_spacepoints";
+    std::string outputStripSpacePoints = "outputStripSpacepoints";
     // name of the output space points
-    std::string outputSpacePoints = "athena_spacepoints";
+    std::string outputSpacePoints = "output_spacepoints";
     // name of the output clusters
-    std::string outputClusters = "athena_clusters";
-    // name of the output particles
-    std::string outputParticles = "athena_particles";
-    // name of the simhit map
-    std::string outputMeasurementParticlesMap = "athena_meas_parts_map";
-    // name of the track parameters (fitted by athena?)
-    std::string outputTrackParameters = "athena_track_parameters";
-
-    /// Only extract spacepoints
-    bool onlySpacepoints = false;
-
-    /// Only extract particles that passed the tracking requirements, for
-    /// details see:
-    /// https://gitlab.cern.ch/atlas/athena/-/blob/main/InnerDetector/InDetGNNTracking/src/DumpObjects.cxx?ref_type=heads#L1363
-    bool onlyPassedParticles = false;
-
-    /// Skip spacepoints with phi overlap
-    bool skipOverlapSPsPhi = false;
-
-    /// Skip spacepoints with eta overlap
-    bool skipOverlapSPsEta = false;
-
-    /// A map that provides a mapping between ACTS and Athena surface
-    /// identifiers
-    std::shared_ptr<ActsExamples::GeometryIdMapActsAthena> geometryIdMap =
-        nullptr;
-
-    /// Tracking Geometry that contains the surfaces where we project
-    /// the measurements on
-    std::shared_ptr<Acts::TrackingGeometry> trackingGeometry = nullptr;
-
-    /// When projecting measurements on ACTS surfaces, which euclidean boundary
-    /// tolerance should be allowed. If a value above zero is needed, this
-    /// indicates that the ACTS surfaces do not 100% include the athena surfaces
-    double absBoundaryTolerance = 0.0;
+    std::string outputClusters = "output_clusters";
   };
 
   RootAthenaDumpReader(const RootAthenaDumpReader &) = delete;
@@ -115,41 +77,11 @@ class RootAthenaDumpReader : public IReader {
   const Config &config() const { return m_cfg; }
 
  private:
-  /// Particles with barcodes larger then this value are considered to be
-  /// secondary particles
-  /// https://gitlab.cern.ch/atlas/athena/-/blob/main/InnerDetector/InDetGNNTracking/src/DumpObjects.h?ref_type=heads#L101
-  constexpr static int s_maxBarcodeForPrimary = 200000;
-
   /// Private access to the logging instance
   const Acts::Logger &logger() const { return *m_logger; }
 
   /// The config class
   Config m_cfg;
-
-  /// Helper method to read particles
-  SimParticleContainer readParticles() const;
-
-  /// Helper method to read measurements
-  std::tuple<ClusterContainer, MeasurementContainer,
-             IndexMultimap<ActsFatras::Barcode>,
-             std::unordered_map<int, std::size_t>>
-  readMeasurements(SimParticleContainer &particles,
-                   const Acts::GeometryContext &gctx) const;
-
-  /// Helper method to read spacepoints
-  /// @param imIdxMap optional remapping of indices. Since the measurement
-  /// index must be continuous, we need to remap the measurements indices
-  /// if we skip measurements in the first place
-  std::tuple<SimSpacePointContainer, SimSpacePointContainer,
-             SimSpacePointContainer>
-  readSpacepoints(const std::optional<std::unordered_map<int, std::size_t>>
-                      &imIdxMap) const;
-
-  /// Helper method to reprocess particle ids
-  std::pair<SimParticleContainer, IndexMultimap<ActsFatras::Barcode>>
-  reprocessParticles(
-      const SimParticleContainer &particles,
-      const IndexMultimap<ActsFatras::Barcode> &measPartMap) const;
 
   /// Write handlers
   WriteDataHandle<SimSpacePointContainer> m_outputPixelSpacePoints{
@@ -159,12 +91,6 @@ class RootAthenaDumpReader : public IReader {
   WriteDataHandle<SimSpacePointContainer> m_outputSpacePoints{
       this, "output_spacepoints"};
   WriteDataHandle<ClusterContainer> m_outputClusters{this, "output_clusters"};
-  WriteDataHandle<SimParticleContainer> m_outputParticles{this,
-                                                          "output_particles"};
-  WriteDataHandle<MeasurementContainer> m_outputMeasurements{
-      this, "output_measurements"};
-  WriteDataHandle<IndexMultimap<ActsFatras::Barcode>> m_outputMeasParticleMap{
-      this, "output_meas_part_map"};
 
   std::unique_ptr<const Acts::Logger> m_logger;
   std::mutex m_read_mutex;
