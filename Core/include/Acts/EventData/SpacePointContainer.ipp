@@ -47,8 +47,8 @@ void SpacePointContainer<container_t, holder_t>::initialize() {
   const auto& external_container = container();
   for (std::size_t i(0); i < size(); ++i) {
     m_data.setX(i, external_container.x_impl(i) - m_options.beamPos[0]);
-    m_data.setY(i, external_container.y_impl(i) - m_options.beamPos[1]);
-    m_data.setZ(i, external_container.z_impl(i));
+    m_data.setY(i, external_container.z_impl(i) - m_options.beamPos[2]);
+    m_data.setZ(i, -external_container.y_impl(i) + m_options.beamPos[1]);
     m_data.setRadius(
         i, std::sqrt(m_data.x(i) * m_data.x(i) + m_data.y(i) * m_data.y(i)));
     m_data.setPhi(i, std::atan2(m_data.y(i), m_data.x(i)));

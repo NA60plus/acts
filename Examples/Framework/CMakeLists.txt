@@ -28,6 +28,7 @@ add_library(
     src/Validation/TrackClassification.cpp
     src/Validation/TrackQualityPlotTool.cpp
     src/Validation/TrackSummaryPlotTool.cpp
+    src/Validation/TrkVtxPlotTool.cpp
 )
 
 target_include_directories(

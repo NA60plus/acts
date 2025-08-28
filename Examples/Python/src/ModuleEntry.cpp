@@ -56,6 +56,8 @@ void addTruthJet(Context& ctx);
 void addVertexing(Context& ctx);
 void addAmbiguityResolution(Context& ctx);
 void addUtilities(Context& ctx);
+void addFilterMeasurements(Context& ctx);
+void addMatching(Context& ctx);
 
 void addRootInput(Context& ctx);
 void addRootOutput(Context& ctx);
@@ -132,6 +134,8 @@ PYBIND11_MODULE(ActsPythonBindings, m) {
   addVertexing(ctx);
   addAmbiguityResolution(ctx);
   addUtilities(ctx);
+  addFilterMeasurements(ctx);
+  addMatching(ctx);
 
   addDigitization(ctx);
   addPythia8(ctx);

@@ -526,6 +526,7 @@ SeedFinder<external_spacepoint_t, grid_t, platform_t>::filterCandidates(
   for (const std::size_t b : sorted_bottoms) {
     // break if we reached the last top SP
     if (t0 == numTopSp) {
+      ACTS_VERBOSE("No more tops, breaking out of the loop");
       break;
     }
 
@@ -701,7 +702,7 @@ SeedFinder<external_spacepoint_t, grid_t, platform_t>::filterCandidates(
           continue;
         }
         // break if cotTheta from bottom SP < cotTheta from top SP because
-        // the SP are sorted by cotTheta
+        // the SP are sorted by cotTheta        
         if (cotThetaB - cotThetaT < 0) {
           break;
         }
@@ -801,6 +802,10 @@ SeedFinder<external_spacepoint_t, grid_t, platform_t>::filterCandidates(
       }
 
       if (Im > m_config.impactMax) {
+        ACTS_VERBOSE(
+            "Impact parameter " << Im << " is larger than maximum "
+                                << m_config.impactMax
+                                << ", skipping this top space point");
         continue;
       }
 

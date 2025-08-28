@@ -305,7 +305,7 @@ def itkSeedingAlgConfig(
     # variables that do not change for pixel and strip SPs:
     zMax = 3000 * u.mm
     zMin = -3000 * u.mm
-    beamPos = (0 * u.mm, 0 * u.mm)
+    beamPos = (0 * u.mm, 0 * u.mm, 0 * u.mm)
     collisionRegionMin = -200 * u.mm
     collisionRegionMax = 200 * u.mm
     maxSeedsPerSpM = 4

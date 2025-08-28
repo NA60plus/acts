@@ -866,3 +866,112 @@ def addTruthJetAlg(
     )
 
     s.addAlgorithm(truthJetAlg)
+
+def addParticleReader(
+    s: acts.examples.Sequencer,
+    inputDir: Optional[Union[Path, str]] = None,
+    outputDirCsv: Optional[Union[Path, str]] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    printParticles: bool = False,
+    logLevel: Optional[acts.logging.Level] = None,
+    det_suffix = "",
+    outputParticles = "particles_input"
+) -> None:
+    """This function read
+    Parameters
+    ----------
+    s: Sequencer
+        the sequencer module to which we add the particle gun steps (returned from addParticleGun)
+    inputDirCsv : Path|str, path, None
+        the input folder for the Csv input, None triggers no output
+    outputDirCsv : Path|str, path, None
+        the output folder for the Csv output, None triggers no output
+    outputDirRoot : Path|str, path, None
+        the output folder for the Root output, None triggers no output
+    printParticles : bool, False
+        print generated particles
+    """
+
+    customLogLevel = acts.examples.defaultLogging(s, logLevel)
+
+    evReader = acts.examples.CsvParticleReader(
+            acts.logging.WARNING,
+            inputDir=str(inputDir),
+            inputStem="particles",
+            outputParticles=outputParticles+det_suffix,
+            outputVertices="vertices_input"+det_suffix,
+        )
+    
+    s.addReader(evReader)
+
+    s.addWhiteboardAlias("particles"+det_suffix, evReader.config.outputParticles)
+
+    if printParticles:
+        s.addAlgorithm(
+            ParticlesPrinter(
+                level=customLogLevel(),
+                inputParticles=evReader.config.outputParticles,
+            )
+        )
+
+    if outputDirCsv is not None:
+        outputDirCsv = Path(outputDirCsv)
+        if not outputDirCsv.exists():
+            outputDirCsv.mkdir()
+
+        s.addWriter(
+            CsvParticleWriter(
+                level=customLogLevel(),
+                inputParticles=evReader.config.outputParticles,
+                outputDir=str(outputDirCsv),
+                outputStem="particles"+det_suffix,
+            )
+        )
+
+    if outputDirRoot is not None:
+        outputDirRoot = Path(outputDirRoot)
+        if not outputDirRoot.exists():
+            outputDirRoot.mkdir()
+
+        s.addWriter(
+            RootParticleWriter(
+                level=customLogLevel(),
+                inputParticles=evReader.config.outputParticles,
+                filePath=str(outputDirRoot / "particles.root"),
+            )
+        )
+
+    return s
+
+
+def addSimHitsReader(
+    s: acts.examples.Sequencer,
+    inputDir: Optional[Union[Path, str]] = None,
+    outputSimHits: Optional[Union[Path, str]] = None,
+) -> None:
+    """This function read
+    Parameters
+    ----------
+    s: Sequencer
+        the sequencer module to which we add the particle gun steps (returned from addParticleGun)
+    inputDirCsv : Path|str, path, None
+        the input folder for the Csv input, None triggers no output
+    outputDirCsv : Path|str, path, None
+        the output folder for the Csv output, None triggers no output
+    outputDirRoot : Path|str, path, None
+        the output folder for the Root output, None triggers no output
+    printParticles : bool, False
+        print generated particles
+    """
+
+
+    hitReader = acts.examples.CsvSimHitReader(
+            acts.logging.WARNING,
+            inputDir=str(inputDir),
+            inputStem="hits",
+            outputSimHits=outputSimHits
+        )
+    
+    s.addReader(hitReader)
+
+    return s

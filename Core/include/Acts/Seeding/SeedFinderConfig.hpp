@@ -257,7 +257,8 @@ struct SeedFinderConfig {
 struct SeedFinderOptions {
   // location of beam in x,y plane.
   // used as offset for Space Points
-  Acts::Vector2 beamPos{0 * Acts::UnitConstants::mm,
+  Acts::Vector3 beamPos{0 * Acts::UnitConstants::mm,
+                        0 * Acts::UnitConstants::mm,
                         0 * Acts::UnitConstants::mm};
   // field induction
   float bFieldInZ = 2.08 * Acts::UnitConstants::T;
@@ -281,6 +282,7 @@ struct SeedFinderOptions {
     options.isInInternalUnits = true;
     options.beamPos[0] /= 1_mm;
     options.beamPos[1] /= 1_mm;
+    options.beamPos[2] /= 1_mm;
 
     options.bFieldInZ /= 1000. * 1_T;
     return options;

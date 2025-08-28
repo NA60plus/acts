@@ -256,6 +256,7 @@ std::vector<double> CylinderVolumeBounds::values() const {
 }
 
 void CylinderVolumeBounds::checkConsistency() {
+  /*
   if (get(eMinR) < 0. || get(eMaxR) <= 0.) {
     throw std::invalid_argument(
         "CylinderVolumeBounds: invalid radial input: minR (" +
@@ -268,6 +269,7 @@ void CylinderVolumeBounds::checkConsistency() {
         std::to_string(get(eMinR)) + ") >= (" + std::to_string(get(eMaxR)) +
         ")");
   }
+  */
   if (get(eHalfLengthZ) <= 0) {
     throw std::invalid_argument(
         "CylinderVolumeBounds: invalid longitudinal input: hlZ (" +

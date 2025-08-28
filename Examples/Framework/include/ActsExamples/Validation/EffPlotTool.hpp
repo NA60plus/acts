@@ -30,7 +30,7 @@ class EffPlotTool {
     std::map<std::string, PlotHelpers::Binning> varBinning = {
         {"Eta", PlotHelpers::Binning("#eta", 40, -4, 4)},
         {"Phi", PlotHelpers::Binning("#phi", 100, -3.15, 3.15)},
-        {"Pt", PlotHelpers::Binning("pT [GeV/c]", 40, 0, 100)},
+        {"Pt", PlotHelpers::Binning("pT [GeV/c]", 10, 0, 5)},
         {"Z0", PlotHelpers::Binning("z_0 [mm]", 50, -200, 200)},
         {"DeltaR", PlotHelpers::Binning("#Delta R", 100, 0, 0.3)},
         {"prodR", PlotHelpers::Binning("prod_R [mm]", 100, 0, 200)}};

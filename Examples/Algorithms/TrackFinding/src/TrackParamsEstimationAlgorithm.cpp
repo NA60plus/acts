@@ -87,7 +87,10 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
   for (std::size_t iseed = 0; iseed < seeds.size(); ++iseed) {
     const auto& seed = seeds[iseed];
     // Get the bottom space point and its reference surface
-    const auto& bottomSP = seed.sp().front();
+    const auto bottomSP = seed.sp().front();
+    const auto middleSP = seed.sp()[1];
+    const auto topSP = seed.sp()[2];
+
     if (bottomSP->sourceLinks().empty()) {
       ACTS_WARNING("Missing source link in the space point");
       continue;
@@ -101,9 +104,27 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
       continue;
     }
 
+    ACTS_DEBUG("Bottom space point: "
+               << bottomSP->x() << ", " << bottomSP->y() << ", " << bottomSP->z());
+    ACTS_DEBUG("Middle space point: "
+               << middleSP->x() << ", " << middleSP->y() << ", " << middleSP->z());
+    ACTS_DEBUG("Top space point: "
+               << topSP->x() << ", " << topSP->y() << ", " << topSP->z());
+               
     // Get the magnetic field at the bottom space point
     auto fieldRes = m_cfg.magneticField->getField(
-        {bottomSP->x(), bottomSP->y(), bottomSP->z()}, bCache);
+        {bottomSP->x(),
+         bottomSP->z(),
+         -bottomSP->y()},
+        bCache);
+
+        /*
+            auto fieldRes = m_cfg.magneticField->getField(
+        {(bottomSP->x() + middleSP->x() + topSP->x()) / 3.,
+         (bottomSP->z() + middleSP->z() + topSP->z()) / 3.,
+         -(bottomSP->y() + middleSP->y() + topSP->y()) / 3.},
+        bCache);
+*/
     if (!fieldRes.ok()) {
       ACTS_ERROR("Field lookup error: " << fieldRes.error());
       return ProcessCode::ABORT;
@@ -115,6 +136,17 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
                                              << field.norm());
       continue;
     }
+
+    ACTS_DEBUG("Magnetic field at seed " << iseed << ": "
+               << field.x() << ", " << field.y() << ", " << field.z());
+
+    field.x() = field.x();
+    auto fieldTmp = field.y();
+    field.y() = -field.z();
+    field.z() = fieldTmp;
+
+    ACTS_DEBUG("Magnetic field at seed " << iseed << ": "
+               << field.x() << ", " << field.y() << ", " << field.z());
 
     // Estimate the track parameters from seed
     const auto paramsResult = Acts::estimateTrackParamsFromSeed(

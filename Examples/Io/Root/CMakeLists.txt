@@ -29,6 +29,7 @@ add_library(
     src/TrackFinderNTupleWriter.cpp
     src/TrackFitterPerformanceWriter.cpp
     src/VertexNTupleWriter.cpp
+    src/TrackletVertexingPerformanceWriter.cpp
 )
 target_include_directories(
     ActsExamplesIoRoot

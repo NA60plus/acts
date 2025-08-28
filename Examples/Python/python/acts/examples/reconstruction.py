@@ -58,8 +58,9 @@ SeedFinderConfigArg = namedtuple(
         "collisionRegion",  # (min,max)
         "r",  # (min,max)
         "z",  # (min,max)
+        "rMiddle" # (min,max)
     ],
-    defaults=[None] * 18 + [(None, None)] * 7,
+    defaults=[None] * 18 + [(None, None)] * 8,
 )
 SeedFinderOptionsArg = namedtuple(
     "SeedFinderOptions", ["beamPos", "bFieldInZ"], defaults=[(None, None), None]
@@ -721,15 +722,17 @@ def addStandardSeeding(
             seedConfirmation=seedFinderConfigArg.seedConfirmation,
             centralSeedConfirmationRange=seedFinderConfigArg.centralSeedConfirmationRange,
             forwardSeedConfirmationRange=seedFinderConfigArg.forwardSeedConfirmationRange,
+            rMinMiddle = seedFinderConfigArg.rMiddle[0],
+            rMaxMiddle = seedFinderConfigArg.rMiddle[1],
         ),
     )
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -871,10 +874,10 @@ def addOrthogonalSeeding(
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -986,10 +989,10 @@ def addHashingSeeding(
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -1134,10 +1137,10 @@ def addGbtsSeeding(
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -2297,5 +2300,116 @@ def addHoughVertexFinding(
                 filePath=str(outputDirRoot / "performance_houghvertexing.root"),
             )
         )
+
+    return s
+
+def addTrackletVertexing(
+    s: acts.examples.Sequencer,
+    inputSpacePoints: str="spacepoints",
+    inputParticles: str="particles",
+    inputMeasurementParticlesMap: str="measurement_particles_map",
+    outputRecPrimaryVertex: str="OutputRecPrimaryVertex",
+    outputGenPrimaryVertex: str="OutputGenPrimaryVertex",
+    zMaxTop: float=170,
+    zMinTop: float=0,
+    zMaxBot: float=170,
+    zMinBot: float=0,
+    deltaPhi: float=0.08,
+    deltaThetaMax: float=0.04,
+    deltaThetaMin: float=-0.15,
+    verbose: bool=False,
+    doMCtruth: bool=True,
+    noGuessing: bool=False,
+    useFit: bool=True,
+    nbins: int=60,
+    zPerigee: float=0,
+    logLevel: Optional[acts.logging.Level] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+
+    ) -> None:
+
+    logLevel = acts.examples.defaultLogging(s, logLevel)()
+    outputDirRoot = Path(outputDirRoot)
+    if not outputDirRoot.exists():
+        outputDirRoot.mkdir()
+
+    selAlg = acts.examples.TrackletVertexingAlgorithm(
+        level=logLevel,
+        inputSpacePoints=inputSpacePoints,
+        inputSpacePointsMC=[inputSpacePoints],
+        inputParticles=inputParticles,
+        outputRecPrimaryVertex=outputRecPrimaryVertex,
+        outputGenPrimaryVertex=outputGenPrimaryVertex,
+        outputFitPrimaryVertex="OutputFitPrimaryVertex",
+        inputMeasurementParticlesMap=inputMeasurementParticlesMap,
+        zMaxTop=zMaxTop,
+        zMinTop=zMinTop,
+        zMaxBot=zMaxBot,
+        zMinBot=zMinBot,
+        deltaPhi=deltaPhi,
+        deltaThetaMin=deltaThetaMin,
+        deltaThetaMax=deltaThetaMax,
+        verbose=verbose,
+        doMCtruth=doMCtruth,
+        noGuessing=noGuessing,
+        useFit=useFit,
+        nbins=nbins,
+        zPerigee=zPerigee,
+        outputFitFunction="OutputFitFuncVtx",
+        outputZTracklets="OutputZTracklets",
+        outputZTrackletsPeak="OutputZTrackletsPeak"
+    )
+
+    s.addAlgorithm(selAlg)
+
+    s.addWriter(
+        acts.examples.TrackletVertexingPerformanceWriter(
+            level=logLevel,
+            inputRecPrimaryVertex="OutputFitPrimaryVertex",
+            inputGenPrimaryVertex="OutputGenPrimaryVertex",
+            filePath = str(outputDirRoot / "performance_tracklet_vertexing.root"),
+            fileMode = "RECREATE",
+            verbose=False,
+            inputFitFunction="OutputFitFuncVtx",
+            inputZTracklets="OutputZTracklets",
+            inputZTrackletsPeak="OutputZTrackletsPeak"
+        )
+    )
+    return s
+
+
+def addUsedMeasurementsFilter(
+    s: acts.examples.Sequencer,
+    inputMeasurements: str="measurements",
+    outputMeasurements: str = "outputmeasurements",
+    inputTracks: str = "tracks",
+    logLevel: Optional[acts.logging.Level] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    trackingGeometry: acts.TrackingGeometry = None,
+    ) -> None:
+
+    logLevel = acts.examples.defaultLogging(s, logLevel)()
+
+    selAlg = acts.examples.FilterMeasurementsAlgorithm(
+        level=logLevel,
+        inputMeasurements=inputMeasurements,
+        inputTracks=inputTracks,
+        outputMeasurements=outputMeasurements
+    )
+
+    s.addAlgorithm(selAlg)
+    if outputDirRoot is not None:
+        outputDirRoot = Path(outputDirRoot)
+        if not outputDirRoot.exists():
+            outputDirRoot.mkdir()
+        rmwConfig = acts.examples.RootMeasurementWriter.Config(
+            inputMeasurements=outputMeasurements,
+            inputClusters="clusters",
+            inputSimHits="simhits",
+            inputMeasurementSimHitsMap="measurement_simhits_map",
+            filePath=str(outputDirRoot / f"{outputMeasurements}_filtered.root"),
+            surfaceByIdentifier=trackingGeometry.geoIdSurfaceMap(),
+        )
+        s.addWriter(acts.examples.RootMeasurementWriter(rmwConfig, logLevel))
 
     return s

@@ -6,6 +6,7 @@ add_library(
     src/IterativeVertexFinderAlgorithm.cpp
     src/VertexFitterAlgorithm.cpp
     src/TruthVertexSeeder.cpp
+    src/TrackletVertexingAlgorithm.cpp
 )
 target_include_directories(
     ActsExamplesVertexing

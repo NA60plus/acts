@@ -152,10 +152,12 @@ std::vector<Vector3> CylinderBounds::circleVertices(
 }
 
 void CylinderBounds::checkConsistency() noexcept(false) {
+  /*
   if (get(eR) <= 0.) {
     throw std::invalid_argument(
         "CylinderBounds: invalid radial setup: radius is negative");
   }
+  */
   if (get(eHalfLengthZ) <= 0.) {
     throw std::invalid_argument(
         "CylinderBounds: invalid length setup: half length is negative");

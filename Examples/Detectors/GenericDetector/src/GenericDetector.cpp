@@ -113,8 +113,8 @@ Gen1GenericDetectorBuilder::buildTrackingGeometry(
   bpvConfig.trackingVolumeHelper = cylinderVolumeHelper;
   bpvConfig.volumeName = "BeamPipe";
   bpvConfig.layerBuilder = beamPipeBuilder;
-  bpvConfig.layerEnvelopeR = {1. * Acts::UnitConstants::mm,
-                              1. * Acts::UnitConstants::mm};
+  bpvConfig.layerEnvelopeR = {0.1 * Acts::UnitConstants::mm,
+                              0.1 * Acts::UnitConstants::mm};
   bpvConfig.buildToRadiusZero = true;
   auto beamPipeVolumeBuilder =
       std::make_shared<const Acts::CylinderVolumeBuilder>(
@@ -162,8 +162,8 @@ Gen1GenericDetectorBuilder::buildTrackingGeometry(
   pvbConfig.trackingVolumeHelper = cylinderVolumeHelper;
   pvbConfig.volumeName = "Pixel";
   pvbConfig.buildToRadiusZero = false;
-  pvbConfig.layerEnvelopeR = {1. * Acts::UnitConstants::mm,
-                              5. * Acts::UnitConstants::mm};
+  pvbConfig.layerEnvelopeR = {0.1 * Acts::UnitConstants::mm,
+                              0.1 * Acts::UnitConstants::mm};
   pvbConfig.layerBuilder = pixelLayerBuilder;
   auto pixelVolumeBuilder = std::make_shared<const Acts::CylinderVolumeBuilder>(
       pvbConfig, logger().clone("PixelVolumeBuilder", volumeLLevel));

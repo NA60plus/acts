@@ -23,6 +23,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <string>
+#include <map>
 
 #include "CsvOutputData.hpp"
 
@@ -37,10 +38,14 @@ ActsExamples::CsvParticleReader::CsvParticleReader(
     throw std::invalid_argument("Missing input filename stem");
   }
   if (m_cfg.outputParticles.empty()) {
-    throw std::invalid_argument("Missing output collection");
+    throw std::invalid_argument("Missing particles output collection");
+  }
+  if (m_cfg.outputVertices.empty()) {
+    throw std::invalid_argument("Missing vertices output collection");
   }
 
   m_outputParticles.initialize(m_cfg.outputParticles);
+  m_outputVertices.initialize(m_cfg.outputVertices);
 }
 
 std::string ActsExamples::CsvParticleReader::CsvParticleReader::name() const {
@@ -55,6 +60,9 @@ ActsExamples::CsvParticleReader::availableEvents() const {
 ActsExamples::ProcessCode ActsExamples::CsvParticleReader::read(
     const ActsExamples::AlgorithmContext& ctx) {
   SimParticleContainer::sequence_type unordered;
+  SimVertexContainer::sequence_type vertices;
+
+  std::map<ActsExamples::SimVertexBarcode, SimVertex> foundVertices;
 
   auto path = perEventFilepath(m_cfg.inputDir, m_cfg.inputStem + ".csv",
                                ctx.eventNumber);
@@ -63,7 +71,10 @@ ActsExamples::ProcessCode ActsExamples::CsvParticleReader::read(
   ParticleData data;
 
   while (reader.read(data)) {
-    SimParticleState particle(ActsFatras::Barcode(data.particle_id),
+    ActsFatras::Barcode particle_id(data.particle_id);
+    ActsExamples::SimVertexBarcode vertex_id(particle_id.vertexId());
+
+    SimParticleState particle(particle_id,
                               Acts::PdgParticle{data.particle_type},
                               data.q * Acts::UnitConstants::e,
                               data.m * Acts::UnitConstants::GeV);
@@ -76,6 +87,15 @@ ActsExamples::ProcessCode ActsExamples::CsvParticleReader::read(
     particle.setAbsoluteMomentum(std::hypot(data.px, data.py, data.pz) *
                                  Acts::UnitConstants::GeV);
     unordered.push_back(SimParticle(particle, particle));
+
+    if (foundVertices.find(vertex_id) != foundVertices.end()) {
+      foundVertices[vertex_id].outgoing.insert(particle_id);
+    }
+    else if(!particle.isSecondary())
+    {
+      foundVertices[vertex_id] = vertices.emplace_back(vertex_id, particle.fourPosition(), particle.process());
+      foundVertices[vertex_id].outgoing.insert(particle_id);
+    }
   }
 
   // Write ordered particles container to the EventStore

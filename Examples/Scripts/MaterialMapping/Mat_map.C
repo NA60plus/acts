@@ -98,21 +98,27 @@ void Mat_map(std::string Val = "", std::string geantino = "", std::string name =
 
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
+  float eta_min = 0;
+  float eta_max = 8;
+  float phi_min = -TMath::Pi();
+  float phi_max = TMath::Pi();
+  int nbins_eta = 100;
+  int nbins_phi = 160;
 
-  TProfile * Val_X0_Eta = new TProfile("Val_X0_Eta","Val_X0_Eta",160,-4,4);
-  TProfile * Val_X0_Phi = new TProfile("Val_X0_Phi","Val_X0_Phi",160,-4,4);
-  TH2F * Val_X0_Eta_spread = new TH2F("Val_X0_Eta_spread","Val_X0_Eta_spread",160,-4,4,160,0,4);
-  TH2F * Val_X0_Phi_spread = new TH2F("Val_X0_Phi_spread","Val_X0_Phi_spread",160,-4,4,160,0,4);
+  TProfile * Val_X0_Eta = new TProfile("Val_X0_Eta","Val_X0_Eta",nbins_eta,eta_min,eta_max);
+  TProfile * Val_X0_Phi = new TProfile("Val_X0_Phi","Val_X0_Phi",nbins_phi,phi_min,phi_max);
+  TH2F * Val_X0_Eta_spread = new TH2F("Val_X0_Eta_spread","Val_X0_Eta_spread",nbins_eta,eta_min,eta_max,160,0,4);
+  TH2F * Val_X0_Phi_spread = new TH2F("Val_X0_Phi_spread","Val_X0_Phi_spread",nbins_phi,phi_min,phi_max,160,0,4);
   TH2F * Val_X0 = new TH2F("Val_X0","Val_X0",160,-4,4,160,-4,4);
 
-  TProfile * geantino_X0_Eta = new TProfile("geantino_X0_Eta","geantino_X0_Eta",160,-4,4);
-  TProfile * geantino_X0_Phi = new TProfile("geantino_X0_Phi","geantino_X0_Phi",160,-4,4);
-  TH2F * geantino_X0_Eta_spread = new TH2F("geantino_X0_Eta_spread","geantino_X0_Eta_spread",160,-4,4,160,0,4);
-  TH2F * geantino_X0_Phi_spread = new TH2F("geantino_X0_Phi_spread","geantino_X0_Phi_spread",160,-4,4,160,0,4);
+  TProfile * geantino_X0_Eta = new TProfile("geantino_X0_Eta","geantino_X0_Eta",nbins_eta,eta_min,eta_max);
+  TProfile * geantino_X0_Phi = new TProfile("geantino_X0_Phi","geantino_X0_Phi",nbins_phi,phi_min,phi_max);
+  TH2F * geantino_X0_Eta_spread = new TH2F("geantino_X0_Eta_spread","geantino_X0_Eta_spread",nbins_eta,eta_min,eta_max,160,0,4);
+  TH2F * geantino_X0_Phi_spread = new TH2F("geantino_X0_Phi_spread","geantino_X0_Phi_spread",nbins_phi,phi_min,phi_max,160,0,4);
   TH2F * geantino_X0 = new TH2F("geantino_X0","geantinol_X0",160,-4,4,160,-4,4);
 
-  TH1F * comp_X0_Eta = new TH1F("comp_X0_Eta","comp_X0_Eta",160,-4,4);
-  TH1F * comp_X0_Phi = new TH1F("comp_X0_Phi","comp_X0_Phi",160,-4,4);
+  TH1F * comp_X0_Eta = new TH1F("comp_X0_Eta","comp_X0_Eta",nbins_eta,eta_min,eta_max);
+  TH1F * comp_X0_Phi = new TH1F("comp_X0_Phi","comp_X0_Phi",nbins_phi,phi_min,phi_max);
   TH2F * comp_X0 = new TH2F("comp_X0","comp_X0",160,-4,4,160,-4,4);
 
   TChain *Val_file = new TChain("material-tracks");

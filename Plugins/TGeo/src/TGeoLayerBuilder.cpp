@@ -153,7 +153,7 @@ void Acts::TGeoLayerBuilder::buildLayers(const GeometryContext& gctx,
                  << " surfaces at r = " << pl.medium(AxisDirection::AxisR));
 
       pl.envelope[Acts::AxisDirection::AxisR] = {lCfg.envelope.first,
-                                                 lCfg.envelope.second};
+                                                 lCfg.envelope.first};
       pl.envelope[Acts::AxisDirection::AxisZ] = {lCfg.envelope.second,
                                                  lCfg.envelope.second};
       if (nb0 >= 0 && nb1 >= 0) {
@@ -170,9 +170,10 @@ void Acts::TGeoLayerBuilder::buildLayers(const GeometryContext& gctx,
                  << " surfaces at z = " << pl.medium(AxisDirection::AxisZ));
 
       pl.envelope[Acts::AxisDirection::AxisR] = {lCfg.envelope.first,
-                                                 lCfg.envelope.second};
+                                                 lCfg.envelope.first};
       pl.envelope[Acts::AxisDirection::AxisZ] = {lCfg.envelope.second,
                                                  lCfg.envelope.second};
+
       if (nb0 >= 0 && nb1 >= 0) {
         layers.push_back(
             m_cfg.layerCreator->discLayer(gctx, lSurfaces, nb0, nb1, pl));

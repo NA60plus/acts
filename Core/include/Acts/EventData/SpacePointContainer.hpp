@@ -38,9 +38,10 @@ struct SpacePointContainerConfig {
 };
 
 struct SpacePointContainerOptions {
-  // location of beam in x,y plane.
+  // location of beam in x,y,z plane.
   // used as offset for Space Points
-  Acts::Vector2 beamPos{0 * Acts::UnitConstants::mm,
+  Acts::Vector3 beamPos{0 * Acts::UnitConstants::mm,
+                        0 * Acts::UnitConstants::mm,
                         0 * Acts::UnitConstants::mm};
   bool isInInternalUnits = false;
 
@@ -55,6 +56,7 @@ struct SpacePointContainerOptions {
     options.isInInternalUnits = true;
     options.beamPos[0] /= 1_mm;
     options.beamPos[1] /= 1_mm;
+    options.beamPos[2] /= 1_mm;
     return options;
   }
 };

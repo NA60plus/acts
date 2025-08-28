@@ -29,7 +29,7 @@ class TrackQualityPlotTool {
     std::map<std::string, PlotHelpers::Binning> varBinning = {
         {"Eta", PlotHelpers::Binning("#eta", 40, -4, 4)},
         {"Phi", PlotHelpers::Binning("#phi", 100, -3.15, 3.15)},
-        {"Pt", PlotHelpers::Binning("pT [GeV/c]", 40, 0, 100)},
+        {"Pt", PlotHelpers::Binning("pT [GeV/c]", 10, 0, 5)},
         {"Num", PlotHelpers::Binning("N", 30, -0.5, 29.5)}};
   };
 

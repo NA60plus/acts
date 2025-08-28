@@ -622,6 +622,7 @@ bool Acts::CylinderVolumeHelper::interGlueTrackingVolume(
         // for the first one
         std::shared_ptr<TrackingVolume> tVol =
             std::const_pointer_cast<TrackingVolume>(*tVolIter);
+        
         if (tVolIter == tVolFirst) {
           addFaceVolumes(tVol, tubeInnerCover, glueVolumesInnerTube);
         }
@@ -646,6 +647,7 @@ bool Acts::CylinderVolumeHelper::interGlueTrackingVolume(
 
           glueTrackingVolumes(gctx, tVol1, tubeOuterCover, tVol2,
                               tubeInnerCover, rMin, rGlueR, rMax, zMin, zMax);
+
         }
       }
     } else {
@@ -750,8 +752,10 @@ void Acts::CylinderVolumeHelper::glueTrackingVolumes(
   // get the two gluevolume descriptors
   const GlueVolumesDescriptor& gvDescriptorOne =
       tvolOne->glueVolumesDescriptor();
+  ACTS_VERBOSE("gvDescriptorOne");
   const GlueVolumesDescriptor& gvDescriptorTwo =
       tvolTwo->glueVolumesDescriptor();
+  ACTS_VERBOSE("gvDescriptorTwo");
 
   std::size_t volOneGlueVols =
       gvDescriptorOne.glueVolumes(faceOne)
@@ -773,10 +777,15 @@ void Acts::CylinderVolumeHelper::glueTrackingVolumes(
       volOneGlueVols != 0u
           ? gvDescriptorOne.glueVolumes(faceOne)->arrayObjects()[0]
           : tvolOne;
+
+  ACTS_VERBOSE("glueVolOne");
+
   TrackingVolumePtr glueVolTwo =
       volTwoGlueVols != 0u
           ? gvDescriptorTwo.glueVolumes(faceTwo)->arrayObjects()[0]
           : tvolTwo;
+
+  ACTS_VERBOSE("glueVolTwo");
 
   // We'll need to mutate those volumes in order to glue them together
   auto mutableGlueVolOne = std::const_pointer_cast<TrackingVolume>(glueVolOne);
@@ -792,6 +801,8 @@ void Acts::CylinderVolumeHelper::glueTrackingVolumes(
     // one to one is easy
     mutableGlueVolOne->glueTrackingVolume(gctx, faceOne,
                                           mutableGlueVolTwo.get(), faceTwo);
+    ACTS_VERBOSE("glued");
+
 
   } else if (volOneGlueVols <= 1) {
     // (ii) one -> many

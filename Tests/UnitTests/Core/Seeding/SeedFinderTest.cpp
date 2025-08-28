@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
   Acts::SpacePointContainerConfig spConfig;
   // Options
   Acts::SpacePointContainerOptions spOptions;
-  spOptions.beamPos = {-.5_mm, -.5_mm};
+  spOptions.beamPos = {-.5_mm, -.5_mm, 0};
 
   // Prepare interface SpacePoint backend-ACTS
   ActsExamples::SpacePointContainer container(spVec);

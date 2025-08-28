@@ -32,10 +32,11 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
   using AxisScalar = Acts::Vector3::Scalar;
   using namespace Acts::UnitLiterals;
 
-  int phiBins = 0;
+  int phiBins = 1;
   // for no magnetic field, create 100 phi-bins
+  /*
   if (options.bFieldInZ == 0) {
-    phiBins = 100;
+    phiBins = 1;
     ACTS_VERBOSE(
         "B-Field is 0 (z-coordinate), setting the number of bins in phi to "
         << phiBins);
@@ -105,7 +106,7 @@ Acts::CylindricalSpacePointGridCreator::createGrid(
     // set protection for large number of bins, by default it is large
     phiBins = std::min(phiBins, config.maxPhiBins);
   }
-
+  */
   Acts::Axis<AxisType::Equidistant, AxisBoundaryType::Closed> phiAxis(
       config.phiMin, config.phiMax, phiBins);
 

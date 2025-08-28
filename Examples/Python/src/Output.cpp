@@ -27,6 +27,7 @@
 #include "ActsExamples/Io/Obj/ObjTrackingGeometryWriter.hpp"
 #include "ActsExamples/MaterialMapping/IMaterialWriter.hpp"
 #include "ActsExamples/TrackFinding/ITrackParamsLookupWriter.hpp"
+#include "ActsExamples/Io/Root/TrackletVertexingPerformanceWriter.hpp"
 
 #include <memory>
 #include <string>
@@ -166,6 +167,12 @@ void addOutput(Context& ctx) {
                              "CsvTrackParameterWriter", inputTrackParameters,
                              inputTracks, outputDir, outputStem,
                              outputPrecision);
+
+  ACTS_PYTHON_DECLARE_WRITER(
+      ActsExamples::TrackletVertexingPerformanceWriter, mex, "TrackletVertexingPerformanceWriter",
+      inputRecPrimaryVertex, inputGenPrimaryVertex, filePath,  
+      inputFitFunction, inputZTracklets, inputZTrackletsPeak, fileMode, trkVtxPlotToolConfig, verbose);
+
 
   ACTS_PYTHON_DECLARE_WRITER(ActsExamples::CsvProtoTrackWriter, mex,
                              "CsvProtoTrackWriter", inputSpacepoints,
