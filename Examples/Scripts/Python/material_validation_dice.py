@@ -97,14 +97,16 @@ if "__main__" == __name__:
         default="propagation-material",
         help="Output file name",
     )
-
+    p.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
+    p.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
+    
     args = p.parse_args()
 
     matDeco = (
         acts.IMaterialDecorator.fromFile(args.map) if args.map != None else None
     )
 
-    detector = buildDICEgeometry(matDeco=matDeco)
+    detector = buildDICEgeometry(matDeco=matDeco, addVS=not args.remove_vs, addMS=not args.remove_ms)
     trackingGeometry = detector.trackingGeometry()
     decorators = detector.contextDecorators()
 

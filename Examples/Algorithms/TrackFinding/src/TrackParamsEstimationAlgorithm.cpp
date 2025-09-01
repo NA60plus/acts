@@ -112,38 +112,16 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
                << topSP->x() << ", " << topSP->y() << ", " << topSP->z());
                
     // Get the magnetic field at the bottom space point
-    auto fieldRes = m_cfg.magneticField->getField(
-        {bottomSP->x(),
-         bottomSP->z(),
-         -bottomSP->y()},
-        bCache);
 
-        /*
-            auto fieldRes = m_cfg.magneticField->getField(
+    auto field = m_cfg.magneticField->getField(
         {(bottomSP->x() + middleSP->x() + topSP->x()) / 3.,
-         (bottomSP->z() + middleSP->z() + topSP->z()) / 3.,
-         -(bottomSP->y() + middleSP->y() + topSP->y()) / 3.},
+         (bottomSP->y() + middleSP->y() + topSP->y()) / 3.,
+         (bottomSP->z() + middleSP->z() + topSP->z()) / 3.},
         bCache);
-*/
-    if (!fieldRes.ok()) {
-      ACTS_ERROR("Field lookup error: " << fieldRes.error());
+    if (!field.ok()) {
+      ACTS_ERROR("Field lookup error: " << field.error());
       return ProcessCode::ABORT;
     }
-    Acts::Vector3 field = *fieldRes;
-
-    if (field.norm() < m_cfg.bFieldMin) {
-      ACTS_WARNING("Magnetic field at seed " << iseed << " is too small "
-                                             << field.norm());
-      continue;
-    }
-
-    ACTS_DEBUG("Magnetic field at seed " << iseed << ": "
-               << field.x() << ", " << field.y() << ", " << field.z());
-
-    field.x() = field.x();
-    auto fieldTmp = field.y();
-    field.y() = -field.z();
-    field.z() = fieldTmp;
 
     ACTS_DEBUG("Magnetic field at seed " << iseed << ": "
                << field.x() << ", " << field.y() << ", " << field.z());
@@ -151,6 +129,7 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
     // Estimate the track parameters from seed
     const auto paramsResult = Acts::estimateTrackParamsFromSeed(
         ctx.geoContext, seed.sp(), *surface, field);
+        
     if (!paramsResult.ok()) {
       ACTS_WARNING("Skip track because param estimation failed "
                    << paramsResult.error());

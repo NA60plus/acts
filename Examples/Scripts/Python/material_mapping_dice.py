@@ -148,12 +148,16 @@ if "__main__" == __name__:
         default="material-map.json",
         help="Output filename for the generated material map. Supported formats: JSON, CBOR.",
     )
+    
+    p.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
+    p.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
+    
     args = p.parse_args()
 
     mapName = args.outFile.split(".")[0]
     matDeco = acts.IMaterialDecorator.fromFile(args.inFile)
 
-    detector = buildDICEgeometry(matDeco=matDeco)
+    detector = buildDICEgeometry(matDeco=matDeco, addVS=not args.remove_vs, addMS=not args.remove_ms)
     trackingGeometry = detector.trackingGeometry()
     decorators = detector.contextDecorators()
 

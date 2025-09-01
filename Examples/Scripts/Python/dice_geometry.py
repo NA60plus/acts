@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from acts.examples import TGeoDetector
 from acts import UnitConstants as u
+import argparse
 
 import acts
 from acts import MaterialMapJsonConverter
@@ -89,19 +90,14 @@ def runGeometry(
 
             jmw.write(trackingGeometry)
 
-def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/fullgeo/geometry.root', matDeco = None):
+def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/fullgeo/geometry.root', matDeco = None, addVS = True, addMS = True):
     Volume = TGeoDetector.Config.Volume
     LayerTriplet = TGeoDetector.Config.LayerTriplet
     equidistant = TGeoDetector.Config.BinningType.equidistant
 
-    config = TGeoDetector.Config(
-        fileName=geometryFile,
-        surfaceLogLevel=acts.logging.VERBOSE,
-        layerLogLevel=acts.logging.VERBOSE,
-        volumeLogLevel=acts.logging.VERBOSE,
-        buildBeamPipe=False,
-        unitScalor=10.0,
-        volumes=[
+    volumes = []
+    if addVS:
+        volumes.append(
             Volume(
                 name="VS",
                 binToleranceR=(5 * u.mm, 5 * u.mm),
@@ -138,7 +134,9 @@ def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis
                 itkModuleSplit=False,
                 barrelMap={},
                 discMap={},
-            ),
+            ))
+    if addMS:
+        volumes.append(
             Volume(
                 name="MS",
                 binToleranceR=(5 * u.mm, 5 * u.mm),
@@ -176,7 +174,16 @@ def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis
                 barrelMap={},
                 discMap={},
             )
-        ],
+            )
+        
+    config = TGeoDetector.Config(
+        fileName=geometryFile,
+        surfaceLogLevel=acts.logging.VERBOSE,
+        layerLogLevel=acts.logging.VERBOSE,
+        volumeLogLevel=acts.logging.VERBOSE,
+        buildBeamPipe=False,
+        unitScalor=10.0,
+        volumes=volumes,
         materialDecorator=matDeco,
     )
 
@@ -184,7 +191,12 @@ def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis
         
 
 if "__main__" == __name__:
-    detector = buildDICEgeometry()
+    parser = argparse.ArgumentParser(description="Run DICE geometry simulation.")
+    parser.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
+    parser.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
+    args = parser.parse_args()
+    
+    detector = buildDICEgeometry(addVS=not args.remove_vs, addMS=not args.remove_ms)
     trackingGeometry = detector.trackingGeometry()
     decorators = detector.contextDecorators()
     print("Tracking geometry built successfully.")

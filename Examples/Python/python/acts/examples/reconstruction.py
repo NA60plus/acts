@@ -2413,3 +2413,87 @@ def addUsedMeasurementsFilter(
         s.addWriter(acts.examples.RootMeasurementWriter(rmwConfig, logLevel))
 
     return s
+
+
+def addMatching(
+    s: acts.examples.Sequencer,
+    trackingGeometry: acts.TrackingGeometry,
+    magneticField: acts.MagneticFieldProvider,
+    inputTracksMS = "ambitrackspars",
+    inputTracksVT = "ambitrackspars",
+    outputTrackParameters = "outputTrackParameters",
+    outputTracksVT = "matchVT",
+    outputTracksMS = "matchMS",
+    outputMatchedTracks = "outputMatchedTracks",
+    inputParticles = "particles",
+    inputMeasurementParticlesMapVT = "measurement_particles_map",
+    inputMeasurementParticlesMapMS = "measurement_particles_map",
+    useRecVtx = False,
+    chi2max = None,
+    suffixOut = "matched",
+    outputDirCsv: Optional[Union[Path, str]] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    writeTrackSummary: bool = True,
+    writeTrackStates: bool = True,
+    writePerformance: bool = True,
+    writeCovMat: bool = False,
+    logLevel: Optional[acts.logging.Level] = acts.logging.Level.ERROR,
+    geoIdForPropagation = None
+) -> None:
+    
+    customLogLevel = acts.examples.defaultLogging(s, logLevel)
+    kalmanOptions = {
+        "multipleScattering": True,
+        "energyLoss": True,
+        "reverseFilteringMomThreshold": 0 * u.GeV,
+        "freeToBoundCorrection": acts.examples.FreeToBoundCorrection(False),
+        "level": acts.logging.Level.INFO,
+    }
+
+    vtmsmatcher = acts.examples.MatchingAlgorithm(
+        level=customLogLevel(),
+        inputTracksMS = inputTracksMS,
+        inputTracksVT = inputTracksVT,
+        outputTrackParameters = outputTrackParameters,
+        outputTracksMS = outputTracksMS,
+        outputTracksVT = outputTracksVT,
+        outputMatchedTracks = outputMatchedTracks,
+        inputParticles = inputParticles,
+        inputMeasurementParticlesMapVT = inputMeasurementParticlesMapVT,
+        inputMeasurementParticlesMapMS = inputMeasurementParticlesMapMS,
+        useRecVtx = useRecVtx,
+        chi2max = chi2max, 
+        fit = acts.examples.makeKalmanFitterFunction(trackingGeometry, magneticField, **kalmanOptions),
+        trackingGeometry = trackingGeometry,
+        magneticField = magneticField,
+        geoIdForPropagation = geoIdForPropagation
+        )
+    
+    s.addAlgorithm(vtmsmatcher)
+
+    matchAlg = acts.examples.TrackTruthMatcher(
+        level=customLogLevel(),
+        inputTracks=matchAlg.config.outputTracks,
+        inputParticles="particles",
+        inputMeasurementParticlesMap="measurement_particles_map",
+        outputTrackParticleMatching=suffixOut+"track_particle",
+        outputParticleTrackMatching=suffixOut+"particle_track",
+        doubleMatching=True,
+    )
+    s.addAlgorithm(matchAlg)
+
+    addTrackWriters(
+        s,
+        name=suffixOut,
+        tracks=matchAlg.config.outputTracks,
+        outputDirCsv=outputDirCsv,
+        outputDirRoot=outputDirRoot,
+        writeSummary=writeTrackSummary,
+        writeStates=writeTrackStates,
+        writeFitterPerformance=writePerformance,
+        writeFinderPerformance=writePerformance,
+        writeCovMat=writeCovMat,
+        logLevel=logLevel,
+    )
+
+    return s
