@@ -15,7 +15,7 @@
 #include "ActsExamples/Framework/IAlgorithm.hpp"
 #include "ActsExamples/Framework/ProcessCode.hpp"
 #include "ActsExamples/EventData/Index.hpp"
-//#include "ActsExamples/EventData/IndexSourceLink.hpp"
+#include "ActsExamples/EventData/SimHit.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,6 +34,18 @@ class FilterMeasurementsAlgorithm final : public IAlgorithm {
     std::string inputTracks;
     /// Output measurements collection.
     std::string outputMeasurements;
+    /// Input collection of simulated hits.
+    std::string inputSimHits;
+    /// Output collection to map measured hits to contributing particles.
+    std::string outputMeasurementParticlesMap ;
+    /// Output collection to map measured hits to simulated hits.
+    std::string outputMeasurementSimHitsMap;
+    /// Output collection to map particles to measurements.
+    std::string outputParticleMeasurementsMap ;
+    /// Output collection to map particles to simulated hits.
+    std::string outputSimHitMeasurementsMap;
+    /// Output collection to map particles to simulated hits.
+    std::string inputSimHitMeasurementsMap;
   };
 
   /// Construct the ambiguity resolution algorithm.
@@ -57,6 +69,21 @@ class FilterMeasurementsAlgorithm final : public IAlgorithm {
   ReadDataHandle<MeasurementContainer> m_inputMeasurements{this, "InputMeasurements"};
   ReadDataHandle<ConstTrackContainer> m_inputTracks{this, "InputTracks"};
   WriteDataHandle<MeasurementContainer> m_outputMeasurements{this, "OutputMeasurements"};
+  ReadDataHandle<SimHitContainer> m_inputHits{this, "InputHits"};
+
+  ReadDataHandle<IndexMultimap<Index>> m_inputMeasurementSimHitsMap{
+    this, "InputMeasurementSimHitsMap"};
+
+  WriteDataHandle<IndexMultimap<SimBarcode>> m_outputMeasurementParticlesMap{
+      this, "OutputMeasurementParticlesMap"};
+  WriteDataHandle<IndexMultimap<Index>> m_outputMeasurementSimHitsMap{
+      this, "OutputMeasurementSimHitsMap"};
+
+  WriteDataHandle<InverseMultimap<SimBarcode>> m_outputParticleMeasurementsMap{
+      this, "OutputParticleMeasurementsMap"};
+  WriteDataHandle<InverseMultimap<Index>> m_outputSimHitMeasurementsMap{
+      this, "OutputSimHitMeasurementsMap"};
+
 
 };
 

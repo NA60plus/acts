@@ -192,11 +192,13 @@ def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis
 
 if "__main__" == __name__:
     parser = argparse.ArgumentParser(description="Run DICE geometry simulation.")
+    parser.add_argument("--geometry-file", type=str, default='/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/fullgeo/geometry.root', help="Path to the geometry ROOT file.")
     parser.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
     parser.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
     args = parser.parse_args()
     
-    detector = buildDICEgeometry(addVS=not args.remove_vs, addMS=not args.remove_ms)
+    detector = buildDICEgeometry(geometryFile=args.geometry_file,
+                                 addVS=not args.remove_vs, addMS=not args.remove_ms)
     trackingGeometry = detector.trackingGeometry()
     decorators = detector.contextDecorators()
     print("Tracking geometry built successfully.")

@@ -104,27 +104,18 @@ ProcessCode TrackParamsEstimationAlgorithm::execute(
       continue;
     }
 
-    ACTS_DEBUG("Bottom space point: "
-               << bottomSP->x() << ", " << bottomSP->y() << ", " << bottomSP->z());
-    ACTS_DEBUG("Middle space point: "
-               << middleSP->x() << ", " << middleSP->y() << ", " << middleSP->z());
-    ACTS_DEBUG("Top space point: "
-               << topSP->x() << ", " << topSP->y() << ", " << topSP->z());
-               
     // Get the magnetic field at the bottom space point
 
-    auto field = m_cfg.magneticField->getField(
+    auto fieldRes = m_cfg.magneticField->getField(
         {(bottomSP->x() + middleSP->x() + topSP->x()) / 3.,
          (bottomSP->y() + middleSP->y() + topSP->y()) / 3.,
          (bottomSP->z() + middleSP->z() + topSP->z()) / 3.},
         bCache);
-    if (!field.ok()) {
-      ACTS_ERROR("Field lookup error: " << field.error());
+    if (!fieldRes.ok()) {
+      ACTS_ERROR("Field lookup error: " << fieldRes.error());
       return ProcessCode::ABORT;
     }
-
-    ACTS_DEBUG("Magnetic field at seed " << iseed << ": "
-               << field.x() << ", " << field.y() << ", " << field.z());
+    Acts::Vector3 field = *fieldRes;
 
     // Estimate the track parameters from seed
     const auto paramsResult = Acts::estimateTrackParamsFromSeed(

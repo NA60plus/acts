@@ -26,7 +26,9 @@ void addFilterMeasurements(Context& ctx) {
 
   ACTS_PYTHON_DECLARE_ALGORITHM(
       ActsExamples::FilterMeasurementsAlgorithm, mex,
-      "FilterMeasurementsAlgorithm", inputTracks, inputMeasurements, outputMeasurements);
+      "FilterMeasurementsAlgorithm", inputTracks, inputMeasurements,
+      outputMeasurements, inputSimHits, outputMeasurementParticlesMap,
+      outputMeasurementSimHitsMap, outputParticleMeasurementsMap,
+      outputSimHitMeasurementsMap, inputSimHitMeasurementsMap);
 }
-
 }  // namespace Acts::Python

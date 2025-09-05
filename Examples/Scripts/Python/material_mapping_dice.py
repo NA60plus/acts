@@ -133,15 +133,17 @@ def runMaterialMapping(
 
 
 if "__main__" == __name__:
-    p = argparse.ArgumentParser(description="Script to generate ACTS material map")
-    p.add_argument(
+    parser = argparse.ArgumentParser(description="Script to generate ACTS material map")
+    parser.add_argument("--geometry-file", type=str, default='/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/fullgeo/geometry.root', help="Path to the geometry ROOT file.")
+
+    parser.add_argument(
         "-i",
         "--inFile",
         type=str,
         default="geometry-map.json",
         help="Output filename for the generated material map. Supported formats: JSON, CBOR.",
     )
-    p.add_argument(
+    parser.add_argument(
         "-o",
         "--outFile",
         type=str,
@@ -149,15 +151,16 @@ if "__main__" == __name__:
         help="Output filename for the generated material map. Supported formats: JSON, CBOR.",
     )
     
-    p.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
-    p.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
+    parser.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
+    parser.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
     
-    args = p.parse_args()
+    args = parser.parse_args()
 
     mapName = args.outFile.split(".")[0]
     matDeco = acts.IMaterialDecorator.fromFile(args.inFile)
 
-    detector = buildDICEgeometry(matDeco=matDeco, addVS=not args.remove_vs, addMS=not args.remove_ms)
+    detector = buildDICEgeometry(geometryFile=args.geometry_file,
+                                matDeco=matDeco, addVS=not args.remove_vs, addMS=not args.remove_ms)
     trackingGeometry = detector.trackingGeometry()
     decorators = detector.contextDecorators()
 

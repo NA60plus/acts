@@ -27,9 +27,9 @@ class TrackSummaryPlotTool {
   /// @brief The nested configuration struct
   struct Config {
     std::map<std::string, PlotHelpers::Binning> varBinning = {
-        {"Eta", PlotHelpers::Binning("#eta", 40, -4, 4)},
+        {"Eta", PlotHelpers::Binning("#eta", 50, 0, 5)},
         {"Phi", PlotHelpers::Binning("#phi", 100, -3.15, 3.15)},
-        {"Pt", PlotHelpers::Binning("pT [GeV/c]", 10, 0, 5)},
+        {"Pt", PlotHelpers::Binning("pT [GeV/c]", 30, 0, 3)},
         {"Num", PlotHelpers::Binning("N", 30, -0.5, 29.5)}};
   };
 

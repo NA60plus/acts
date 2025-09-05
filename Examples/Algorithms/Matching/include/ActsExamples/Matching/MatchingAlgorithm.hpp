@@ -62,30 +62,22 @@ class MatchingAlgorithm final : public IAlgorithm {
     /// Optional. Input track parameters collection
     std::string inputTracksVT;
     /// Optional. Input track parameters collection
-    std::string outputTrackParameters = "trackParameters";
-    /// Optional. Input track parameters collection
     std::string inputMeasurements = "measurements";
 
     std::string outputTracksVT = "matchVT";
     std::string outputTracksMS = "matchMS";
     std::string outputTracksRefit = "refit";
     std::string outputMatchedTracks = "matched";
-    std::string inputParticles = "particles";
     std::string inputMeasurementParticlesMapVT;
     std::string inputMeasurementParticlesMapMS;
-    bool useRecVtx = false;
     double chi2max = 1e12;
-    Acts::GeometryIdentifier geoIdForPropagation;
+    std::uint64_t geoIdForPropagation;
     std::shared_ptr<ActsExamples::TrackFitterFunction> fit;
-    std::shared_ptr<MeasurementCalibrator> calibrator;
 
     /// The tracking geometry that should be used.
     std::shared_ptr<const Acts::TrackingGeometry> trackingGeometry;
     /// The magnetic field that should be used.
     std::shared_ptr<const Acts::MagneticFieldProvider> magneticField;
-    /// Extrapolation strategy
-    Acts::TrackExtrapolationStrategy extrapolationStrategy =
-        Acts::TrackExtrapolationStrategy::firstOrLast;
   };
 
   /// Construct the ambiguity resolution algorithm.
@@ -120,8 +112,6 @@ class MatchingAlgorithm final : public IAlgorithm {
   ReadDataHandle<ConstTrackContainer> m_inputTracksVT{this, "InputTracksVT"};
   ReadDataHandle<ConstTrackContainer> m_inputTracksMS{this, "InputTracksMS"};
 
-  ReadDataHandle<SimParticleContainer> m_inputParticles{this, "InputParticles"};
-
   ReadDataHandle<IndexMultimap<ActsFatras::Barcode>>
       m_inputMeasurementParticlesMapVT{this, "InputMeasurementParticlesMapVT"};
   ReadDataHandle<IndexMultimap<ActsFatras::Barcode>>
@@ -133,8 +123,6 @@ class MatchingAlgorithm final : public IAlgorithm {
   WriteDataHandle<std::vector<std::pair<TrackProxyType, TrackProxyType>>>
       m_outputMatchedTracks{this, "OutputMatchedTracks"};
 
-  WriteDataHandle<TrackParametersContainer> m_outputTrackParameters{
-      this, "OutputTrackParameters"};
   WriteDataHandle<ConstTrackContainer> m_outputTracksMS{this, "OutputRefitVT"};
   WriteDataHandle<ConstTrackContainer> m_outputTracksVT{this, "OutputRefitMS"};
   WriteDataHandle<ConstTrackContainer> m_outputTracksRefit{this, "OutputRefit"};

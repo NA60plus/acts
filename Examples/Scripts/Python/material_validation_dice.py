@@ -79,34 +79,35 @@ def runMaterialValidation(
 
 
 if "__main__" == __name__:
-    p = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--geometry-file", type=str, default='/home/giacomo/acts_for_NA60+/ACTS-Analysis-Scripts/geometry/fullgeo/geometry.root', help="Path to the geometry ROOT file.")
 
-    p.add_argument(
+    parser.add_argument(
         "-n", "--events", type=int, default=1000, help="Number of events to process"
     )
-    p.add_argument(
+    parser.add_argument(
         "-t", "--tracks", type=int, default=1000, help="Number of tracks per event"
     )
-    p.add_argument(
+    parser.add_argument(
         "-m", "--map", type=str, help="Input file (optional) for the material map"
     )
-    p.add_argument(
+    parser.add_argument(
         "-o",
         "--output",
         type=str,
         default="propagation-material",
         help="Output file name",
     )
-    p.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
-    p.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
+    parser.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
+    parser.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
     
-    args = p.parse_args()
+    args = parser.parse_args()
 
     matDeco = (
         acts.IMaterialDecorator.fromFile(args.map) if args.map != None else None
     )
 
-    detector = buildDICEgeometry(matDeco=matDeco, addVS=not args.remove_vs, addMS=not args.remove_ms)
+    detector = buildDICEgeometry(geometryFile=args.geometry_file,matDeco=matDeco, addVS=not args.remove_vs, addMS=not args.remove_ms)
     trackingGeometry = detector.trackingGeometry()
     decorators = detector.contextDecorators()
 

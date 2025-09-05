@@ -47,14 +47,12 @@ ActsExamples::MatchingAlgorithm::MatchingAlgorithm(
       m_cfg(std::move(cfg)) {
         
 
-  m_outputTrackParameters.initialize(m_cfg.outputTrackParameters);
   m_inputTracksVT.initialize(m_cfg.inputTracksVT);
   m_inputTracksMS.initialize(m_cfg.inputTracksMS);
   m_outputTracksVT.initialize(m_cfg.outputTracksVT);
   m_outputTracksMS.initialize(m_cfg.outputTracksMS);
   m_outputTracksRefit.initialize(m_cfg.outputTracksRefit);
   m_outputMatchedTracks.initialize(m_cfg.outputMatchedTracks);
-  m_inputParticles.initialize(m_cfg.inputParticles);
   m_inputMeasurementParticlesMapVT.initialize(
       m_cfg.inputMeasurementParticlesMapVT);
   m_inputMeasurementParticlesMapMS.initialize(
@@ -73,17 +71,8 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
 
   const auto& measurements = m_inputMeasurements(ctx);
 
-  auto pSurfaceMatching = m_cfg.trackingGeometry->findSurface(m_cfg.geoIdForPropagation);
-
-  Acts::Propagator<Acts::EigenStepper<>, Acts::Navigator> extrapolator(
-      Acts::EigenStepper<>(m_cfg.magneticField),
-      Acts::Navigator({m_cfg.trackingGeometry},
-                      logger().cloneWithSuffix("Navigator")),
-      logger().cloneWithSuffix("Propagator"));
-
-  // VOID PROPAGATOR
-  // Set up EigenStepper
-  Acts::EigenStepper<> stepper(m_cfg.magneticField);
+  Acts::GeometryIdentifier geoIdForPropagation(m_cfg.geoIdForPropagation);
+  auto pSurfaceMatching = m_cfg.trackingGeometry->findSurface(geoIdForPropagation);
 
   Acts::PropagatorPlainOptions pOptions(ctx.geoContext, ctx.magFieldContext);
   
@@ -110,7 +99,11 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
 
   std::vector<int> ntracksVTs;
 
+  ACTS_DEBUG("Start matching " << tracksMS.size() << " MS tracks with "
+                              << tracksVT.size() << " VT tracks");
   for (const auto& trackMS : tracksMS) {
+    ACTS_DEBUG("Matching MS track " << indexMS << " / "
+                                   << tracksMS.size());
     indexVT = -1;
     std::pair<TrackProxyType, TrackProxyType> trackPairTmp(
         tracksMS.getTrack(indexMS),
@@ -135,29 +128,30 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
     Acts::BoundTrackParameters params1(
       trackMS.referenceSurface().getSharedPtr(), trackMS.parameters(),
       trackMS.covariance(), trackMS.particleHypothesis());
-    
+    /*
     const auto resMS =
         extrapolator.propagateToSurface(params1, *pSurfaceMatching, pOptions);
 
     if (!resMS.ok()) {
       continue;
     }
-    float chi2 = 1e12;
     const auto& endParamsMS = *resMS;
+    */
 
-    Acts::BoundVector paramsMS = endParamsMS.parameters();
-    const auto covMS = *endParamsMS.covariance();
+    float chi2 = 1e12;
+    Acts::BoundVector paramsMS = trackMS.parameters();
+    const auto covMS = trackMS.covariance();
     
     int ntracksVT = 0;
     for (const auto& trackVT : tracksVT) {
       ntracksVT++;
       indexVT++;
+      ACTS_DEBUG("Matching VS track " << indexVT << " / "
+                                    << tracksVT.size());
 
       Acts::BoundTrackParameters params2(
         trackVT.referenceSurface().getSharedPtr(), trackVT.parameters(),
         trackVT.covariance(), trackVT.particleHypothesis());
-      const auto resVT =
-          extrapolator.propagateToSurface(params2, *pSurfaceMatching, pOptions);
 
       identifyContributingParticles(hitParticlesMapVT,
                                     tracksVT.getTrack(indexVT),
@@ -167,13 +161,8 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
         continue;
       }
 
-      if (!resVT.ok()) {
-        continue;
-      }
-
-      const auto& endParamsVT = *resVT;
-      Acts::BoundVector paramsMatch = endParamsVT.parameters() - paramsMS;
-      const auto covMatch = *endParamsVT.covariance() + covMS;
+      Acts::BoundVector paramsMatch = trackVT.parameters() - paramsMS;
+      const auto covMatch = trackVT.covariance() + covMS;
 
       float chi2tmp  = 0;
 
@@ -207,82 +196,98 @@ ActsExamples::ProcessCode ActsExamples::MatchingAlgorithm::execute(
       auto srcProxyMS = trackPairTmp.first;
       destProxyMS.copyFrom(srcProxyMS, true);
       destProxyMS.tipIndex() = srcProxyMS.tipIndex();
-      destProxyMS.parameters() = endParamsMS.parameters();
-      if (endParamsMS.covariance().has_value()) {
-        destProxyMS.covariance() = endParamsMS.covariance().value();
-      }
+      destProxyMS.parameters() = trackMS.parameters();
+      destProxyMS.covariance() = trackMS.covariance();
     
       auto trackVTMatch = tracksVT.getTrack(trackPairIndex.second);
-      Acts::BoundTrackParameters params2Tmp(
-        trackVTMatch.referenceSurface().getSharedPtr(), trackVTMatch.parameters(),
-        trackVTMatch.covariance(), trackVTMatch.particleHypothesis());
-      const auto resVTki =
-          extrapolator.propagateToSurface(params2Tmp, *pSurfaceMatching, pOptions);
-      auto& matchParamsVT = *resVTki;
-
       auto destProxyVT = matchedTracksVT.makeTrack();
       auto srcProxyVT = trackPairTmp.second;
       destProxyVT.copyFrom(srcProxyVT, true);
       destProxyVT.tipIndex() = srcProxyVT.tipIndex();
-      destProxyVT.parameters() = matchParamsVT.parameters();
-      if (matchParamsVT.covariance().has_value()) {
-        destProxyVT.covariance() = matchParamsVT.covariance().value();
-      }
+      destProxyVT.parameters() = trackVTMatch.parameters();
+      destProxyVT.covariance() = trackVTMatch.covariance(); 
 
     }
         
   }
+
+  ACTS_DEBUG("Number of matched tracks: " << trackPairs.size());
   
   std::vector<Acts::SourceLink> trackSourceLinks;
+  std::vector<const Acts::Surface*> surfSequence;
+
 
   auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
   auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
   TrackContainer tracks(trackContainer, trackStateContainer);
 
   ActsExamples::PassThroughCalibrator pcalibrator;
-  ActsExamples::MeasurementCalibratorAdapter calibrator(pcalibrator,
-                                                        measurements);
+//ActsExamples::MeasurementCalibratorAdapter calibrator(pcalibrator,
+//                                                        measurements);
+  RefittingCalibrator calibrator;
 
-  TrackFitterFunction::GeneralFitterOptions options{
-      ctx.geoContext, ctx.magFieldContext, ctx.calibContext, pSurfaceMatching,
-      pOptions};
+  // Construct a perigee surface as the target surface
+  auto pSurface = Acts::Surface::makeShared<Acts::PerigeeSurface>(
+      Acts::Vector3{0., 0., 0.});
+
 
   for (auto& pair : trackPairs) {
     auto trackMS = pair.first;
     auto trackVT = pair.second;
 
+    ACTS_DEBUG("Refitting matched track with tip index "
+               << trackMS.tipIndex() << " (MS) and "
+               << trackVT.tipIndex() << " (VT)");
+
     trackSourceLinks.clear();
+
+    TrackFitterFunction::GeneralFitterOptions options{
+        ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
+        &trackVT.referenceSurface(),
+        Acts::PropagatorPlainOptions(ctx.geoContext, ctx.magFieldContext)};
+    options.doRefit = true;
 
     const Acts::BoundTrackParameters initialParams(
         trackVT.referenceSurface().getSharedPtr(), trackVT.parameters(),
         trackVT.covariance(), trackMS.particleHypothesis());
 
     for (auto state : trackMS.trackStatesReversed()) {
+      surfSequence.push_back(&state.referenceSurface());
+
       if (!state.hasCalibrated()) {
         continue;
       }
-      auto source_link =
-          state.getUncalibratedSourceLink().template get<IndexSourceLink>();
-      trackSourceLinks.push_back(Acts::SourceLink{source_link});
+
+      auto sl = RefittingCalibrator::RefittingSourceLink{state};
+      trackSourceLinks.push_back(Acts::SourceLink{sl});
     }
 
     for (auto state : trackVT.trackStatesReversed()) {
+      surfSequence.push_back(&state.referenceSurface());
+
       if (!state.hasCalibrated()) {
         continue;
       }
-      auto source_link =
-          state.getUncalibratedSourceLink().template get<IndexSourceLink>();
-      trackSourceLinks.push_back(Acts::SourceLink{source_link});
+
+      auto sl = RefittingCalibrator::RefittingSourceLink{state};
+      trackSourceLinks.push_back(Acts::SourceLink{sl});
     }
-    
+
     if (trackSourceLinks.empty()) {
       ACTS_WARNING("Empty track found.");
       continue;
     }
-    std::reverse(trackSourceLinks.begin(), trackSourceLinks.end());
+      std::ranges::reverse(surfSequence);
+
+//    std::reverse(trackSourceLinks.begin(), trackSourceLinks.end());
+    //std::ranges::reverse(trackSourceLinks);
+
+    ACTS_VERBOSE("Initial parameters: "
+                 << initialParams.fourPosition(ctx.geoContext).transpose()
+                 << " -> " << initialParams.direction().transpose());
 
     auto result = (*m_cfg.fit)(trackSourceLinks, initialParams, options,
-                               calibrator, tracks);
+                               calibrator, surfSequence, tracks);
 
     if (result.ok()) {
       // Get the fit output object

@@ -28,14 +28,13 @@ void addMatching(Context& ctx) {
       ActsExamples::MatchingAlgorithm, mex, "MatchingAlgorithm",
       inputTracksMS,
       inputTracksVT,
-      outputTrackParameters,
       outputTracksMS,
       outputTracksVT,
       outputMatchedTracks,
-      inputParticles,
+      outputTracksRefit,
       inputMeasurementParticlesMapVT,
       inputMeasurementParticlesMapMS,
-      useRecVtx, chi2max, fit,
+      chi2max, fit,
       trackingGeometry, magneticField, geoIdForPropagation);
 
 }
