@@ -32,7 +32,7 @@ def runMaterialRecording(
     outputDir,
     tracksPerEvent=10000,
     s=None,
-    etaRange=(0, 8),
+    etaRange=(0,8),
 ):
     global _material_recording_executed
     if _material_recording_executed:
@@ -55,7 +55,7 @@ def runMaterialRecording(
                     charge=0,
                     randomizeCharge=False,
                     mass=0,
-                    p=(1 * u.GeV, 10 * u.GeV),
+                    p=(1 * u.GeV, 1 * u.GeV),
                     eta=etaRange,
                     numParticles=tracksPerEvent,
                     etaUniform=True,

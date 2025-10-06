@@ -37,8 +37,9 @@ def runMaterialMapping(
     readCachedSurfaceInformation=False,
     mappingStep=1,
     s=None,
+    nevents=1000,
 ):
-    s = s or Sequencer(numThreads=1,events=1)
+    s = s or Sequencer(numThreads=1,events=nevents)
 
     for decorator in decorators:
         s.addContextDecorator(decorator)
@@ -153,6 +154,7 @@ if "__main__" == __name__:
     
     parser.add_argument("--remove-vs", action="store_true", help="Remove Vertex Spectrometer")
     parser.add_argument("--remove-ms", action="store_true", help="Remove Muon Spectrometer")
+    parser.add_argument("-n", "--nevents", type=int, default=1, help="Number of events to process")
     
     args = parser.parse_args()
 
@@ -172,4 +174,5 @@ if "__main__" == __name__:
         readCachedSurfaceInformation=False,
         mapName=mapName,
         mapFormat=JsonFormat.Json,
+        nevents=args.nevents,
     ).run()
