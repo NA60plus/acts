@@ -80,7 +80,7 @@ ProcessCode SeedingOrthogonalAlgorithm::execute(
 
   // Options
   Acts::SpacePointContainerOptions spOptions;
-  spOptions.beamPos = {0., 0.};
+  spOptions.beamPos = {0., 0., 0.};
 
   SpacePointContainer container(spacePoints);
   Acts::SpacePointContainer<decltype(container), Acts::detail::RefHolder>

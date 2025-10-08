@@ -11,8 +11,7 @@
 #include "ActsExamples/Vertexing/HoughVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/IterativeVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/VertexFitterAlgorithm.hpp"
-#include "ActsPython/Utilities/Helpers.hpp"
-#include "ActsPython/Utilities/Macros.hpp"
+#include "ActsExamples/Vertexing/TrackletVertexingAlgorithm.hpp"
 
 #include <memory>
 
@@ -58,6 +57,12 @@ void addVertexing(Context& ctx) {
                                 "HoughVertexFinderAlgorithm", inputSpacepoints,
                                 outputVertices, targetSPs, minAbsEta, maxAbsEta,
                                 minHits, defVtxPosition);
+
+  ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::TrackletVertexingAlgorithm,
+                                mex, "TrackletVertexingAlgorithm",
+                                inputSpacePoints, inputSpacePointsMC, inputParticles, inputMeasurementParticlesMap,                            
+                                zMaxTop, zMinTop, zMaxBot, zMinBot,deltaPhi, deltaThetaMin, deltaThetaMax, verbose, doMCtruth, outputRecPrimaryVertex, outputFitPrimaryVertex, outputGenPrimaryVertex, noGuessing,
+                                useFit, nbins, zPerigee, outputFitFunction, outputZTracklets, outputZTrackletsPeak);
 }
 
 }  // namespace ActsPython

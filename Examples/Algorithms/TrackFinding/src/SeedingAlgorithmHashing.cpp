@@ -225,7 +225,7 @@ ProcessCode SeedingAlgorithmHashing::execute(
       m_cfg.seedFinderConfig.useDetailedDoubleMeasurementInfo;
   // Options
   Acts::SpacePointContainerOptions spOptions;
-  spOptions.beamPos = {0., 0.};
+  spOptions.beamPos = {0., 0., 0.};
 
   // Hashing Training
   ActsPlugins::AnnoyModel annoyModel =

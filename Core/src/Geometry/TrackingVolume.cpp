@@ -185,9 +185,16 @@ void TrackingVolume::glueTrackingVolume(const GeometryContext& gctx,
   Vector3 bPosition(referencePosition(gctx, AxisDirection::AxisR));
   Vector3 distance = Vector3(
       neighbor->referencePosition(gctx, AxisDirection::AxisR) - bPosition);
+  std::cout<<"glueTrackingVolume: bPosition = " << bPosition.transpose()
+                                                  << ", distance = "
+                                                  << distance.transpose() << std::endl;
+  std::cout<<"glueTrackingVolume: bsfMine = " << bsfMine
+                                                  << ", bsfNeighbor = "
+                                                  << bsfNeighbor << std::endl;
   // glue to the face
   std::shared_ptr<const BoundarySurfaceT<TrackingVolume>> bSurfaceMine =
       boundarySurfaces().at(bsfMine);
+  std::cout<<"glueTrackingVolume: bSurfaceMine = "  << std::endl;
   // @todo - complex glueing could be possible with actual intersection for the
   // normal vector
   // Coerce the arbitrary position bPosition to be on the surface repr so we can
@@ -198,15 +205,18 @@ void TrackingVolume::glueTrackingVolume(const GeometryContext& gctx,
   Direction dir = Direction::fromScalar(nvector.dot(distance));
   // The easy case :
   // - no glue volume descriptors on either side
+  std::cout<<"glueTrackingVolume: dir = " << dir << std::endl;
   if ((m_glueVolumeDescriptor == nullptr) ||
       m_glueVolumeDescriptor->glueVolumes(bsfMine) == nullptr) {
     // the boundary orientation
     auto mutableBSurfaceMine =
         std::const_pointer_cast<BoundarySurfaceT<TrackingVolume>>(bSurfaceMine);
     mutableBSurfaceMine->attachVolume(neighbor, dir);
+    std::cout<<"glueTrackingVolume: attached volume to bSurfaceMine" << std::endl;
     // Make sure you keep the boundary material if there
     const Surface& neighborSurface =
         neighbor->m_boundarySurfaces.at(bsfNeighbor)->surfaceRepresentation();
+    std::cout<<"glueTrackingVolume: neighborSurface = " << std::endl;
     auto neighborMaterial = neighborSurface.surfaceMaterialSharedPtr();
     const Surface& mySurface = bSurfaceMine->surfaceRepresentation();
     auto myMaterial = mySurface.surfaceMaterialSharedPtr();
@@ -216,7 +226,10 @@ void TrackingVolume::glueTrackingVolume(const GeometryContext& gctx,
       myMutbableSurface->assignSurfaceMaterial(neighborMaterial);
     }
     // Now set it to the neighbor volume
+    std::cout<<"glueTrackingVolume: setting boundary surface to neighbor volume: "
+         << neighbor->volumeName() << std::endl;
     (neighbor->m_boundarySurfaces).at(bsfNeighbor) = bSurfaceMine;
+    std::cout<<"glueTrackingVolume: boundary surface set" << std::endl;
   }
 }
 

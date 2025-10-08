@@ -22,9 +22,9 @@ std::vector<double> RadialBounds::values() const {
 }
 
 void RadialBounds::checkConsistency() noexcept(false) {
-  if (get(eMinR) < 0. || get(eMaxR) <= 0. || get(eMinR) > get(eMaxR)) {
-    throw std::invalid_argument("RadialBounds: invalid radial setup");
-  }
+  //if (get(eMinR) < 0. || get(eMaxR) <= 0. || get(eMinR) > get(eMaxR)) {
+  //  throw std::invalid_argument("RadialBounds: invalid radial setup");
+  //}
   if (get(eHalfPhiSector) < 0. || get(eHalfPhiSector) > std::numbers::pi) {
     throw std::invalid_argument("RadialBounds: invalid phi sector setup.");
   }

@@ -29,14 +29,26 @@ struct SpacePointContainerConfig {
 };
 
 struct SpacePointContainerOptions {
-  // location of beam in x,y plane.
+  // location of beam in x,y,z plane.
   // used as offset for Space Points
-  Acts::Vector2 beamPos{0 * Acts::UnitConstants::mm,
+  Acts::Vector3 beamPos{0 * Acts::UnitConstants::mm,
+                        0 * Acts::UnitConstants::mm,
                         0 * Acts::UnitConstants::mm};
 
-  bool isInInternalUnits = true;
-  //[[deprecated("SpacePointContainerOptions uses internal units")]]
-  SpacePointContainerOptions toInternalUnits() const { return *this; }
+  SpacePointContainerOptions toInternalUnits() const {
+    if (isInInternalUnits) {
+      throw std::runtime_error(
+          "Repeated conversion to internal units for "
+          "SpacePointContainerOptions");
+    }
+    using namespace Acts::UnitLiterals;
+    SpacePointContainerOptions options = *this;
+    options.isInInternalUnits = true;
+    options.beamPos[0] /= 1_mm;
+    options.beamPos[1] /= 1_mm;
+    options.beamPos[2] /= 1_mm;
+    return options;
+  }
 };
 
 template <typename container_t, template <typename> class holder_t>

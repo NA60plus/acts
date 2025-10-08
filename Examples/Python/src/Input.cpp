@@ -37,8 +37,9 @@ void addInput(Context& ctx) {
   ACTS_PYTHON_DECLARE_READER(BufferedReader, mex, "BufferedReader",
                              upstreamReader, selectionSeed, bufferSize);
 
-  ACTS_PYTHON_DECLARE_READER(CsvParticleReader, mex, "CsvParticleReader",
-                             inputDir, inputStem, outputParticles);
+  ACTS_PYTHON_DECLARE_READER(ActsExamples::CsvParticleReader, mex,
+                             "CsvParticleReader", inputDir, inputStem,
+                             outputParticles, outputVertices);
 
   ACTS_PYTHON_DECLARE_READER(CsvMeasurementReader, mex, "CsvMeasurementReader",
                              inputDir, outputMeasurements,

@@ -30,7 +30,7 @@ acts_add_library(
     src/Validation/TrackClassification.cpp
     src/Validation/TrackQualityPlotTool.cpp
     src/Validation/TrackSummaryPlotTool.cpp
-    ACTS_INCLUDE_FOLDER include/ActsExamples
+    src/Validation/TrkVtxPlotTool.cpp
 )
 
 target_include_directories(

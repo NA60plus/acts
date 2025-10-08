@@ -155,10 +155,10 @@ void ActsPlugins::TGeoLayerBuilder::buildLayers(const GeometryContext& gctx,
                  << lSurfaces.size()
                  << " surfaces at r = " << pl.medium(AxisDirection::AxisR));
 
-      pl.envelope[AxisDirection::AxisR] = {lCfg.envelope.first,
-                                           lCfg.envelope.second};
-      pl.envelope[AxisDirection::AxisZ] = {lCfg.envelope.second,
-                                           lCfg.envelope.second};
+      pl.envelope[Acts::AxisDirection::AxisR] = {lCfg.envelope.first,
+                                                 lCfg.envelope.first};
+      pl.envelope[Acts::AxisDirection::AxisZ] = {lCfg.envelope.second,
+                                                 lCfg.envelope.second};
       if (nb0 >= 0 && nb1 >= 0) {
         layers.push_back(
             m_cfg.layerCreator->cylinderLayer(gctx, lSurfaces, nb0, nb1, pl));
@@ -172,10 +172,11 @@ void ActsPlugins::TGeoLayerBuilder::buildLayers(const GeometryContext& gctx,
                  << lSurfaces.size()
                  << " surfaces at z = " << pl.medium(AxisDirection::AxisZ));
 
-      pl.envelope[AxisDirection::AxisR] = {lCfg.envelope.first,
-                                           lCfg.envelope.second};
-      pl.envelope[AxisDirection::AxisZ] = {lCfg.envelope.second,
-                                           lCfg.envelope.second};
+      pl.envelope[Acts::AxisDirection::AxisR] = {lCfg.envelope.first,
+                                                 lCfg.envelope.first};
+      pl.envelope[Acts::AxisDirection::AxisZ] = {lCfg.envelope.second,
+                                                 lCfg.envelope.second};
+
       if (nb0 >= 0 && nb1 >= 0) {
         layers.push_back(
             m_cfg.layerCreator->discLayer(gctx, lSurfaces, nb0, nb1, pl));

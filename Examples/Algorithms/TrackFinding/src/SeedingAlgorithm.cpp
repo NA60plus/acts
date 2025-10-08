@@ -213,7 +213,7 @@ ProcessCode SeedingAlgorithm::execute(const AlgorithmContext& ctx) const {
       m_cfg.seedFinderConfig.useDetailedDoubleMeasurementInfo;
   // Options
   Acts::SpacePointContainerOptions spOptions;
-  spOptions.beamPos = {0., 0.};
+  spOptions.beamPos = {0., 0., 0.};
 
   // Prepare interface SpacePoint backend-ACTS
   SpacePointContainer container(spacePointPtrs);

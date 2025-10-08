@@ -490,7 +490,7 @@ class CylinderVolumeBuilder : public ITrackingVolumeBuilder {
     /// The world material
     std::shared_ptr<const IVolumeMaterial> volumeMaterial = nullptr;
     /// Build the volume to the beam line
-    bool buildToRadiusZero = false;
+    bool buildToRadiusZero = true;
     /// Check for endcap ring layout
     bool checkRingLayout = false;
     /// Tolerance for endcap ring association
@@ -501,10 +501,10 @@ class CylinderVolumeBuilder : public ITrackingVolumeBuilder {
     std::shared_ptr<const IConfinedTrackingVolumeBuilder> ctVolumeBuilder =
         nullptr;
     /// Additional envelope in R to create rMin, rMax
-    std::pair<double, double> layerEnvelopeR = {1. * UnitConstants::mm,
-                                                1. * UnitConstants::mm};
+    std::pair<double, double> layerEnvelopeR = {0 * UnitConstants::mm,
+                                                0.1 * UnitConstants::mm};
     /// the additional envelope in Z to create zMin, zMax
-    double layerEnvelopeZ = 1. * UnitConstants::mm;
+    double layerEnvelopeZ = 100. * UnitConstants::mm;
 
     // The potential boundary material (MB) options - there are 6 at maximum
     /// -------------------- MB (outer [1]) ---------------

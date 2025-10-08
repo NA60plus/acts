@@ -79,8 +79,8 @@ class TGeoLayerBuilder : public Acts::ILayerBuilder {
     /// Layer splitting: parameter and tolerance
     std::vector<SplitConfig> splitConfigs = {};
     /// The envelope to be built around the layer
-    std::pair<double, double> envelope = {1 * Acts::UnitConstants::mm,
-                                          1 * Acts::UnitConstants::mm};
+    std::pair<double, double> envelope = {0 * UnitConstants::mm,
+                                          1 * UnitConstants::mm};
     /// Binning setup in l0: nbins (-1 -> automated), axis binning type
     std::vector<std::pair<int, Acts::BinningType>> binning0 = {
         {-1, Acts::equidistant}};
@@ -89,7 +89,12 @@ class TGeoLayerBuilder : public Acts::ILayerBuilder {
         {-1, Acts::equidistant}};
 
     // Default constructor
-    LayerConfig() = default;
+    LayerConfig()
+        : volumeName(""),
+          sensorNames({}),
+          localAxes("XZY"),
+          envelope(std::pair<double, double>(0.1 * UnitConstants::mm,
+                                             0.1 * UnitConstants::mm)) {}
   };
 
   /// Type alias for detector element factory function

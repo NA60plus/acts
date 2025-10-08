@@ -169,6 +169,7 @@ ActsPlugins::TGeoSurfaceConverter::discComponents(
           }
 
           std::vector<std::pair<Vector2, Vector2>> boundLines;
+          printf("DiscPoly bounds vertices:");
           for (std::size_t i = 0; i < vertices.size(); ++i) {
             Vector2 a = vertices.at(i);
             Vector2 b = vertices.at((i + 1) % vertices.size());
@@ -184,7 +185,7 @@ ActsPlugins::TGeoSurfaceConverter::discComponents(
               }
             }
           }
-
+          printf("DiscPoly bounds lines: ");
           if (boundLines.size() != 2) {
             throw std::logic_error(
                 "Input DiscPoly bounds type does not have sensible edges.");

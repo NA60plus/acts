@@ -244,7 +244,9 @@ struct SeedFinderConfig {
 struct SeedFinderOptions {
   // location of beam in x,y plane.
   // used as offset for Space Points
-  Vector2 beamPos{0 * UnitConstants::mm, 0 * UnitConstants::mm};
+  Acts::Vector3 beamPos{0 * Acts::UnitConstants::mm,
+                        0 * Acts::UnitConstants::mm,
+                        0 * Acts::UnitConstants::mm};
   // field induction
   float bFieldInZ = 2 * UnitConstants::T;
 
@@ -255,9 +257,23 @@ struct SeedFinderOptions {
   float sigmapT2perRadius = std::numeric_limits<float>::quiet_NaN();
   float multipleScattering2 = std::numeric_limits<float>::quiet_NaN();
 
-  bool isInInternalUnits = true;
-  //[[deprecated("SeedFinderOptions uses internal units")]]
-  SeedFinderOptions toInternalUnits() const { return *this; }
+  bool isInInternalUnits = false;
+
+  SeedFinderOptions toInternalUnits() const {
+    if (isInInternalUnits) {
+      throw std::runtime_error(
+          "Repeated conversion to internal units for SeedFinderOptions");
+    }
+    using namespace Acts::UnitLiterals;
+    SeedFinderOptions options = *this;
+    options.isInInternalUnits = true;
+    options.beamPos[0] /= 1_mm;
+    options.beamPos[1] /= 1_mm;
+    options.beamPos[2] /= 1_mm;
+
+    options.bFieldInZ /= 1000. * 1_T;
+    return options;
+  }
 
   template <typename Config>
   SeedFinderOptions calculateDerivedQuantities(const Config& config) const {

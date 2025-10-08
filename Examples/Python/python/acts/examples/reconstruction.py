@@ -58,8 +58,9 @@ SeedFinderConfigArg = namedtuple(
         "collisionRegion",  # (min,max)
         "r",  # (min,max)
         "z",  # (min,max)
+        "rMiddle" # (min,max)
     ],
-    defaults=[None] * 18 + [(None, None)] * 7,
+    defaults=[None] * 18 + [(None, None)] * 8,
 )
 SeedFinderOptionsArg = namedtuple(
     "SeedFinderOptions", ["beamPos", "bFieldInZ"], defaults=[(None, None), None]
@@ -301,7 +302,14 @@ def addSeeding(
         acts.ParticleHypothesis
     ] = acts.ParticleHypothesis.pion,
     inputParticles: str = "particles",
+    outputSpacePoints: str = "spacepoints",
     selectedParticles: str = "particles_selected",
+    inputMeasurements: str = "measurements",
+    outputSeeds: str = "seeds",
+    outputTrackParameters: str = "estimatedparameters",
+    outputTrackParticleMatching="seed_particle_matching_step",
+    outputParticleTrackMatching="particle_seed_matching_step",
+    fileSuffix: str = "",
     outputDirRoot: Optional[Union[Path, str]] = None,
     outputDirCsv: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
@@ -386,8 +394,9 @@ def addSeeding(
             s,
             trackingGeometry,
             geoSelectionConfigFile,
-            stripGeoSelectionConfigFile,
             logLevel,
+            inputMeasurements=inputMeasurements,
+            outputSpacePoints=outputSpacePoints,
         )
         # Run either: truth track finding or seeding
         if seedingAlgorithm == SeedingAlgorithm.TruthEstimated:
@@ -410,6 +419,7 @@ def addSeeding(
                 seedFilterConfigArg,
                 spacePointGridConfigArg,
                 logLevel,
+                outputSeeds=outputSeeds
             )
         elif seedingAlgorithm == SeedingAlgorithm.Orthogonal:
             logger.info("Using orthogonal seeding")
@@ -505,8 +515,8 @@ def addSeeding(
         parEstimateAlg = acts.examples.TrackParamsEstimationAlgorithm(
             level=logLevel,
             inputSeeds=seeds,
-            outputTrackParameters="estimatedparameters",
-            outputSeeds="estimatedseeds",
+            outputTrackParameters=outputTrackParameters,
+            outputSeeds="estimated"+outputSeeds,
             trackingGeometry=trackingGeometry,
             magneticField=field,
             **acts.examples.defaultKWArgs(
@@ -519,7 +529,7 @@ def addSeeding(
         )
         s.addAlgorithm(parEstimateAlg)
 
-        prototracks = "seed-prototracks"
+        prototracks = "seed-prototracks"+fileSuffix
         s.addAlgorithm(
             acts.examples.SeedsToPrototracks(
                 level=logLevel,
@@ -528,13 +538,13 @@ def addSeeding(
             )
         )
 
-        tracks = "seed-tracks"
+        tracks = "seed-tracks"+fileSuffix
         s.addAlgorithm(
             acts.examples.PrototracksToTracks(
                 level=logLevel,
                 inputProtoTracks=prototracks,
-                inputTrackParameters="estimatedparameters",
-                inputMeasurements="measurements",
+                inputTrackParameters=outputTrackParameters,
+                inputMeasurements=inputMeasurements,
                 outputTracks=tracks,
             )
         )
@@ -544,9 +554,9 @@ def addSeeding(
                 level=logLevel,
                 inputTracks=tracks,
                 inputParticles=selectedParticles,
-                inputMeasurementParticlesMap="measurement_particles_map",
-                outputTrackParticleMatching="seed_particle_matching",
-                outputParticleTrackMatching="particle_seed_matching",
+                inputMeasurementParticlesMap="measurement_particles_map"+fileSuffix,
+                outputTrackParticleMatching=outputTrackParticleMatching,
+                outputParticleTrackMatching=outputParticleTrackMatching,
                 matchingRatio=1.0,
                 doubleMatching=False,
             )
@@ -561,7 +571,10 @@ def addSeeding(
                 selectedParticles,
                 inputParticles,
                 parEstimateAlg.config.outputTrackParameters,
-                logLevel,
+                inputTrackParticleMatching=outputTrackParticleMatching,
+                inputParticleTrackMatching=outputParticleTrackMatching,
+                fileSuffix=fileSuffix,
+                logLevel=logLevel,
             )
 
         if outputDirCsv is not None:
@@ -575,8 +588,8 @@ def addSeeding(
                 inputTrackParameters=parEstimateAlg.config.outputTrackParameters,
                 inputSimSeeds=seeds,
                 inputSimHits="simhits",
-                inputMeasurementParticlesMap="measurement_particles_map",
-                inputMeasurementSimHitsMap="measurement_simhits_map",
+                inputMeasurementParticlesMap="measurement_particles_map"+fileSuffix,
+                inputMeasurementSimHitsMap="measurement_simhits_map"+fileSuffix,
                 outputDir=str(outputDirCsv),
                 fileName=str(f"seed.csv"),
             )
@@ -696,6 +709,8 @@ def addSpacePointsMaking(
     geoSelectionConfigFile: Union[Path, str],
     stripGeoSelectionConfigFile: Union[Path, str],
     logLevel: acts.logging.Level = None,
+    inputMeasurements: str = "measurements",
+    outputSpacePoints: str = "spacepoints",
 ):
     """adds space points making
     For parameters description see addSeeding
@@ -703,8 +718,8 @@ def addSpacePointsMaking(
     logLevel = acts.examples.defaultLogging(sequence, logLevel)()
     spAlg = acts.examples.SpacePointMaker(
         level=logLevel,
-        inputMeasurements="measurements",
-        outputSpacePoints="spacepoints",
+        inputMeasurements=inputMeasurements,
+        outputSpacePoints=outputSpacePoints,
         trackingGeometry=trackingGeometry,
         geometrySelection=acts.examples.readJsonGeometryList(
             str(geoSelectionConfigFile)
@@ -784,15 +799,17 @@ def addStandardSeeding(
             seedConfirmation=seedFinderConfigArg.seedConfirmation,
             centralSeedConfirmationRange=seedFinderConfigArg.centralSeedConfirmationRange,
             forwardSeedConfirmationRange=seedFinderConfigArg.forwardSeedConfirmationRange,
+            rMinMiddle = seedFinderConfigArg.rMiddle[0],
+            rMaxMiddle = seedFinderConfigArg.rMiddle[1],
         ),
     )
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -1122,10 +1139,10 @@ def addOrthogonalSeeding(
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -1237,10 +1254,10 @@ def addHashingSeeding(
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -1402,10 +1419,10 @@ def addGbtsSeeding(
     seedFinderOptions = acts.SeedFinderOptions(
         **acts.examples.defaultKWArgs(
             beamPos=(
-                acts.Vector2(0.0, 0.0)
+                acts.Vector3(0.0, 0.0, 0.0)
                 if seedFinderOptionsArg.beamPos == (None, None)
-                else acts.Vector2(
-                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1]
+                else acts.Vector3(
+                    seedFinderOptionsArg.beamPos[0], seedFinderOptionsArg.beamPos[1], seedFinderOptionsArg.beamPos[2]
                 )
             ),
             bFieldInZ=seedFinderOptionsArg.bFieldInZ,
@@ -1439,6 +1456,9 @@ def addSeedPerformanceWriters(
     selectedParticles: str,
     inputParticles: str,
     outputTrackParameters: str,
+    inputTrackParticleMatching = "seed_particle_matching",
+    inputParticleTrackMatching = "particle_seed_matching",
+    fileSuffix: str = "",
     logLevel: acts.logging.Level = None,
 ):
     """Writes seeding related performance output"""
@@ -1452,10 +1472,10 @@ def addSeedPerformanceWriters(
             level=customLogLevel(),
             inputTracks=tracks,
             inputParticles=selectedParticles,
-            inputTrackParticleMatching="seed_particle_matching",
-            inputParticleTrackMatching="particle_seed_matching",
+            inputTrackParticleMatching=inputTrackParticleMatching,
+            inputParticleTrackMatching=inputParticleTrackMatching,
             inputParticleMeasurementsMap="particle_measurements_map",
-            filePath=str(outputDirRoot / f"performance_seeding.root"),
+            filePath=str(outputDirRoot / f"performance_seeding{fileSuffix}.root"),
         )
     )
 
@@ -1468,7 +1488,7 @@ def addSeedPerformanceWriters(
             inputSimHits="simhits",
             inputMeasurementParticlesMap="measurement_particles_map",
             inputMeasurementSimHitsMap="measurement_simhits_map",
-            filePath=str(outputDirRoot / "estimatedparams.root"),
+            filePath=str(outputDirRoot / f"estimatedparams{fileSuffix}.root"),
             treeName="estimatedparams",
         )
     )
@@ -1597,8 +1617,7 @@ def addKalmanTracks(
         "reverseFilteringMomThreshold": reverseFilteringMomThreshold,
         "reverseFilteringCovarianceScaling": reverseFilteringCovarianceScaling,
         "freeToBoundCorrection": acts.examples.FreeToBoundCorrection(False),
-        "level": customLogLevel(),
-        "chi2Cut": float("inf"),
+        "level": acts.logging.Level.INFO,
     }
 
     fitAlg = acts.examples.TrackFittingAlgorithm(
@@ -1624,7 +1643,7 @@ def addKalmanTracks(
         inputMeasurementParticlesMap="measurement_particles_map",
         outputTrackParticleMatching="kf_track_particle_matching",
         outputParticleTrackMatching="kf_particle_track_matching",
-        doubleMatching=True,
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
@@ -1715,6 +1734,7 @@ def addCKFTracks(
     writePerformance: bool = True,
     writeCovMat=False,
     logLevel: Optional[acts.logging.Level] = None,
+    fileSuffix: str = "",
 ) -> None:
     """This function steers the seeding
 
@@ -1793,14 +1813,14 @@ def addCKFTracks(
                 )
             ]
         ),
-        inputMeasurements="measurements",
-        inputInitialTrackParameters="estimatedparameters",
+        inputMeasurements="measurements"+fileSuffix,
+        inputInitialTrackParameters="estimatedparameters"+fileSuffix,
         inputSeeds=(
-            "estimatedseeds"
+            "estimatedseeds"+fileSuffix
             if ckfConfig.seedDeduplication or ckfConfig.stayOnSeed
             else ""
         ),
-        outputTracks="ckf_tracks",
+        outputTracks="ckf_tracks"+fileSuffix,
         findTracks=acts.examples.TrackFindingAlgorithm.makeTrackFinderFunction(
             trackingGeometry, field, customLogLevel()
         ),
@@ -1823,28 +1843,28 @@ def addCKFTracks(
         ),
     )
     s.addAlgorithm(trackFinder)
-    s.addWhiteboardAlias("tracks", trackFinder.config.outputTracks)
+    s.addWhiteboardAlias("tracks"+fileSuffix, trackFinder.config.outputTracks)
 
     matchAlg = acts.examples.TrackTruthMatcher(
         level=customLogLevel(),
         inputTracks=trackFinder.config.outputTracks,
         inputParticles="particles_selected",
-        inputMeasurementParticlesMap="measurement_particles_map",
-        outputTrackParticleMatching="ckf_track_particle_matching",
-        outputParticleTrackMatching="ckf_particle_track_matching",
-        doubleMatching=True,
+        inputMeasurementParticlesMap="measurement_particles_map"+fileSuffix,
+        outputTrackParticleMatching="ckf_track_particle_matching"+fileSuffix,
+        outputParticleTrackMatching="ckf_particle_track_matching"+fileSuffix,
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
-        "track_particle_matching", matchAlg.config.outputTrackParticleMatching
+        "track_particle_matching"+fileSuffix, matchAlg.config.outputTrackParticleMatching
     )
     s.addWhiteboardAlias(
-        "particle_track_matching", matchAlg.config.outputParticleTrackMatching
+        "particle_track_matching"+fileSuffix, matchAlg.config.outputParticleTrackMatching
     )
 
     addTrackWriters(
         s,
-        name="ckf",
+        name="ckf"+fileSuffix,
         tracks=trackFinder.config.outputTracks,
         outputDirCsv=outputDirCsv,
         outputDirRoot=outputDirRoot,
@@ -1854,6 +1874,12 @@ def addCKFTracks(
         writeFinderPerformance=writePerformance,
         writeCovMat=writeCovMat,
         logLevel=logLevel,
+        inputParticles = "particles_selected",
+        inputTrackParticleMatching = "track_particle_matching"+fileSuffix,
+        inputParticleTrackMatching = "particle_track_matching"+fileSuffix,
+        inputParticleMeasurementsMap = "particle_measurements_map"+fileSuffix,
+        inputMeasurementParticlesMap = "measurement_particles_map"+fileSuffix,
+        inputMeasurementSimHitsMap = "measurement_simhits_map"+fileSuffix,
     )
 
     return s
@@ -1906,7 +1932,7 @@ def addGx2fTracks(
         inputMeasurementParticlesMap="measurement_particles_map",
         outputTrackParticleMatching="gx2f_track_particle_matching",
         outputParticleTrackMatching="gx2f_particle_track_matching",
-        doubleMatching=True,
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
@@ -1931,6 +1957,12 @@ def addTrackWriters(
     writeFinderPerformance: bool = False,
     logLevel: Optional[acts.logging.Level] = None,
     writeCovMat=False,
+    inputParticles: str = "particles_selected",
+    inputTrackParticleMatching: str = "track_particle_matching",
+    inputParticleTrackMatching: str = "particle_track_matching",
+    inputParticleMeasurementsMap: str = "particle_measurements_map",
+    inputMeasurementParticlesMap: str = "measurement_particles_map",
+    inputMeasurementSimHitsMap: str = "measurement_simhits_map",
 ):
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -1943,8 +1975,8 @@ def addTrackWriters(
             trackSummaryWriter = acts.examples.RootTrackSummaryWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
-                inputTrackParticleMatching="track_particle_matching",
+                inputParticles=inputParticles,
+                inputTrackParticleMatching=inputTrackParticleMatching,
                 filePath=str(outputDirRoot / f"tracksummary_{name}.root"),
                 treeName="tracksummary",
                 writeCovMat=writeCovMat,
@@ -1955,10 +1987,10 @@ def addTrackWriters(
             trackStatesWriter = acts.examples.RootTrackStatesWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
-                inputTrackParticleMatching="track_particle_matching",
+                inputParticles=inputParticles,
+                inputTrackParticleMatching=inputTrackParticleMatching,
                 inputSimHits="simhits",
-                inputMeasurementSimHitsMap="measurement_simhits_map",
+                inputMeasurementSimHitsMap=inputMeasurementSimHitsMap,
                 filePath=str(outputDirRoot / f"trackstates_{name}.root"),
                 treeName="trackstates",
             )
@@ -1968,8 +2000,8 @@ def addTrackWriters(
             trackFitterPerformanceWriter = acts.examples.TrackFitterPerformanceWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
-                inputTrackParticleMatching="track_particle_matching",
+                inputParticles=inputParticles,
+                inputTrackParticleMatching=inputTrackParticleMatching,
                 filePath=str(outputDirRoot / f"performance_fitting_{name}.root"),
             )
             s.addWriter(trackFitterPerformanceWriter)
@@ -1978,10 +2010,10 @@ def addTrackWriters(
             trackFinderPerfWriter = acts.examples.TrackFinderPerformanceWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
-                inputTrackParticleMatching="track_particle_matching",
-                inputParticleTrackMatching="particle_track_matching",
-                inputParticleMeasurementsMap="particle_measurements_map",
+                inputParticles=inputParticles,
+                inputTrackParticleMatching=inputTrackParticleMatching,
+                inputParticleTrackMatching=inputParticleTrackMatching,
+                inputParticleMeasurementsMap=inputParticleMeasurementsMap,
                 filePath=str(outputDirRoot / f"performance_finding_{name}.root"),
             )
             s.addWriter(trackFinderPerfWriter)
@@ -1995,7 +2027,7 @@ def addTrackWriters(
             csvWriter = acts.examples.CsvTrackWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputMeasurementParticlesMap="measurement_particles_map",
+                inputMeasurementParticlesMap=inputMeasurementParticlesMap,
                 outputDir=str(outputDirCsv),
                 fileName=str(f"tracks_{name}.csv"),
             )
@@ -2135,9 +2167,9 @@ def addGnn(
         inputTracks="tracks",
         inputParticles="particles",
         inputMeasurementParticlesMap="measurement_particles_map",
-        outputTrackParticleMatching="gnn_track_particle_matching",
-        outputParticleTrackMatching="gnn_particle_track_matching",
-        doubleMatching=True,
+        outputTrackParticleMatching="exatrkx_track_particle_matching",
+        outputParticleTrackMatching="exatrkx_particle_track_matching",
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
@@ -2176,6 +2208,7 @@ def addAmbiguityResolution(
     writePerformance: bool = True,
     writeCovMat=False,
     logLevel: Optional[acts.logging.Level] = None,
+    fileSuffix: str = "",
 ) -> None:
     from acts.examples import GreedyAmbiguityResolutionAlgorithm
 
@@ -2184,7 +2217,7 @@ def addAmbiguityResolution(
     alg = GreedyAmbiguityResolutionAlgorithm(
         level=customLogLevel(),
         inputTracks=tracks,
-        outputTracks="ambi_tracks",
+        outputTracks="ambi_tracks"+fileSuffix,
         **acts.examples.defaultKWArgs(
             maximumSharedHits=config.maximumSharedHits,
             nMeasurementsMin=config.nMeasurementsMin,
@@ -2192,28 +2225,28 @@ def addAmbiguityResolution(
         ),
     )
     s.addAlgorithm(alg)
-    s.addWhiteboardAlias("tracks", alg.config.outputTracks)
+    s.addWhiteboardAlias("tracks"+fileSuffix, alg.config.outputTracks)
 
     matchAlg = acts.examples.TrackTruthMatcher(
         level=customLogLevel(),
         inputTracks=alg.config.outputTracks,
         inputParticles="particles",
-        inputMeasurementParticlesMap="measurement_particles_map",
-        outputTrackParticleMatching="ambi_track_particle_matching",
-        outputParticleTrackMatching="ambi_particle_track_matching",
-        doubleMatching=True,
+        inputMeasurementParticlesMap="measurement_particles_map"+fileSuffix,
+        outputTrackParticleMatching="ambi_track_particle_matching"+fileSuffix,
+        outputParticleTrackMatching="ambi_particle_track_matching"+fileSuffix,
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
-        "track_particle_matching", matchAlg.config.outputTrackParticleMatching
+        "track_particle_matching"+fileSuffix, matchAlg.config.outputTrackParticleMatching
     )
     s.addWhiteboardAlias(
-        "particle_track_matching", matchAlg.config.outputParticleTrackMatching
+        "particle_track_matching"+fileSuffix, matchAlg.config.outputParticleTrackMatching
     )
 
     addTrackWriters(
         s,
-        name="ambi",
+        name="ambi"+fileSuffix,
         tracks=alg.config.outputTracks,
         outputDirCsv=outputDirCsv,
         outputDirRoot=outputDirRoot,
@@ -2223,6 +2256,12 @@ def addAmbiguityResolution(
         writeFinderPerformance=writePerformance,
         writeCovMat=writeCovMat,
         logLevel=logLevel,
+        inputParticles = "particles_selected",
+        inputTrackParticleMatching = "track_particle_matching"+fileSuffix,
+        inputParticleTrackMatching = "particle_track_matching"+fileSuffix,
+        inputParticleMeasurementsMap = "particle_measurements_map"+fileSuffix,
+        inputMeasurementParticlesMap = "measurement_particles_map"+fileSuffix,
+        inputMeasurementSimHitsMap = "measurement_simhits_map"+fileSuffix,
     )
 
     return s
@@ -2272,7 +2311,7 @@ def addScoreBasedAmbiguityResolution(
         inputMeasurementParticlesMap="measurement_particles_map",
         outputTrackParticleMatching="ambi_scorebased_track_particle_matching",
         outputParticleTrackMatching="ambi_scorebased_particle_track_matching",
-        doubleMatching=True,
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
@@ -2352,7 +2391,7 @@ def addAmbiguityResolutionML(
         inputMeasurementParticlesMap="measurement_particles_map",
         outputTrackParticleMatching="ambiML_track_particle_matching",
         outputParticleTrackMatching="ambiML_particle_track_matching",
-        doubleMatching=True,
+        doubleMatching=False,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
@@ -2580,5 +2619,212 @@ def addHoughVertexFinding(
                 filePath=str(outputDirRoot / "performance_houghvertexing.root"),
             )
         )
+
+    return s
+
+def addTrackletVertexing(
+    s: acts.examples.Sequencer,
+    inputSpacePoints: str="spacepoints",
+    inputParticles: str="particles",
+    inputMeasurementParticlesMap: str="measurement_particles_map",
+    outputRecPrimaryVertex: str="OutputRecPrimaryVertex",
+    outputGenPrimaryVertex: str="OutputGenPrimaryVertex",
+    zMaxTop: float=170,
+    zMinTop: float=0,
+    zMaxBot: float=170,
+    zMinBot: float=0,
+    deltaPhi: float=0.08,
+    deltaThetaMax: float=0.04,
+    deltaThetaMin: float=-0.15,
+    verbose: bool=False,
+    doMCtruth: bool=True,
+    noGuessing: bool=False,
+    useFit: bool=True,
+    nbins: int=60,
+    zPerigee: float=0,
+    logLevel: Optional[acts.logging.Level] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+
+    ) -> None:
+
+    logLevel = acts.examples.defaultLogging(s, logLevel)()
+    outputDirRoot = Path(outputDirRoot)
+    if not outputDirRoot.exists():
+        outputDirRoot.mkdir()
+
+    selAlg = acts.examples.TrackletVertexingAlgorithm(
+        level=logLevel,
+        inputSpacePoints=inputSpacePoints,
+        inputSpacePointsMC=[inputSpacePoints],
+        inputParticles=inputParticles,
+        outputRecPrimaryVertex=outputRecPrimaryVertex,
+        outputGenPrimaryVertex=outputGenPrimaryVertex,
+        outputFitPrimaryVertex="OutputFitPrimaryVertex",
+        inputMeasurementParticlesMap=inputMeasurementParticlesMap,
+        zMaxTop=zMaxTop,
+        zMinTop=zMinTop,
+        zMaxBot=zMaxBot,
+        zMinBot=zMinBot,
+        deltaPhi=deltaPhi,
+        deltaThetaMin=deltaThetaMin,
+        deltaThetaMax=deltaThetaMax,
+        verbose=verbose,
+        doMCtruth=doMCtruth,
+        noGuessing=noGuessing,
+        useFit=useFit,
+        nbins=nbins,
+        zPerigee=zPerigee,
+        outputFitFunction="OutputFitFuncVtx",
+        outputZTracklets="OutputZTracklets",
+        outputZTrackletsPeak="OutputZTrackletsPeak"
+    )
+
+    s.addAlgorithm(selAlg)
+
+    s.addWriter(
+        acts.examples.TrackletVertexingPerformanceWriter(
+            level=logLevel,
+            inputRecPrimaryVertex="OutputFitPrimaryVertex",
+            inputGenPrimaryVertex="OutputGenPrimaryVertex",
+            filePath = str(outputDirRoot / "performance_tracklet_vertexing.root"),
+            fileMode = "RECREATE",
+            verbose=False,
+            inputFitFunction="OutputFitFuncVtx",
+            inputZTracklets="OutputZTracklets",
+            inputZTrackletsPeak="OutputZTrackletsPeak"
+        )
+    )
+    return s
+
+
+def addUsedMeasurementsFilter(
+    s: acts.examples.Sequencer,
+    inputMeasurements: str="measurements",
+    outputMeasurements: str = "outputmeasurements",
+    inputTracks: str = "tracks",
+    inputSimHits: str = "simhits",
+    outputMeasurementParticlesMap : str = "output_measurement_particles_map",
+    outputMeasurementSimHitsMap : str = "output_measurement_simhits_map",
+    outputParticleMeasurementsMap : str = "output_particle_measurements_map",
+    outputSimHitMeasurementsMap : str = "output_simhit_measurements_map",
+    inputSimHitMeasurementsMap : str = "simhit_measurements_map",
+    logLevel: Optional[acts.logging.Level] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    trackingGeometry: acts.TrackingGeometry = None,
+    fileSuffix: str = ""
+    ) -> None:
+
+    logLevel = acts.examples.defaultLogging(s, logLevel)()
+
+    selAlg = acts.examples.FilterMeasurementsAlgorithm(
+        level=logLevel,
+        inputMeasurements=inputMeasurements,
+        inputTracks=inputTracks,
+        outputMeasurements=outputMeasurements,
+        inputSimHits=inputSimHits,
+        outputMeasurementParticlesMap=outputMeasurementParticlesMap,
+        outputMeasurementSimHitsMap=outputMeasurementSimHitsMap,
+        outputParticleMeasurementsMap=outputParticleMeasurementsMap,
+        outputSimHitMeasurementsMap=outputSimHitMeasurementsMap,
+        inputSimHitMeasurementsMap=inputSimHitMeasurementsMap,
+    )
+
+    s.addAlgorithm(selAlg)
+    if outputDirRoot is not None:
+        outputDirRoot = Path(outputDirRoot)
+        if not outputDirRoot.exists():
+            outputDirRoot.mkdir()
+        rmwConfig = acts.examples.RootMeasurementWriter.Config(
+            inputMeasurements=outputMeasurements,
+            inputClusters="clusters",
+            inputSimHits="simhits",
+            inputMeasurementSimHitsMap=outputMeasurementSimHitsMap,
+            filePath=str(outputDirRoot / f"{outputMeasurements}{fileSuffix}.root"),
+            surfaceByIdentifier=trackingGeometry.geoIdSurfaceMap(),
+        )
+        s.addWriter(acts.examples.RootMeasurementWriter(rmwConfig, logLevel))
+
+    return s
+
+
+def addMatching(
+    s: acts.examples.Sequencer,
+    trackingGeometry: acts.TrackingGeometry,
+    magneticField: acts.MagneticFieldProvider,
+    inputTracksMS = "ambitracksms",
+    inputTracksVT = "ambitracksvs",
+    inputParticles="particles",
+    outputTracksVT = "matchVT",
+    outputTracksMS = "matchMS",
+    outputMatchedTracks = "outputMatchedTracks",
+    inputMeasurementParticlesMapVT = "measurement_particles_map",
+    inputMeasurementParticlesMapMS = "measurement_particles_map",
+    chi2max = 100000000,
+    suffixOut = "matched",
+    outputDirCsv: Optional[Union[Path, str]] = None,
+    outputDirRoot: Optional[Union[Path, str]] = None,
+    writeTrackSummary: bool = True,
+    writeTrackStates: bool = True,
+    writePerformance: bool = True,
+    writeCovMat: bool = False,
+    logLevel: Optional[acts.logging.Level] = acts.logging.Level.ERROR,
+    geoIdForPropagation = None
+) -> None:
+    
+    customLogLevel = acts.examples.defaultLogging(s, logLevel)
+    kalmanOptions = {
+        "multipleScattering": True,
+        "energyLoss": True,
+        "reverseFilteringMomThreshold": 0 * u.GeV,
+        "freeToBoundCorrection": acts.examples.FreeToBoundCorrection(False),
+        "chi2Cut": 10000000.0,
+        "level": logLevel,
+    }
+
+    vtmsmatcher = acts.examples.MatchingAlgorithm(
+        level=customLogLevel(),
+        inputTracksMS = inputTracksMS,
+        inputTracksVT = inputTracksVT,
+        outputTracksMS = outputTracksMS,
+        outputTracksVT = outputTracksVT,
+        outputMatchedTracks = outputMatchedTracks,
+        inputMeasurementParticlesMapVT = inputMeasurementParticlesMapVT,
+        inputMeasurementParticlesMapMS = inputMeasurementParticlesMapMS,
+        chi2max = chi2max,
+        fit = acts.examples.makeKalmanFitterFunction(
+            trackingGeometry,
+            magneticField,**kalmanOptions
+        ),
+        trackingGeometry = trackingGeometry,
+        magneticField = magneticField,
+        geoIdForPropagation = geoIdForPropagation
+        )
+    
+    s.addAlgorithm(vtmsmatcher)
+
+    matchAlg = acts.examples.TrackTruthMatcher(
+        level=customLogLevel(),
+        inputTracks=vtmsmatcher.config.outputTracksRefit,
+        inputParticles=inputParticles,
+        inputMeasurementParticlesMap="measurement_particles_map",
+        outputTrackParticleMatching=suffixOut+"track_particle",
+        outputParticleTrackMatching=suffixOut+"particle_track",
+        doubleMatching=False,
+    )
+    s.addAlgorithm(matchAlg)
+
+    addTrackWriters(
+        s,
+        name=suffixOut,
+        tracks=vtmsmatcher.config.outputTracksRefit,
+        outputDirCsv=outputDirCsv,
+        outputDirRoot=outputDirRoot,
+        writeSummary=writeTrackSummary,
+        writeStates=writeTrackStates,
+        writeFitterPerformance=writePerformance,
+        writeFinderPerformance=writePerformance,
+        writeCovMat=writeCovMat,
+        logLevel=logLevel,
+    )
 
     return s
