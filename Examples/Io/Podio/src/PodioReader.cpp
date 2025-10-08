@@ -8,8 +8,9 @@
 
 #include "ActsExamples/Io/Podio/PodioReader.hpp"
 
-#include "Acts/Plugins/Podio/PodioUtil.hpp"
+#include "Acts/Utilities/ScopedTimer.hpp"
 #include "ActsExamples/Framework/DataHandle.hpp"
+#include "ActsPlugins/Podio/PodioUtil.hpp"
 
 #include <filesystem>
 
@@ -39,7 +40,7 @@ class PodioReaderImpl {
     m_frameWriteHandle.initialize(m_cfg.outputFrame);
   }
 
-  Acts::PodioUtil::ROOTReader& reader() {
+  ActsPlugins::PodioUtil::ROOTReader& reader() {
     bool exists = false;
     auto& reader = m_reader.local(exists);
     if (!exists) {
@@ -52,7 +53,7 @@ class PodioReaderImpl {
   WriteDataHandle<podio::Frame> m_frameWriteHandle;
   std::pair<std::size_t, std::size_t> m_eventsRange;
 
-  tbb::enumerable_thread_specific<Acts::PodioUtil::ROOTReader> m_reader;
+  tbb::enumerable_thread_specific<ActsPlugins::PodioUtil::ROOTReader> m_reader;
   PodioReader::Config m_cfg;
 };
 
@@ -65,7 +66,8 @@ PodioReader::PodioReader(const Config& config, Acts::Logging::Level level)
 PodioReader::~PodioReader() = default;
 
 ProcessCode PodioReader::read(const AlgorithmContext& context) {
-  ACTS_DEBUG("Reading EDM4hep inputs");
+  Acts::ScopedTimer timer("Reading PODIO inputs", logger(),
+                          Acts::Logging::DEBUG);
   podio::Frame frame = m_impl->reader().readEntry(
       m_impl->m_cfg.category, static_cast<unsigned int>(context.eventNumber));
   m_impl->m_frameWriteHandle(context, std::move(frame));

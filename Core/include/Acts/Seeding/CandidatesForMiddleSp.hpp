@@ -30,11 +30,17 @@ struct TripletCandidate {
                    external_space_point_t& t, float w, float z, bool q)
       : bottom(&b), middle(&m), top(&t), weight(w), zOrigin(z), isQuality(q) {}
 
+  /// Pointer to bottom space point of the triplet candidate
   external_space_point_t* bottom{nullptr};
+  /// Pointer to middle space point of the triplet candidate
   external_space_point_t* middle{nullptr};
+  /// Pointer to top space point of the triplet candidate
   external_space_point_t* top{nullptr};
+  /// Quality weight of the triplet candidate
   float weight{0.};
+  /// Z-coordinate of the estimated track origin
   float zOrigin{0.};
+  /// Flag indicating whether this is a high-quality candidate
   bool isQuality{false};
 };
 
@@ -55,6 +61,7 @@ concept SatisfyCandidateConcept = requires(external_space_point_t spacePoint) {
 template <SatisfyCandidateConcept external_space_point_t>
 class CandidatesForMiddleSp {
  public:
+  /// Type alias for triplet candidate type stored in this container
   using value_type = TripletCandidate<external_space_point_t>;
 
   /// @brief Setting maximum number of candidates to keep
@@ -104,7 +111,7 @@ class CandidatesForMiddleSp {
   std::size_t nHighQualityCandidates() const;
 
  private:
-  /// @brief dding a new triplet candidate to the collection, should it satisfy the
+  /// @brief Adding a new triplet candidate to the collection, should it satisfy the
   /// selection criteria
   /// @param indices The collection into which the candidate should be stored
   /// @param n The current number of stored elements in the container

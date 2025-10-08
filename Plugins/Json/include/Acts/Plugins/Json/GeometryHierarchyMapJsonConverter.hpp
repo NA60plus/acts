@@ -10,6 +10,7 @@
 
 #include "Acts/Geometry/GeometryHierarchyMap.hpp"
 #include "Acts/Plugins/Json/ActsJson.hpp"
+#include "Acts/Plugins/Json/GeometryIdentifierJsonConverter.hpp"
 
 #include <stdexcept>
 #include <string>
@@ -36,7 +37,9 @@ template <typename value_t,
           class decorator_t = void /* e.g. ITrackingGeometryJsonDecorator */>
 class GeometryHierarchyMapJsonConverter {
  public:
+  /// Type alias for values stored in geometry hierarchy map
   using Value = value_t;
+  /// Type alias for geometry hierarchy map container
   using Container = GeometryHierarchyMap<value_t>;
 
   /// Construct the converter.
@@ -65,46 +68,6 @@ class GeometryHierarchyMapJsonConverter {
   /// @throw std::invalid_argument in case of format errors
   Container fromJson(const nlohmann::json& encoded) const;
 
-  /// Encode the geometry identifier
-  /// @param id is the geometry identifier that will be encoded
-  static nlohmann::json encodeIdentifier(const GeometryIdentifier& id) {
-    nlohmann::json encoded;
-    // only store non-zero identifiers
-    if (id.volume() != 0u) {
-      encoded["volume"] = id.volume();
-    }
-    if (id.boundary() != 0u) {
-      encoded["boundary"] = id.boundary();
-    }
-    if (id.layer() != 0u) {
-      encoded["layer"] = id.layer();
-    }
-    if (id.approach() != 0u) {
-      encoded["approach"] = id.approach();
-    }
-    if (id.sensitive() != 0u) {
-      encoded["sensitive"] = id.sensitive();
-    }
-    if (id.extra() != 0u) {
-      encoded["extra"] = id.extra();
-    }
-    return encoded;
-  }
-
-  /// @brief  Decode a geometry identifier from a json object
-  /// @param encoded is the json object that carries the encoded identifier
-  /// @return a valid geometry Identifier
-  static GeometryIdentifier decodeIdentifier(const nlohmann::json& encoded) {
-    return GeometryIdentifier()
-        .withVolume(encoded.value("volume", GeometryIdentifier::Value{0u}))
-        .withBoundary(encoded.value("boundary", GeometryIdentifier::Value{0u}))
-        .withLayer(encoded.value("layer", GeometryIdentifier::Value{0u}))
-        .withApproach(encoded.value("approach", GeometryIdentifier::Value{0u}))
-        .withSensitive(
-            encoded.value("sensitive", GeometryIdentifier::Value{0u}))
-        .withExtra(encoded.value("extra", GeometryIdentifier::Value{0u}));
-  }
-
  private:
   static constexpr const char* kHeaderKey = "acts-geometry-hierarchy-map";
   static constexpr const char* kEntriesKey = "entries";
@@ -122,7 +85,10 @@ class GeometryHierarchyMapJsonConverter {
 template <typename T, class decorator_t>
 struct missing_specialization : std::false_type {};
 
-// methods to adapt type decorations for the given decorator
+/// Adapt type decorations for the given decorator (reference version)
+/// @param decorator Decorator instance
+/// @param src Source object to decorate
+/// @param dest Destination JSON object
 template <class T, class decorator_t>
 void decorateJson([[maybe_unused]] const decorator_t* decorator,
                   [[maybe_unused]] const T& src,
@@ -132,6 +98,10 @@ void decorateJson([[maybe_unused]] const decorator_t* decorator,
       missing_specialization<T, decorator_t>::value,
       "Explicit specialization needed for each decorator_t and src T");
 }
+/// Adapt type decorations for the given decorator (pointer version)
+/// @param decorator Decorator instance
+/// @param src Source object pointer to decorate
+/// @param dest Destination JSON object
 template <class T, class decorator_t>
 void decorateJson([[maybe_unused]] const decorator_t* decorator,
                   [[maybe_unused]] const T* src,
@@ -154,7 +124,8 @@ nlohmann::json GeometryHierarchyMapJsonConverter<value_t, decorator_t>::toJson(
   // encode entries
   nlohmann::json entries = nlohmann::json::array();
   for (std::size_t i = 0; i < container.size(); ++i) {
-    auto entry = encodeIdentifier(container.idAt(i));
+    auto entry =
+        GeometryIdentifierJsonConverter::encodeIdentifier(container.idAt(i));
     auto value_json = nlohmann::json(container.valueAt(i));
     if constexpr (!std::is_same_v<decorator_t, void>) {
       decorateJson(decorator, container.valueAt(i), value_json);
@@ -190,7 +161,7 @@ auto GeometryHierarchyMapJsonConverter<value_t, decorator_t>::fromJson(
   }
   std::vector<std::pair<GeometryIdentifier, Value>> elements;
   for (const auto& entry : encoded.at(kEntriesKey)) {
-    auto id = decodeIdentifier(entry);
+    auto id = GeometryIdentifierJsonConverter::decodeIdentifier(entry);
     auto value = entry.at("value").get<Value>();
     elements.emplace_back(id, std::move(value));
   }

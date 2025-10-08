@@ -1,6 +1,3 @@
-add_library(ActsPythonUtilities INTERFACE)
-target_include_directories(ActsPythonUtilities INTERFACE include)
-
 set(_python_dir "${CMAKE_BINARY_DIR}/python")
 file(MAKE_DIRECTORY ${_python_dir})
 file(MAKE_DIRECTORY ${_python_dir}/acts)
@@ -35,6 +32,7 @@ pybind11_add_module(ActsPythonBindings
   src/FilterMeasurements.cpp
   src/Matching.cpp
 )
+
 install(TARGETS ActsPythonBindings DESTINATION ${_python_install_dir})
 
 set_target_properties(
@@ -78,17 +76,15 @@ target_link_libraries(
 )
 
 set(py_files
-    __init__.py
     examples/__init__.py
     examples/simulation.py
     examples/reconstruction.py
     examples/itk.py
     examples/odd.py
-    _adapter.py
 )
 
 if(ACTS_BUILD_EXAMPLES_ROOT)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesIoRoot)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::ExamplesIoRoot)
     target_sources(
         ActsPythonBindings
         PRIVATE src/RootInput.cpp src/RootOutput.cpp
@@ -98,7 +94,7 @@ else()
 endif()
 
 if(ACTS_BUILD_PLUGIN_JSON)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginJson)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::PluginJson)
     target_sources(ActsPythonBindings PRIVATE src/Json.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/JsonStub.cpp)
@@ -107,26 +103,29 @@ endif()
 if(ACTS_BUILD_PLUGIN_GEOMODEL)
     target_link_libraries(
         ActsPythonBindings
-        PUBLIC ActsPluginGeoModel ActsExamplesDetectorGeoModel
+        PUBLIC
+            Acts::PluginGeoModel
+            Acts::ExamplesDetectorGeoModel
+            Acts::ExamplesMuonSpectrometerMockupDetector
     )
     target_sources(ActsPythonBindings PRIVATE src/GeoModel.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/GeoModelStub.cpp)
 endif()
 
-if(ACTS_BUILD_PLUGIN_TGEO)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginTGeo)
+if(ACTS_BUILD_PLUGIN_ROOT)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::PluginRoot)
     target_sources(ActsPythonBindings PRIVATE src/TGeo.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/TGeoStub.cpp)
 endif()
 
 if(ACTS_BUILD_PLUGIN_TRACCC)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginDetray)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::PluginDetray)
     target_sources(ActsPythonBindings PRIVATE src/Detray.cpp)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginCovfie)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::PluginCovfie)
     target_sources(ActsPythonBindings PRIVATE src/Covfie.cpp)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesTraccc)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::ExamplesTraccc)
     target_sources(ActsPythonBindings PRIVATE src/Traccc.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/DetrayStub.cpp)
@@ -135,7 +134,7 @@ else()
 endif()
 
 if(ACTS_BUILD_PLUGIN_ACTSVG)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesIoSvg)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::ExamplesIoSvg)
     target_sources(ActsPythonBindings PRIVATE src/Svg.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/SvgStub.cpp)
@@ -145,7 +144,7 @@ if(ACTS_BUILD_PLUGIN_DD4HEP AND ACTS_BUILD_EXAMPLES_DD4HEP)
     pybind11_add_module(ActsPythonBindingsDD4hep src/DD4hepComponent.cpp)
     target_link_libraries(
         ActsPythonBindingsDD4hep
-        PUBLIC ActsPythonUtilities ActsExamplesDetectorDD4hep
+        PUBLIC Acts::PythonUtilities Acts::ExamplesDetectorDD4hep
     )
     add_dependencies(ActsPythonBindings ActsPythonBindingsDD4hep)
 
@@ -164,7 +163,7 @@ endif()
 if(ACTS_BUILD_EXAMPLES_PYTHIA8)
     target_link_libraries(
         ActsPythonBindings
-        PUBLIC ActsExamplesGeneratorsPythia8
+        PUBLIC Acts::ExamplesGeneratorsPythia8
     )
     target_sources(ActsPythonBindings PRIVATE src/Pythia8.cpp)
 else()
@@ -176,10 +175,10 @@ if(ACTS_BUILD_EXAMPLES_GEANT4)
     target_link_libraries(
         ActsPythonBindingsGeant4
         PUBLIC
-            ActsExamplesGeant4
-            ActsExamplesDetectorGeant4
-            ActsPythonUtilities
-            ActsExamplesMuonSpectrometerMockupDetector
+            Acts::ExamplesGeant4
+            Acts::ExamplesDetectorGeant4
+            Acts::PythonUtilities
+            Acts::ExamplesMuonSpectrometerMockupDetector
     )
     add_dependencies(ActsPythonBindings ActsPythonBindingsGeant4)
 
@@ -195,25 +194,25 @@ if(ACTS_BUILD_EXAMPLES_GEANT4)
     list(APPEND py_files examples/geant4/__init__.py)
 endif()
 
-target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesIoHepMC3)
+target_link_libraries(ActsPythonBindings PUBLIC Acts::ExamplesIoHepMC3)
 target_sources(ActsPythonBindings PRIVATE src/HepMC3.cpp)
 list(APPEND py_files examples/hepmc3.py)
 
-if(ACTS_BUILD_EXAMPLES_EXATRKX)
+if(ACTS_BUILD_EXAMPLES_GNN)
     target_link_libraries(
         ActsPythonBindings
-        PUBLIC ActsExamplesTrackFindingExaTrkX
+        PUBLIC Acts::ExamplesTrackFindingGnn
     )
-    target_sources(ActsPythonBindings PRIVATE src/ExaTrkXTrackFinding.cpp)
+    target_sources(ActsPythonBindings PRIVATE src/GnnTrackFinding.cpp)
 else()
-    target_sources(ActsPythonBindings PRIVATE src/ExaTrkXTrackFindingStub.cpp)
+    target_sources(ActsPythonBindings PRIVATE src/GnnTrackFindingStub.cpp)
 endif()
 
 if(ACTS_BUILD_EXAMPLES_EDM4HEP)
     pybind11_add_module(ActsPythonBindingsEDM4hep src/EDM4hepComponent.cpp)
     target_link_libraries(
         ActsPythonBindingsEDM4hep
-        PUBLIC ActsPythonUtilities ActsExamplesIoEDM4hep
+        PUBLIC Acts::PythonUtilities Acts::ExamplesIoEDM4hep
     )
     add_dependencies(ActsPythonBindings ActsPythonBindingsEDM4hep)
     install(
@@ -234,7 +233,7 @@ if(ACTS_BUILD_EXAMPLES_PODIO)
     pybind11_add_module(ActsPythonBindingsPodio src/PodioComponent.cpp)
     target_link_libraries(
         ActsPythonBindingsPodio
-        PUBLIC ActsPythonUtilities ActsExamplesIoPodio
+        PUBLIC Acts::PythonUtilities Acts::ExamplesIoPodio
     )
     add_dependencies(ActsPythonBindings ActsPythonBindingsPodio)
     install(TARGETS ActsPythonBindingsPodio DESTINATION ${_python_install_dir})
@@ -252,7 +251,7 @@ endif()
 if(ACTS_BUILD_PLUGIN_ONNX)
     target_link_libraries(
         ActsPythonBindings
-        PUBLIC ActsExamplesFrameworkML ActsExamplesTrackFindingML
+        PUBLIC Acts::ExamplesFrameworkML Acts::ExamplesTrackFindingML
     )
     target_sources(ActsPythonBindings PRIVATE src/Onnx.cpp)
     target_sources(ActsPythonBindings PRIVATE src/OnnxNeuralCalibrator.cpp)
@@ -263,22 +262,19 @@ else()
 endif()
 
 if(ACTS_BUILD_PLUGIN_FASTJET)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsExamplesJets)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::ExamplesJets)
     target_sources(ActsPythonBindings PRIVATE src/TruthJet.cpp)
 else()
     target_sources(ActsPythonBindings PRIVATE src/TruthJetStub.cpp)
 endif()
 
 if(ACTS_BUILD_EXAMPLES_HASHING)
-    target_link_libraries(ActsPythonBindings PUBLIC ActsPluginHashing)
+    target_link_libraries(ActsPythonBindings PUBLIC Acts::PluginHashing)
     target_sources(ActsPythonBindings PRIVATE src/Hashing.cpp)
     list(APPEND py_files examples/hashing.py)
 else()
     target_sources(ActsPythonBindings PRIVATE src/HashingStub.cpp)
 endif()
-
-configure_file(setup.sh.in ${_python_dir}/setup.sh @ONLY)
-install(FILES ${_python_dir}/setup.sh DESTINATION "python")
 
 foreach(f ${py_files})
     set(_target ${_python_dir}/acts/${f})

@@ -1,17 +1,15 @@
-add_library(ActsPluginFastJet INTERFACE)
+acts_add_library(
+    PluginFastJet
+    SHARED
+    src/Jets.cpp
+    ACTS_INCLUDE_FOLDER include/ActsPlugins
+)
 
 target_include_directories(
     ActsPluginFastJet
-    INTERFACE
+    PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_link_libraries(ActsPluginFastJet INTERFACE FastJet)
 
-install(
-    TARGETS ActsPluginFastJet
-    EXPORT ActsPluginFastJetTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-# Add once fastjet plugin has headers
-# install(DIRECTORY include/Acts DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+target_link_libraries(ActsPluginFastJet PUBLIC Acts::Core FastJet::FastJet)

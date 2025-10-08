@@ -6,7 +6,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#include "Acts/Plugins/Python/Utilities.hpp"
 #include "ActsExamples/EventData/Index.hpp"
 #include "ActsExamples/Vertexing/AdaptiveMultiVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/HoughVertexFinderAlgorithm.hpp"
@@ -24,38 +23,37 @@ namespace py = pybind11;
 using namespace ActsExamples;
 using namespace Acts;
 
-namespace Acts::Python {
+namespace ActsPython {
 
 void addVertexing(Context& ctx) {
-  using Seeder = ActsExamples::AdaptiveMultiVertexFinderAlgorithm::SeedFinder;
-  auto mex = ctx.get("examples");
-  auto& m = ctx.get("main");
+  using Seeder = AdaptiveMultiVertexFinderAlgorithm::SeedFinder;
+  auto& mex = ctx.get("examples");
 
-  py::enum_<Seeder>(m, "VertexSeedFinder")
+  py::enum_<Seeder>(mex, "VertexSeedFinder")
       .value("TruthSeeder", Seeder::TruthSeeder)
       .value("GaussianSeeder", Seeder::GaussianSeeder)
       .value("AdaptiveGridSeeder", Seeder::AdaptiveGridSeeder);
 
   ACTS_PYTHON_DECLARE_ALGORITHM(
-      ActsExamples::AdaptiveMultiVertexFinderAlgorithm, mex,
+      AdaptiveMultiVertexFinderAlgorithm, mex,
       "AdaptiveMultiVertexFinderAlgorithm", inputTrackParameters,
       inputTruthParticles, inputTruthVertices, outputProtoVertices,
       outputVertices, seedFinder, bField, minWeight, doSmoothing, maxIterations,
       useTime, tracksMaxZinterval, initialVariances, doFullSplitting,
       tracksMaxSignificance, maxMergeVertexSignificance, spatialBinExtent,
-      temporalBinExtent);
+      temporalBinExtent, simultaneousSeeds);
 
-  ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::IterativeVertexFinderAlgorithm,
-                                mex, "IterativeVertexFinderAlgorithm",
+  ACTS_PYTHON_DECLARE_ALGORITHM(IterativeVertexFinderAlgorithm, mex,
+                                "IterativeVertexFinderAlgorithm",
                                 inputTrackParameters, outputProtoVertices,
                                 outputVertices, bField, maxIterations);
 
-  ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::VertexFitterAlgorithm, mex,
+  ACTS_PYTHON_DECLARE_ALGORITHM(VertexFitterAlgorithm, mex,
                                 "VertexFitterAlgorithm", inputTrackParameters,
                                 inputProtoVertices, outputVertices, bField,
                                 doConstrainedFit, constraintPos, constraintCov);
 
-  ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::HoughVertexFinderAlgorithm, mex,
+  ACTS_PYTHON_DECLARE_ALGORITHM(HoughVertexFinderAlgorithm, mex,
                                 "HoughVertexFinderAlgorithm", inputSpacepoints,
                                 outputVertices, targetSPs, minAbsEta, maxAbsEta,
                                 minHits, defVtxPosition);
@@ -67,4 +65,4 @@ void addVertexing(Context& ctx) {
                                 useFit, nbins, zPerigee, outputFitFunction, outputZTracklets, outputZTrackletsPeak);
 }
 
-}  // namespace Acts::Python
+}  // namespace ActsPython

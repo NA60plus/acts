@@ -11,15 +11,16 @@
 #include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
+#include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Material/ISurfaceMaterial.hpp"
 #include "Acts/Material/IVolumeMaterial.hpp"
+#include "Acts/Material/TrackingGeometryMaterial.hpp"
 #include "Acts/Plugins/Json/ActsJson.hpp"
 #include "Acts/Plugins/Json/GeometryHierarchyMapJsonConverter.hpp"
 #include "Acts/Plugins/Json/ITrackingGeometryJsonDecorator.hpp"
 #include "Acts/Plugins/Json/IVolumeMaterialJsonDecorator.hpp"
+#include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Logger.hpp"
-#include <Acts/Geometry/TrackingVolume.hpp>
-#include <Acts/Surfaces/Surface.hpp>
 
 #include <map>
 #include <memory>
@@ -39,10 +40,14 @@ class Surface;
 class TrackingGeometry;
 class TrackingVolume;
 
+/// A tuple containing a surface, its associated material, and geometry context.
+/// @note Used for material mapping and JSON conversion.
 using SurfaceAndMaterialWithContext =
     std::tuple<std::shared_ptr<const Acts::Surface>,
                std::shared_ptr<const Acts::ISurfaceMaterial>,
                Acts::GeometryContext>;
+/// A pair containing a tracking volume and its associated material.
+/// @note Used for material mapping and JSON conversion.
 using TrackingVolumeAndMaterial =
     std::pair<const Acts::TrackingVolume*,
               std::shared_ptr<const Acts::IVolumeMaterial>>;
@@ -52,11 +57,15 @@ using TrackingVolumeAndMaterial =
 /// @brief read the material from Json
 class MaterialMapJsonConverter {
  public:
-  using SurfaceMaterialMap =
-      std::map<GeometryIdentifier, std::shared_ptr<const ISurfaceMaterial>>;
-  using VolumeMaterialMap =
-      std::map<GeometryIdentifier, std::shared_ptr<const IVolumeMaterial>>;
-  using DetectorMaterialMaps = std::pair<SurfaceMaterialMap, VolumeMaterialMap>;
+  using SurfaceMaterialMap
+      [[deprecated("Use Acts::SurfaceMaterialMaps directly")]] =
+          SurfaceMaterialMaps;
+  using VolumeMaterialMap
+      [[deprecated("Use Acts::VolumeMaterialMaps directly")]] =
+          VolumeMaterialMaps;
+  using DetectorMaterialMaps
+      [[deprecated("Use Acts::TrackingGeometryMaterial directly")]] =
+          TrackingGeometryMaterial;
 
   /// @class Config
   /// Configuration of the Converter
@@ -90,17 +99,20 @@ class MaterialMapJsonConverter {
   /// Destructor
   ~MaterialMapJsonConverter() = default;
 
-  /// Convert a json material map to a DetectorMaterialMaps
+  /// Convert a json material map to a TrackingGeometryMaterial
   ///
   /// @param materialmaps The json material
-  DetectorMaterialMaps jsonToMaterialMaps(const nlohmann::json& materialmaps);
+  /// @return Converted tracking geometry material from JSON
+  TrackingGeometryMaterial jsonToMaterialMaps(
+      const nlohmann::json& materialmaps);
 
-  /// Convert a DetectorMaterialMaps to json
+  /// Convert a TrackingGeometryMaterial to json
   ///
   /// @param maps The material map collection
   /// @param decorator nullptr or a decorator to add extra attributes
+  /// @return JSON representation of the material maps
   nlohmann::json materialMapsToJson(
-      const DetectorMaterialMaps& maps,
+      const TrackingGeometryMaterial& maps,
       const IVolumeMaterialJsonDecorator* decorator = nullptr);
 
   /// Convert a tracking geometry to json.
@@ -108,6 +120,7 @@ class MaterialMapJsonConverter {
   ///
   /// @param tGeometry is the tracking geometry
   /// @param decorator nullptr or a decorator to add extra attributes
+  /// @return JSON representation of the tracking geometry
   nlohmann::json trackingGeometryToJson(
       const TrackingGeometry& tGeometry,
       const ITrackingGeometryJsonDecorator* decorator = nullptr);
