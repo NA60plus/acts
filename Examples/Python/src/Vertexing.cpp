@@ -12,6 +12,8 @@
 #include "ActsExamples/Vertexing/IterativeVertexFinderAlgorithm.hpp"
 #include "ActsExamples/Vertexing/VertexFitterAlgorithm.hpp"
 #include "ActsExamples/Vertexing/TrackletVertexingAlgorithm.hpp"
+#include "ActsPython/Utilities/Helpers.hpp"
+#include "ActsPython/Utilities/Macros.hpp"
 
 #include <memory>
 
@@ -58,7 +60,7 @@ void addVertexing(Context& ctx) {
                                 outputVertices, targetSPs, minAbsEta, maxAbsEta,
                                 minHits, defVtxPosition);
 
-  ACTS_PYTHON_DECLARE_ALGORITHM(ActsExamples::TrackletVertexingAlgorithm,
+  ACTS_PYTHON_DECLARE_ALGORITHM(TrackletVertexingAlgorithm,
                                 mex, "TrackletVertexingAlgorithm",
                                 inputSpacePoints, inputSpacePointsMC, inputParticles, inputMeasurementParticlesMap,                            
                                 zMaxTop, zMinTop, zMaxBot, zMinBot,deltaPhi, deltaThetaMin, deltaThetaMax, verbose, doMCtruth, outputRecPrimaryVertex, outputFitPrimaryVertex, outputGenPrimaryVertex, noGuessing,

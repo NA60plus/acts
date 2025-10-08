@@ -6,7 +6,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "Acts/Plugins/Python/Utilities.hpp"
+#include "ActsPython/Utilities/Helpers.hpp"
+#include "ActsPython/Utilities/Macros.hpp"
 #include "ActsExamples/FilterMeasurements/FilterMeasurementsAlgorithm.hpp"
 
 #include <memory>
@@ -19,7 +20,7 @@ namespace py = pybind11;
 using namespace Acts;
 using namespace ActsExamples;
 
-namespace Acts::Python {
+namespace ActsPython {
 
 void addFilterMeasurements(Context& ctx) {
   auto [m, mex] = ctx.get("main", "examples");

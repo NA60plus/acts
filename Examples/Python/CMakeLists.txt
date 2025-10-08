@@ -4,33 +4,29 @@ file(MAKE_DIRECTORY ${_python_dir}/acts)
 
 set(_python_install_dir "python/acts")
 
-pybind11_add_module(ActsPythonBindings
-  src/ModuleEntry.cpp
-  src/Framework.cpp
-  src/Base.cpp
-  src/Detector.cpp
-  src/Digitization.cpp
-  src/Material.cpp
-  src/Geometry.cpp
-  src/GeometryBuildingGen1.cpp
-  src/Blueprint.cpp
-  src/ExampleAlgorithms.cpp
-  src/MagneticField.cpp
-  src/Output.cpp
-  src/Input.cpp
-  src/Propagation.cpp
-  src/Navigation.cpp
-  src/Generators.cpp
-  src/Obj.cpp
-  src/TruthTracking.cpp
-  src/TrackFitting.cpp
-  src/TrackFinding.cpp
-  src/Vertexing.cpp
-  src/AmbiguityResolution.cpp
-  src/EventData.cpp
-  src/Utilities.cpp
-  src/FilterMeasurements.cpp
-  src/Matching.cpp
+target_sources(
+    ActsPythonBindings
+    PRIVATE
+        src/ModuleEntry.cpp
+        src/Framework.cpp
+        src/Alignment.cpp
+        src/Detector.cpp
+        src/Digitization.cpp
+        src/MaterialMapping.cpp
+        src/ExampleAlgorithms.cpp
+        src/Output.cpp
+        src/Input.cpp
+        src/Propagation.cpp
+        src/Generators.cpp
+        src/Obj.cpp
+        src/TruthTracking.cpp
+        src/TrackFitting.cpp
+        src/TrackFinding.cpp
+        src/Vertexing.cpp
+        src/AmbiguityResolution.cpp
+        src/Utilities.cpp
+        src/FilterMeasurements.cpp
+        src/Matching.cpp
 )
 
 install(TARGETS ActsPythonBindings DESTINATION ${_python_install_dir})
@@ -47,32 +43,29 @@ set_target_properties(
 target_link_libraries(
     ActsPythonBindings
     PUBLIC
-        ActsCore
-        ActsPythonUtilities
-        ActsExamplesFramework
-        ActsExamplesGeometry
-        ActsExamplesDetectorGeneric
-        ActsExamplesDetectorContextual
-        ActsExamplesDetectorTGeo
-        ActsExamplesMagneticField
-        ActsExamplesIoCsv
-        ActsExamplesIoObj
-        ActsExamplesIoJson
-        ActsExamplesGenerators
-        ActsExamplesPrinters
-        ActsExamplesTrackFinding
-        ActsExamplesTrackFitting
-        ActsExamplesVertexing
-        ActsExamplesFatras
-        ActsExamplesDetectorTelescope
-        ActsExamplesUtilities
-        ActsExamplesAmbiguityResolution
-        ActsExamplesTruthTracking
-        ActsExamplesDigitization
-        ActsExamplesPropagation
-        ActsExamplesMaterialMapping
-        ActsExamplesFilterMeasurements
-        ActsExamplesMatching
+        Acts::PythonUtilities
+        Acts::ExamplesFramework
+        Acts::ExamplesGeometry
+        Acts::ExamplesDetectorGeneric
+        Acts::ExamplesDetectorTGeo
+        Acts::ExamplesIoCsv
+        Acts::ExamplesIoObj
+        Acts::ExamplesIoJson
+        Acts::ExamplesGenerators
+        Acts::ExamplesPrinters
+        Acts::ExamplesTrackFinding
+        Acts::ExamplesTrackFitting
+        Acts::ExamplesVertexing
+        Acts::ExamplesFatras
+        Acts::ExamplesDetectorTelescope
+        Acts::ExamplesUtilities
+        Acts::ExamplesAmbiguityResolution
+        Acts::ExamplesTruthTracking
+        Acts::ExamplesDigitization
+        Acts::ExamplesPropagation
+        Acts::ExamplesMaterialMapping
+        Acts::ExamplesFilterMeasurements
+        Acts::ExamplesMatching
 )
 
 set(py_files

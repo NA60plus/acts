@@ -739,7 +739,6 @@ def addSimParticleSelection(
 def addDigitization(
     s: acts.examples.Sequencer,
     trackingGeometry: Union[acts.TrackingGeometry, acts.Detector],
-    field: acts.MagneticFieldProvider,
     digiConfigFile: Union[Path, str],
     outputDirCsv: Optional[Union[Path, str]] = None,
     outputDirRoot: Optional[Union[Path, str]] = None,
@@ -755,7 +754,6 @@ def addDigitization(
     s: Sequencer
         the sequencer module to which we add the Digitization steps (returned from addDigitization)
     trackingGeometry : tracking geometry or detector
-    field : magnetic field
     digiConfigFile : Path|str, path
         Configuration (.json) file for digitization or smearing description
     outputDirCsv : Path|str, path, None

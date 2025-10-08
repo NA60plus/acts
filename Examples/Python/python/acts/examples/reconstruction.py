@@ -724,10 +724,8 @@ def addSpacePointsMaking(
         geometrySelection=acts.examples.readJsonGeometryList(
             str(geoSelectionConfigFile)
         ),
-        stripGeometrySelection=(
-            acts.examples.readJsonGeometryList(str(stripGeoSelectionConfigFile))
-            if stripGeoSelectionConfigFile
-            else []
+        stripGeometrySelection=( 
+            []
         ),
     )
     sequence.addAlgorithm(spAlg)

@@ -35,20 +35,9 @@ struct SpacePointContainerOptions {
                         0 * Acts::UnitConstants::mm,
                         0 * Acts::UnitConstants::mm};
 
-  SpacePointContainerOptions toInternalUnits() const {
-    if (isInInternalUnits) {
-      throw std::runtime_error(
-          "Repeated conversion to internal units for "
-          "SpacePointContainerOptions");
-    }
-    using namespace Acts::UnitLiterals;
-    SpacePointContainerOptions options = *this;
-    options.isInInternalUnits = true;
-    options.beamPos[0] /= 1_mm;
-    options.beamPos[1] /= 1_mm;
-    options.beamPos[2] /= 1_mm;
-    return options;
-  }
+  bool isInInternalUnits = true;
+  //[[deprecated("SpacePointContainerOptions uses internal units")]]
+  SpacePointContainerOptions toInternalUnits() const { return *this; }
 };
 
 template <typename container_t, template <typename> class holder_t>

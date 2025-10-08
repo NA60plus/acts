@@ -24,9 +24,11 @@
 #include "ActsExamples/Io/Obj/ObjPropagationStepsWriter.hpp"
 #include "ActsExamples/Io/Obj/ObjSimHitWriter.hpp"
 #include "ActsExamples/Io/Obj/ObjTrackingGeometryWriter.hpp"
+#include "ActsExamples/Io/Root/TrackletVertexingPerformanceWriter.hpp"
 #include "ActsExamples/MaterialMapping/IMaterialWriter.hpp"
 #include "ActsExamples/TrackFinding/ITrackParamsLookupWriter.hpp"
-#include "ActsExamples/Io/Root/TrackletVertexingPerformanceWriter.hpp"
+#include "ActsPython/Utilities/Helpers.hpp"
+#include "ActsPython/Utilities/Macros.hpp"
 
 #include <memory>
 #include <string>
@@ -142,15 +144,15 @@ void addOutput(Context& ctx) {
                              "CsvTrackParameterWriter", inputTracks, outputDir,
                              outputStem, outputPrecision);
 
+  ACTS_PYTHON_DECLARE_WRITER(CsvProtoTrackWriter, mex, "CsvProtoTrackWriter",
+                             inputSpacepoints, inputPrototracks, outputDir);
+
+
   ACTS_PYTHON_DECLARE_WRITER(
-      ActsExamples::TrackletVertexingPerformanceWriter, mex, "TrackletVertexingPerformanceWriter",
+      TrackletVertexingPerformanceWriter, mex, "TrackletVertexingPerformanceWriter",
       inputRecPrimaryVertex, inputGenPrimaryVertex, filePath,  
       inputFitFunction, inputZTracklets, inputZTrackletsPeak, fileMode, trkVtxPlotToolConfig, verbose);
 
-
-  ACTS_PYTHON_DECLARE_WRITER(ActsExamples::CsvProtoTrackWriter, mex,
-                             "CsvProtoTrackWriter", inputSpacepoints,
-                             inputPrototracks, outputDir);
 
   {
     using Writer = CsvBFieldWriter;

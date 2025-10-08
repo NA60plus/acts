@@ -71,13 +71,19 @@ ActsExamples::ProcessCode ActsExamples::CsvParticleReader::read(
   ParticleData data;
 
   while (reader.read(data)) {
-    ActsFatras::Barcode particle_id(data.particle_id);
-    ActsExamples::SimVertexBarcode vertex_id(particle_id.vertexId());
-
-    SimParticleState particle(particle_id,
+    SimParticleState particle(ActsFatras::Barcode()
+                                  .withVertexPrimary(data.particle_id_pv)
+                                  .withVertexSecondary(data.particle_id_sv)
+                                  .withParticle(data.particle_id_part)
+                                  .withGeneration(data.particle_id_gen)
+                                  .withSubParticle(data.particle_id_subpart),
                               Acts::PdgParticle{data.particle_type},
                               data.q * Acts::UnitConstants::e,
                               data.m * Acts::UnitConstants::GeV);
+                              
+    ActsExamples::SimVertexBarcode vertex_id(ActsFatras::Barcode()
+                                  .withVertexPrimary(data.particle_id_pv));
+
     particle.setProcess(static_cast<ActsFatras::ProcessType>(data.process));
     particle.setPosition4(
         data.vx * Acts::UnitConstants::mm, data.vy * Acts::UnitConstants::mm,
@@ -89,12 +95,22 @@ ActsExamples::ProcessCode ActsExamples::CsvParticleReader::read(
     unordered.push_back(SimParticle(particle, particle));
 
     if (foundVertices.find(vertex_id) != foundVertices.end()) {
-      foundVertices[vertex_id].outgoing.insert(particle_id);
+      foundVertices[vertex_id].outgoing.insert(ActsFatras::Barcode()
+                                  .withVertexPrimary(data.particle_id_pv)
+                                  .withVertexSecondary(data.particle_id_sv)
+                                  .withParticle(data.particle_id_part)
+                                  .withGeneration(data.particle_id_gen)
+                                  .withSubParticle(data.particle_id_subpart));
     }
     else if(!particle.isSecondary())
     {
       foundVertices[vertex_id] = vertices.emplace_back(vertex_id, particle.fourPosition(), particle.process());
-      foundVertices[vertex_id].outgoing.insert(particle_id);
+      foundVertices[vertex_id].outgoing.insert(ActsFatras::Barcode()
+                                  .withVertexPrimary(data.particle_id_pv)
+                                  .withVertexSecondary(data.particle_id_sv)
+                                  .withParticle(data.particle_id_part)
+                                  .withGeneration(data.particle_id_gen)
+                                  .withSubParticle(data.particle_id_subpart));
     }
   }
 
