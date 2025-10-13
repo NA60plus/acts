@@ -2769,18 +2769,18 @@ def addMatching(
     geoIdForPropagation = None
 ) -> None:
     
-    customLogLevel = acts.examples.defaultLogging(s, logLevel)
     kalmanOptions = {
         "multipleScattering": True,
         "energyLoss": True,
         "reverseFilteringMomThreshold": 0 * u.GeV,
+        "reverseFilteringCovarianceScaling": 1.0,  # valore tipico
         "freeToBoundCorrection": acts.examples.FreeToBoundCorrection(False),
-        "chi2Cut": 10000000.0,
+        "chi2Cut": 1500.0,  # valore standard nei tutorial ACTS
         "level": logLevel,
     }
 
     vtmsmatcher = acts.examples.MatchingAlgorithm(
-        level=customLogLevel(),
+        level=logLevel,
         inputTracksMS = inputTracksMS,
         inputTracksVT = inputTracksVT,
         outputTracksMS = outputTracksMS,
@@ -2801,7 +2801,7 @@ def addMatching(
     s.addAlgorithm(vtmsmatcher)
 
     matchAlg = acts.examples.TrackTruthMatcher(
-        level=customLogLevel(),
+        level=logLevel,
         inputTracks=vtmsmatcher.config.outputTracksRefit,
         inputParticles=inputParticles,
         inputMeasurementParticlesMap="measurement_particles_map",
@@ -2823,6 +2823,12 @@ def addMatching(
         writeFinderPerformance=writePerformance,
         writeCovMat=writeCovMat,
         logLevel=logLevel,
+        inputParticles = "particles_selected",
+        inputTrackParticleMatching = suffixOut+"track_particle",
+        inputParticleTrackMatching = suffixOut+"particle_track",
+        inputParticleMeasurementsMap = "particle_measurements_map",
+        inputMeasurementParticlesMap = "measurement_particles_map",
+        inputMeasurementSimHitsMap = "measurement_simhits_map",
     )
 
     return s

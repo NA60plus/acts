@@ -108,7 +108,7 @@ def main():
         "-t", "--tracks", type=int, default=100, help="Particle tracks per event"
     )
     p.add_argument(
-        "-i", "--input", type=str, default="", help="input (GDML/SQL) file (optional)"
+        "-i", "--input", type=str, default="", help="input (GDML/SQL) file"
     )
 
     args = p.parse_args()
