@@ -45,12 +45,14 @@ ParticleSelectorConfig = namedtuple(
         "m",  # (min,max)
         "hits",  # (min,max)
         "measurements",  # (min,max)
+        "measurementsVS",  # (min,max)
+        "measurementsMS",  # (min,max)
         "removeCharged",  # bool
         "removeNeutral",  # bool
         "removeSecondaries",  # bool
         "nMeasurementsGroupMin",
     ],
-    defaults=[(None, None)] * 10 + [None] * 4,
+    defaults=[(None, None)] * 12 + [None] * 4,
 )
 
 TruthJetConfig = namedtuple(
@@ -82,6 +84,10 @@ def _getParticleSelectionKWargs(config: ParticleSelectorConfig) -> dict:
         "hitsMax": config.hits[1],
         "measurementsMin": config.measurements[0],
         "measurementsMax": config.measurements[1],
+        "measurementsVSMin": config.measurementsVS[0],
+        "measurementsVSMax": config.measurementsVS[1],
+        "measurementsMSMin": config.measurementsMS[0],
+        "measurementsMSMax": config.measurementsMS[1],
         "removeCharged": config.removeCharged,
         "removeNeutral": config.removeNeutral,
         "removeSecondaries": config.removeSecondaries,
@@ -429,6 +435,8 @@ def addGenParticleSelection(
     config: ParticleSelectorConfig,
     logLevel: Optional[acts.logging.Level] = None,
     inputParticles: str = "particles_generated_selected",
+    inputParticleMeasurementsMap: Optional[str] = None,
+    inputMeasurements: Optional[str] = None,
 ) -> None:
     """
     This function steers the particle selection after generation.
@@ -447,6 +455,8 @@ def addGenParticleSelection(
         level=customLogLevel(),
         inputParticles=inputParticles,
         outputParticles="tmp_particles_generated_selected",
+        inputParticleMeasurementsMap=inputParticleMeasurementsMap,
+        inputMeasurements=inputMeasurements
     )
     s.addAlgorithm(selector)
 

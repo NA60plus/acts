@@ -79,6 +79,7 @@ void addTruthTracking(Context& ctx) {
         outputParticles, rhoMin, rhoMax, absZMin, absZMax, timeMin, timeMax,
         phiMin, phiMax, etaMin, etaMax, absEtaMin, absEtaMax, mMin, mMax, ptMin,
         ptMax, hitsMin, hitsMax, measurementsMin, measurementsMax,
+        measurementsVSMin, measurementsVSMax, measurementsMSMin, measurementsMSMax,
         removeCharged, removeNeutral, removeSecondaries, excludeAbsPdgs,
         minPrimaryVertexId, maxPrimaryVertexId, measurementCounter);
 

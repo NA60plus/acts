@@ -42,7 +42,7 @@ class TGeoDetector : public Detector {
     double beamPipeHalflengthZ{0};
     double beamPipeLayerThickness{0};
     double beamPipeEnvelopeR{0.0};
-    double layerEnvelopeR{0.0};
+    double layerEnvelopeR{1.0};
 
     double unitScalor = 1.0;
 

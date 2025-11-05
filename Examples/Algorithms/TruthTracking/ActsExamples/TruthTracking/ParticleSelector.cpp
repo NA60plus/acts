@@ -91,6 +91,22 @@ ParticleSelector::ParticleSelector(const Config& config,
         "and inputMeasurements");
   }
 
+  // Volume-specific measurement count cuts require both the particle->measurement
+  // map and the measurement container to be available. Guard upfront to avoid
+  // runtime out-of-range accesses when these cuts are requested without data.
+  const bool requestsVolumeSpecificCuts =
+    (m_cfg.measurementsVSMin > 0 ||
+     m_cfg.measurementsVSMax < std::numeric_limits<std::size_t>::max() ||
+     m_cfg.measurementsMSMin > 0 ||
+     m_cfg.measurementsMSMax < std::numeric_limits<std::size_t>::max());
+  if (requestsVolumeSpecificCuts &&
+    (!m_inputParticleMeasurementsMap.isInitialized() ||
+     !m_inputMeasurements.isInitialized())) {
+  throw std::invalid_argument(
+    "Volume-specific measurement cuts require the inputParticleMeasurementsMap "
+    "and inputMeasurements");
+  }
+
   ACTS_DEBUG("selection particle rho [" << m_cfg.rhoMin << "," << m_cfg.rhoMax
                                         << ")");
   ACTS_DEBUG("selection particle |z| [" << m_cfg.absZMin << "," << m_cfg.absZMax
@@ -137,6 +153,10 @@ ProcessCode ParticleSelector::execute(const AlgorithmContext& ctx) const {
       m_inputMeasurements.isInitialized() ? m_inputMeasurements(ctx)
                                           : emptyMeasurements;
 
+  // Helper to know if we can safely access measurement indices
+  const bool haveMeasurementData = m_inputParticleMeasurementsMap.isInitialized() &&
+                                   m_inputMeasurements.isInitialized();
+
   std::size_t nInvalidCharge = 0;
   std::size_t nInvalidHitCount = 0;
   std::size_t nInvalidMeasurementCount = 0;
@@ -170,6 +190,36 @@ ProcessCode ParticleSelector::execute(const AlgorithmContext& ctx) const {
         inputMeasurementParticlesMap.count(p.particleId());
     const bool validMeasurementCount =
         within(measurementCount, m_cfg.measurementsMin, m_cfg.measurementsMax);
+
+    // Count measurements in specific volumes only if measurement data is present
+    std::size_t volume3MeasurementCount = 0;
+    std::size_t volume5MeasurementCount = 0;
+
+    bool valid3MeasurementCount = true;
+    bool valid5MeasurementCount = true;
+
+    if (haveMeasurementData) {
+      const auto range = inputMeasurementParticlesMap.equal_range(p.particleId());
+      for (auto it = range.first; it != range.second; ++it) {
+        const auto measIdx = it->second;  // Index of the measurement
+        const auto meas = inputMeasurements.at(measIdx);
+        const auto vol = meas.geometryId().volume();
+        if (vol == 3) {
+          ++volume3MeasurementCount;
+        } else if (vol == 5) {
+          ++volume5MeasurementCount;
+        }
+      }
+
+      valid3MeasurementCount =
+          within(volume3MeasurementCount, m_cfg.measurementsVSMin, m_cfg.measurementsVSMax);
+      ACTS_DEBUG("Volume 3 measurement count: " << volume3MeasurementCount);
+      valid5MeasurementCount =
+          within(volume5MeasurementCount, m_cfg.measurementsMSMin, m_cfg.measurementsMSMax);
+      ACTS_DEBUG("Volume 5 measurement count: " << volume5MeasurementCount);
+
+    }
+
     nInvalidMeasurementCount +=
         static_cast<std::size_t>(!validMeasurementCount);
 
@@ -189,7 +239,7 @@ ProcessCode ParticleSelector::execute(const AlgorithmContext& ctx) const {
     }
 
     return validPdg && validCharge && validSecondary && validPrimaryVertexId &&
-           validHitCount && validMeasurementCount &&
+           validHitCount && validMeasurementCount && valid3MeasurementCount && valid5MeasurementCount &&
            validMeasurementRegionCount &&
            within(p.transverseMomentum(), m_cfg.ptMin, m_cfg.ptMax) &&
            within(std::abs(eta), m_cfg.absEtaMin, m_cfg.absEtaMax) &&

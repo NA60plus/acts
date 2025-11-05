@@ -127,13 +127,7 @@ def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis
                     positive=[(0, equidistant)],
                 ),
                 cylinderDiscSplit=False,
-                cylinderNZSegments=0,
-                cylinderNPhiSegments=0,
-                discNRSegments=0,
-                discNPhiSegments=0,
-                itkModuleSplit=False,
-                barrelMap={},
-                discMap={},
+                itkModuleSplit=False
             ))
     if addMS:
         volumes.append(
@@ -166,13 +160,7 @@ def buildDICEgeometry(geometryFile = '/home/giacomo/acts_for_NA60+/ACTS-Analysis
                     positive=[(0, equidistant)],
                 ),
                 cylinderDiscSplit=False,
-                cylinderNZSegments=0,
-                cylinderNPhiSegments=0,
-                discNRSegments=0,
-                discNPhiSegments=0,
-                itkModuleSplit=False,
-                barrelMap={},
-                discMap={},
+                itkModuleSplit=False
             )
             )
         
